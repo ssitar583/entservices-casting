@@ -214,12 +214,10 @@ namespace Plugin {
         guint m_FriendlyNameUpdateTimerID{0};
         //Timer related variables and functions
         TpTimer m_locateCastTimer;
-        Core::ProxyType<RPC::InvokeServerType<1, 0, 4> > _engine;
-        Core::ProxyType<RPC::CommunicatorClient> _communicatorClient;
         PowerManagerInterfaceRef _powerManagerPlugin;
         Core::Sink<PowerManagerNotification> _pwrMgrNotification;
         bool _registeredEventHandlers;
-        void InitializePowerManager();
+        void InitializePowerManager(PluginHost::IShell *service);
         void InitializeIARM();
         void DeinitializeIARM();
         //Internal methods
