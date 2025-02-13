@@ -78,8 +78,6 @@ private:
     GstCaps     *m_capsSrc;
 
     bool m_firstVideoFrameReceived{false};
-    bool m_destroyTimer{false};
-    guint m_sourceId{0};
 
     MiracastRTSPMsg *m_rtsp_reference_instance{nullptr};
     MessageQueue* m_customQueueHandle{nullptr};
@@ -96,6 +94,10 @@ private:
     GstElement *m_audio_sink{nullptr};
     pthread_t m_playback_thread{0};
     VIDEO_RECT_STRUCT m_video_rect_st;
+
+    bool m_pushBufferLoop;
+    pthread_t m_pushbuffer_handler_tid{0};
+    static void *pushbuffer_handler_thread(void *ctx);
 
     static MiracastGstPlayer *m_GstPlayer;
     MiracastGstPlayer();
@@ -121,7 +123,6 @@ private:
     static GstFlowReturn appendPipelineNewSampleHandler(GstElement *elt, gpointer userdata);
     static gboolean appendPipelineBusMessage(GstBus * bus, GstMessage * message, gpointer userdata);
     static gboolean playbinPipelineBusMessage (GstBus * bus, GstMessage * message, gpointer userdata);
-    static gboolean pushBufferToAppsrc(gpointer userdata);
     static void gst_bin_need_data(GstAppSrc *src, guint length, gpointer user_data);
     static void gst_bin_enough_data(GstAppSrc *src, gpointer user_data);
     static void source_setup(GstElement *pipeline, GstElement *source, gpointer userdata);

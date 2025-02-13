@@ -389,6 +389,7 @@ public:
     ~MessageQueue();
     void sendData(void* new_value, int wait_time_ms = DEFAULT_MSGQ_WAIT_TIME_MS);
     void ReceiveData(void*& value, int wait_time_ms = DEFAULT_MSGQ_WAIT_TIME_MS);
+    void detachQueue(void);
 };
 
 #endif

@@ -206,7 +206,7 @@ std::string MiracastCommon::parse_opt_flag( std::string file_name , bool integer
 int MiracastCommon::execute_SystemCommand( const char* system_command_buffer )
 {
     int return_value = -1;
-    MIRACASTLOG_TRACE("Entering ...");
+    MIRACASTLOG_TRACE("Entering...");
 
     if (!system_command_buffer)
     {
@@ -217,7 +217,7 @@ int MiracastCommon::execute_SystemCommand( const char* system_command_buffer )
 	MIRACASTLOG_INFO("System command buffer[%s]",system_command_buffer);
 	return_value = system(system_command_buffer);
     }
-    MIRACASTLOG_TRACE("Exiting ...");
+    MIRACASTLOG_TRACE("Exiting...");
     return return_value;
 }
 
@@ -230,11 +230,11 @@ bool MiracastCommon::execute_PopenCommand( const char* popen_command, const char
     unsigned int retry_index = 1;
     bool returnValue = false;
 
-    MIRACASTLOG_TRACE("Entering ...");
+    MIRACASTLOG_TRACE("Entering...");
     if ( nullptr == popen_command )
     {
         MIRACASTLOG_ERROR("#### Null Command ####");
-        MIRACASTLOG_TRACE("Exiting ...");
+        MIRACASTLOG_TRACE("Exiting...");
         return false;
     }
 
@@ -290,28 +290,22 @@ bool MiracastCommon::execute_PopenCommand( const char* popen_command, const char
     {
         MIRACASTLOG_ERROR("Maximum retries[%u] reached and Popen couldn't success",retry_count);
     }
-    MIRACASTLOG_TRACE("Exiting ...");
+    MIRACASTLOG_TRACE("Exiting...");
     return returnValue;
 }
 
 MessageQueue::MessageQueue(int queueSize,void (*free_cb)(void *param))
 {
-    std::cout << "[ctor] " << std::endl;
+    MIRACASTLOG_TRACE("Entering...");
     m_currentMsgCount = 0;
     m_maxMsgCount = queueSize;
     m_free_resource_cb = free_cb;
+    MIRACASTLOG_TRACE("Exiting...");
 }
 
 MessageQueue::~MessageQueue(void)
 {
-    std::cout << "[dtor] " << std::endl;
-    {
-        std::lock_guard<std::mutex> lk(mutexSync);
-        m_isDestructing = true;
-    }
-    m_condNotEmpty.notify_all();
-    m_condNotFull.notify_all();
-
+    MIRACASTLOG_TRACE("Entering...");
     std::unique_lock<std::mutex> lk(mutexSync);
     void* userParam = nullptr;
     while (!m_internalQueue.empty())
@@ -319,33 +313,36 @@ MessageQueue::~MessageQueue(void)
         userParam = m_internalQueue.front();
         if (nullptr != m_free_resource_cb)
         {
-            std::cout << "[dtor] asked to free : " << userParam << std::endl;
+            MIRACASTLOG_TRACE("dtor asked to free [%x]", userParam);
             m_free_resource_cb(userParam);
         }
         m_internalQueue.pop();
         m_currentMsgCount--;
     }
-    std::cout << "[dtor] done" << std::endl;
+    MIRACASTLOG_TRACE("Exiting...");
 }
 
 void MessageQueue::sendData(void* new_value,int wait_time_ms)
 {
+    MIRACASTLOG_TRACE("Entering...");
     std::unique_lock<std::mutex> lk(mutexSync);
     // Wait if the queue is full
     if (!m_condNotFull.wait_for(lk, std::chrono::milliseconds(wait_time_ms), [this] { return (( m_currentMsgCount < m_maxMsgCount ) || m_isDestructing ) ; }))
     {
         if (m_isDestructing)
         {
-            std::cout << "[sendData] skipped dueto m_isDestructing" << std::endl;
+            MIRACASTLOG_INFO("skipped dueto m_isDestructing");
         }
         else
         {
-            std::cout << "[sendData] Timeout occurred while waiting to send data." << std::endl;
+            MIRACASTLOG_WARNING("Timeout occurred while waiting to send data");
         }
+        MIRACASTLOG_TRACE("Exiting...");
         return;
     }
 
     if (m_isDestructing){
+        MIRACASTLOG_TRACE("Exiting...");
         return;
     }
     m_internalQueue.push(new_value);
@@ -353,33 +350,52 @@ void MessageQueue::sendData(void* new_value,int wait_time_ms)
     std::cout << "[sendData] data at address: " << new_value << std::endl;
     // Notify consumer that new data is available
     m_condNotEmpty.notify_one();
+    MIRACASTLOG_TRACE("Exiting...");
 }
 
 void MessageQueue::ReceiveData(void*& value,int wait_time_ms)
 {
+    MIRACASTLOG_TRACE("Entering...");
+
     std::unique_lock<std::mutex> lk(mutexSync);
     // Wait if the queue is empty
     if (!m_condNotEmpty.wait_for(lk, std::chrono::milliseconds(wait_time_ms), [this] { return (( !m_internalQueue.empty()) || m_isDestructing ); }))
     {
         if (m_isDestructing)
         {
-            std::cout << "[receiveData] skipped dueto m_isDestructing" << std::endl;
+            MIRACASTLOG_INFO("skipped dueto m_isDestructing");
         }
         else
         {
-            std::cout << "[receiveData] Timeout occurred while waiting to send data." << std::endl;
+            MIRACASTLOG_WARNING("Timeout occurred while waiting to receive data");
         }
+        MIRACASTLOG_TRACE("Exiting...");
         return;  // Timeout occurred
     }
 
     if (m_isDestructing){
+        MIRACASTLOG_TRACE("Exiting...");
         return;
     }
 
     value = m_internalQueue.front();
     m_internalQueue.pop();
     m_currentMsgCount--;
-    std::cout << "[ReceiveData] data at address: " << value << std::endl;
+    MIRACASTLOG_TRACE("[ReceiveData] data at address: %x", value);
     // Notify producer that space is available
     m_condNotFull.notify_one();
+    MIRACASTLOG_TRACE("Exiting...");
+}
+
+void MessageQueue::detachQueue(void)
+{
+    MIRACASTLOG_TRACE("Entering...");
+    {
+        std::lock_guard<std::mutex> lk(mutexSync);
+        m_isDestructing = true;
+    }
+    m_condNotEmpty.notify_all();
+    m_condNotFull.notify_all();
+
+    MIRACASTLOG_TRACE("Exiting...");
 }
