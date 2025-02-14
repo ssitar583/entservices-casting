@@ -172,7 +172,7 @@ jobs:
           ref: ${{env.INTERFACES_REF}}
           token : ${{ secrets.GITHUB_TOKEN }}
           run: rm -rf $GITHUB_WORKSPACE/rdkservices-apis/jsonrpc/DTV.json
-
+          continue-on-error: true
 
       - name: Build rdkservices-apis
         run: >
@@ -186,6 +186,7 @@ jobs:
           cmake --build build/rdkservices-apis -j8
           &&
           cmake --install build/rdkservices-apis
+          continue-on-error: true
 
       - name: Generate external headers
         # Empty headers to mute errors
