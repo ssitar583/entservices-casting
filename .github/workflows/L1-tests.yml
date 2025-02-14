@@ -167,7 +167,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v3
         with:
-          repository: rdkcentral/rdkservices-apis
+          repository: rdkcentral/entservices-apis
           path: rdkservices-apis
           ref: ${{env.INTERFACES_REF}}
           token : ${{ secrets.GITHUB_TOKEN }}
