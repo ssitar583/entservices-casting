@@ -163,31 +163,6 @@ jobs:
           &&
           cmake --install build/Thunder
 
-      - name: Checkout rdkservices-apis
-        if: steps.cache.outputs.cache-hit != 'true'
-        uses: actions/checkout@v3
-        with:
-          repository: rdkcentral/entservices-apis
-          path: rdkservices-apis
-          ref: ${{env.INTERFACES_REF}}
-          token : ${{ secrets.GITHUB_TOKEN }}
-          run: rm -rf $GITHUB_WORKSPACE/rdkservices-apis/jsonrpc/DTV.json
-          continue-on-error: true
-
-      - name: Build rdkservices-apis
-        run: >
-          cmake -G Ninja
-          -S "$GITHUB_WORKSPACE/rdkservices-apis"
-          -B build/rdkservices-apis
-          -DEXCEPTIONS_ENABLE=ON
-          -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/usr"
-          -DCMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
-          &&
-          cmake --build build/rdkservices-apis -j8
-          &&
-          cmake --install build/rdkservices-apis
-          continue-on-error: true
-
       - name: Generate external headers
         # Empty headers to mute errors
         run: >
