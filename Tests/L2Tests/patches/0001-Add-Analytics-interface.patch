@@ -1,0 +1,74 @@
+From ff5a2c6d1d0ae1da1e41583cb5a190f94cedd722 Mon Sep 17 00:00:00 2001
+From: Adrian Muzyka <Adrian_Muzyka@comcast.com>
+Date: Wed, 18 Dec 2024 17:13:25 +0100
+Subject: [PATCH] Add Analytics interface
+
+---
+ interfaces/IAnalytics.h | 39 +++++++++++++++++++++++++++++++++++++++
+ interfaces/Ids.h        |  4 +++-
+ 2 files changed, 42 insertions(+), 1 deletion(-)
+ create mode 100644 interfaces/IAnalytics.h
+
+diff --git a/interfaces/IAnalytics.h b/interfaces/IAnalytics.h
+new file mode 100644
+index 0000000..f1aaad8
+--- /dev/null
++++ b/interfaces/IAnalytics.h
+@@ -0,0 +1,39 @@
++#pragma once
++
++#include "Module.h"
++
++// @stubgen:include <com/IIteratorType.h>
++
++namespace WPEFramework {
++namespace Exchange {
++    // @json 1.0.0 @text:keep
++    struct EXTERNAL IAnalytics : virtual public Core::IUnknown {
++        enum { ID = ID_ANALYTICS };
++
++        virtual ~IAnalytics() = default;
++
++        using IStringIterator = RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>;
++
++
++        // @alt sendEvent
++        // @brief Send an event to the analytics server
++        // @param eventName: Name of the event
++        // @param eventVersion: Version of the event
++        // @param eventSource: Source of the event
++        // @param eventSourceVersion: Version of the event source
++        // @param cetList: List of CETs
++        // @param epochTimestamp: Epoch timestamp of the event
++        // @param uptimeTimestamp: Uptime timestamp of the event
++        // @param eventPayload: Payload of the event
++
++        virtual Core::hresult SendEvent(const string& eventName /* @in */,
++                                   const string& eventVersion /* @in */,
++                                   const string& eventSource /* @in */,
++                                   const string& eventSourceVersion /* @in */,
++                                   IStringIterator* const& cetList /* @in */,
++                                   const uint64_t epochTimestamp /* @in */,
++                                   const uint64_t uptimeTimestamp /* @in */,
++                                   const string& eventPayload /* @in */ ) = 0;
++    };
++}
++}
+diff --git a/interfaces/Ids.h b/interfaces/Ids.h
+index 0f216d8..7793be6 100644
+--- a/interfaces/Ids.h
++++ b/interfaces/Ids.h
+@@ -380,7 +380,9 @@ namespace Exchange {
+         ID_USB_MASS_STORAGE_NOTIFICATION             = ID_USB_MASS_STORAGE + 3,
+ 
+         ID_FIRMWARE_UPDATE                           = RPC::IDS::ID_EXTERNAL_INTERFACE_OFFSET + 0x510,
+-        ID_FIRMWARE_UPDATE_NOTIFICATION              = ID_FIRMWARE_UPDATE +1
++        ID_FIRMWARE_UPDATE_NOTIFICATION              = ID_FIRMWARE_UPDATE +1,
++
++        ID_ANALYTICS                                 = RPC::IDS::ID_EXTERNAL_INTERFACE_OFFSET + 0x520
+     };
+ }
+ }
+-- 
+2.43.0
+

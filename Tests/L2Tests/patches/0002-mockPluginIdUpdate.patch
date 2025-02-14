@@ -1,0 +1,25 @@
+commit 60c61975b2507032675de0269cd44644eb7a60b6
+Author: karuppaiya kaliyaperumal <kkaliyaperumal@synamedia.com>
+Date:   Tue Sep 17 22:14:34 2024 +0530
+
+    Added new IDs for sample and mock plugins
+
+diff --git a/interfaces/Ids.h b/interfaces/Ids.h
+index e66cb22..03b0053 100644
+--- a/interfaces/Ids.h
++++ b/interfaces/Ids.h
+@@ -363,7 +363,13 @@ namespace Exchange {
+         ID_TEXT_TO_SPEECH_NOTIFICATION               = ID_TEXT_TO_SPEECH + 1,
+ 
+ 	ID_USER_SETTINGS                             = RPC::IDS::ID_EXTERNAL_INTERFACE_OFFSET + 0x4D0,
+-        ID_USER_SETTINGS_NOTIFICATION                = ID_USER_SETTINGS + 1
++        ID_USER_SETTINGS_NOTIFICATION                = ID_USER_SETTINGS + 1,
++
++        ID_SAMPLE_PLUGIN                             = RPC::IDS::ID_EXTERNAL_INTERFACE_OFFSET + 0x4E0,
++        ID_SAMPLE_PLUGIN_NOTIFICATION                = ID_SAMPLE_PLUGIN + 1,
++
++        ID_MOCK_PLUGIN                               = RPC::IDS::ID_EXTERNAL_INTERFACE_OFFSET + 0x4F0,
++        ID_MOCK_PLUGIN_NOTIFICATION                  = ID_MOCK_PLUGIN + 1
+     };
+ }
+ }

@@ -1,0 +1,97 @@
+From 09f21fb6ab78e20cd79999e51084ae2516350799 Mon Sep 17 00:00:00 2001
+From: yuvaramachandran_gurusamy <yuvaramachandran_gurusamy@comcast.com>
+Date: Wed, 25 Sep 2024 13:08:04 +0000
+Subject: [PATCH] RDK-52055: Make XCast thunder plugin as OutOfProcess
+
+Reason for change: Make XCast thunder plugin as OutOfProcess
+Test Procedure: XCast thunder plugin should run as OutOfProcess
+Risks: Medium
+
+Signed-off-by: yuvaramachandran_gurusamy <yuvaramachandran_gurusamy@comcast.com>
+---
+ interfaces/IXCast.h | 56 +++++++++++++++++++++++++++++++++++++++++++++
+ interfaces/Ids.h    |  5 ++++
+ 2 files changed, 61 insertions(+)
+ create mode 100644 interfaces/IXCast.h
+
+diff --git a/interfaces/IXCast.h b/interfaces/IXCast.h
+new file mode 100644
+index 0000000..6ef5ad6
+--- /dev/null
++++ b/interfaces/IXCast.h
+@@ -0,0 +1,56 @@
++#ifndef __IXCast_H
++#define __IXCast_H
++
++#include "Module.h"
++
++// @stubgen:include <com/IIteratorType.h>
++
++namespace WPEFramework {
++	namespace Exchange {
++		struct EXTERNAL IXCast : virtual public Core::IUnknown {
++			enum { ID = ID_XCAST };
++
++			struct ApplicationInfo {
++				string appName;
++				string prefixes;
++				string cors;
++				string query;
++				string payload;
++				int  allowStop;
++			};
++
++			using IApplicationInfoIterator = RPC::IIteratorType<ApplicationInfo,ID_XCAST_APPLICATION_INFO_ITERATOR>;
++
++			struct INotification : virtual public Core::IUnknown {
++				enum { ID = ID_XCAST_NOTIFICATION };
++
++				~INotification() override = default;
++
++				virtual void onApplicationLaunchRequestWithLaunchParam(const string& appName, const string& strPayLoad, const string& strQuery, const string& strAddDataUrl) = 0;
++				virtual void onApplicationLaunchRequest(const string& appName, const string& parameter) = 0;
++				virtual void onApplicationStopRequest(const string& appName, const string& appID) = 0;
++				virtual void onApplicationHideRequest(const string& appName, const string& appID) = 0;
++				virtual void onApplicationStateRequest(const string& appName, const string& appID) = 0;
++				virtual void onApplicationResumeRequest(const string& appName, const string& appID) = 0;
++				virtual void onUpdatePowerStateRequest(const string& powerState) = 0;
++			};
++
++			~IXCast() override = default;
++
++			virtual void Register(IXCast::INotification* sink) = 0;
++			virtual void Unregister(IXCast::INotification* sink) = 0;
++
++			virtual uint32_t Initialize(bool networkStandbyMode) = 0;
++			virtual void Deinitialize(void) = 0;
++
++			virtual uint32_t applicationStateChanged(const string& applicationName, const string& state, const string& applicationId, const string& error) const = 0;
++			virtual uint32_t enableCastService(string friendlyname,bool enableService) const = 0;
++			virtual uint32_t getProtocolVersion(string &protocolVersion /* @out */ ) const = 0;
++			virtual uint32_t registerApplications(IApplicationInfoIterator * const appInfoList /* @in */ ) = 0;
++			virtual uint32_t setNetworkStandbyMode(bool networkStandbyMode) = 0;
++		};
++
++	} // Exchange
++} // WPEFramework
++
++#endif //__IXCast_H
+diff --git a/interfaces/Ids.h b/interfaces/Ids.h
+index ce954cd..f53e999 100644
+--- a/interfaces/Ids.h
++++ b/interfaces/Ids.h
+@@ -358,6 +358,11 @@ namespace Exchange {
+         ID_TEXT_TO_SPEECH_NOTIFICATION               = ID_TEXT_TO_SPEECH + 1,
+ 
+ 	ID_ANALYTICS                                 = RPC::IDS::ID_EXTERNAL_INTERFACE_OFFSET + 0x4D0,
++
++        ID_XCAST                                     = RPC::IDS::ID_EXTERNAL_INTERFACE_OFFSET + 0x4F0,
++        ID_XCAST_NOTIFICATION                        = ID_XCAST + 1,
++        ID_XCAST_APPLICATION_INFO_ITERATOR           = ID_XCAST + 2,
++
+     };
+ }
+ }
+-- 
+2.17.1
+

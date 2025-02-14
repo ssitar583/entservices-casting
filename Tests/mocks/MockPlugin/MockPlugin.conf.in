@@ -1,0 +1,12 @@
+autostart = "@PLUGIN_MOCKPLUGIN_AUTOSTART@"
+precondition = ["Platform"]
+callsign = "org.rdk.MockPlugin"
+startuporder = "@PLUGIN_MOCKPLUGIN_STARTUPORDER@"
+
+configuration = JSON()
+rootobject = JSON()
+
+rootobject.add("mode", "@PLUGIN_DUMMYPLUGIN_MODE@")
+rootobject.add("locator", "lib@PLUGIN_IMPLEMENTATION@.so")
+configuration.add("root", rootobject)
+

@@ -1,0 +1,56 @@
+{
+  "ACTIVATE_RDKSHELL": {
+    "jsonrpc": {
+      "jsonrpc": "2.0",
+      "id": "42",
+      "method": "Controller.1.activate",
+      "params": {
+        "callsign": "org.rdk.RDKShell"
+      }
+    },
+    "regex_patterns": ""
+  },
+  "LAUNCH_APP": {
+    "jsonrpc": {
+      "id": "0",
+      "jsonrpc": "2.0",
+      "method": "org.rdk.RDKShell.1.launch",
+      "params": {
+        "callsign": "<app>",
+        "client": "<app>"
+      }
+    },
+    "regex_patterns": "app:([\\w-]+)"
+  },
+  "SET_PERSISTENT_STORE": {
+    "jsonrpc": {
+      "jsonrpc": "2.0",
+      "id": "42",
+      "method": "org.rdk.PersistentStore.setValue",
+      "params": {
+        "namespace": "<testNamespace>",
+        "key": "<key>",
+        "value": "<value>"
+      }
+    },
+    "regex_patterns": "\"key:(\\w+)\", \"namespace: (\\w+)\" to \"(\\w+)\" is set in persistentStore"
+  },
+  "TEXT_TO_SPEECH_SET_ACL": {
+    "jsonrpc": {
+      "jsonrpc": "2.0",
+      "id": "42",
+      "method": "org.rdk.TextToSpeech.setACL",
+      "params": {
+        "accesslist": [
+          {
+            "method": "<action>",
+            "apps": [
+              "<app>"
+            ]
+          }
+        ]
+      }
+    },
+    "regex_patterns": "\"setACL:(\\w+):(\\w+)\" is configured"
+  }
+}

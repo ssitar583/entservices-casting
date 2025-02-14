@@ -1,0 +1,172 @@
+commit 647ed4e2693e8fea2686c5e2faf3a88f027b787d
+Author: ssk <ssk@synamedia.com>
+Date:   Wed Jul 17 16:51:38 2024 +0530
+
+    samplePluginInterface
+
+diff --git a/interfaces/ISamplePlugin.h b/interfaces/ISamplePlugin.h
+new file mode 100755
+index 0000000..a901ead
+--- /dev/null
++++ b/interfaces/ISamplePlugin.h
+@@ -0,0 +1,74 @@
++/**
++* If not stated otherwise in this file or this component's LICENSE
++* file the following copyright and licenses apply:
++*
++* Copyright 2022 RDK Management
++*
++* Licensed under the Apache License, Version 2.0 (the "License");
++* you may not use this file except in compliance with the License.
++* You may obtain a copy of the License at
++*
++* http://www.apache.org/licenses/LICENSE-2.0
++*
++* Unless required by applicable law or agreed to in writing, software
++* distributed under the License is distributed on an "AS IS" BASIS,
++* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++* See the License for the specific language governing permissions and
++* limitations under the License.
++**/
++
++#pragma once
++
++#include "Module.h"
++
++namespace WPEFramework
++{
++    namespace Exchange
++    {
++        /*
++            This is the COM-RPC interface for the sample plugin
++
++            The requirement to make an interface a COMRPC interface is that it should inherit
++            from Core::IUnknown
++        */
++        struct EXTERNAL ISamplePlugin : virtual public Core::IUnknown
++        {
++            // All interfaces require a unique ID, defined in Ids.h
++            enum
++            {
++                ID = 0x510//ID_SAMPLE_PLUGIN
++            };
++
++            // Define the COM-RPC methods to be implemented by the plugin
++
++            /* @brief Return a greeting */
++            virtual uint32_t Greet(const string &message,
++                                     string &result /* @out */) = 0;
++
++            virtual uint32_t Echo(const string &message, string &result /* @out */) = 0;
++
++            /* @event */
++            struct EXTERNAL INotification : virtual public Core::IUnknown
++            {
++                enum
++                {
++                    ID = 0x511//ID_SAMPLE_PLUGIN_NOTIFICATION
++                };
++
++                // The events the plugin can raise
++                enum Source : uint8_t
++                {
++                    EXCITING_THING_HAPPENED,
++                    BORING_THING_HAPPENED
++                };
++
++                // Notifications that other processes can subscribe to
++                virtual void SomethingHappend(const Source event) = 0;
++            };
++
++            // Allow other processes to register/unregister from our notifications
++            virtual uint32_t Register(ISamplePlugin::INotification* notification) = 0;
++            virtual uint32_t Unregister(ISamplePlugin::INotification* notification) = 0;
++        };
++    }
++}
+\ No newline at end of file
+diff --git a/jsonrpc/SamplePlugin.json b/jsonrpc/SamplePlugin.json
+new file mode 100755
+index 0000000..3742518
+--- /dev/null
++++ b/jsonrpc/SamplePlugin.json
+@@ -0,0 +1,78 @@
++{
++    "$schema": "https://raw.githubusercontent.com/rdkcentral/Thunder/master/Tools/JsonGenerator/schemas/interface.schema.json",
++    "jsonrpc": "2.0",
++    "info": {
++        "title": "Sample Plugin JSON RPC API",
++        "class": "SamplePlugin",
++        "description": "The `SamplePlugin` plugin is a test plugin for experimenting with Thunder"
++    },
++    "common": {
++        "$ref": "common.json"
++    },
++    "definitions": {
++        "greeting": {
++            "summary": "A greeting",
++            "type": "string",
++            "example": "Hello World"
++        },
++        "success": {
++            "summary": "Whether the request succeeded",
++            "type": "boolean",
++            "example": "true"
++        }
++    },
++    "methods": {
++        "greeter": {
++            "summary": "Return a greeting to the user",
++            "params": {
++                "type": "object",
++                "properties": {
++                    "message": {
++                        "type": "string"
++                    }
++                },
++                "required": [
++                    "message"
++                ]
++            },
++            "result": {
++                "type": "object",
++                "properties": {
++                    "greeting": {
++                        "$ref": "#/definitions/greeting"
++                    },
++                    "success":{
++                        "$ref": "#/definitions/success"
++                    }
++                }
++            }
++        },
++        "echo": {
++            "summary": "Return a greeting to the user",
++            "params": {
++                "type": "object",
++                "properties": {
++                    "data": {
++                        "type": "string"
++                    }
++                },
++                "required": [
++                    "message"
++                ]
++            },
++            "result": {
++                "type": "object",
++                "properties": {
++                    "data": {
++                        "type": "string"
++                    },
++                    "success":{
++                        "$ref": "#/definitions/success"
++                    }
++                }
++            }
++        }
++    },
++    "properties": {},
++    "events": {}
++}
+\ No newline at end of file
