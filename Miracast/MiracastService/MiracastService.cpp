@@ -77,6 +77,7 @@ using namespace std;
 static PowerState m_powerState = WPEFramework::Exchange::IPowerManager::POWER_STATE_STANDBY;
 static bool m_IsTransitionFromDeepSleep = false;
 static bool m_IsWiFiConnectingState = false;
+//static bool m_IsWiFiConnectingState = false;
 
 namespace WPEFramework
 {
