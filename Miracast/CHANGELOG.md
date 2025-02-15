@@ -12,3 +12,10 @@ All notable changes to this RDK Service will be documented in this file.
 
     Changes in CHANGELOG should be updated when commits are added to the main or release branches. There should be one CHANGELOG entry per JIRA Ticket. This is not enforced on sprint branches since there could be multiple changes for the same JIRA ticket during development.
 
+## [1.0.1] - 2025-02-14
+### Added
+- pthread used to push streaming data to playbin pipeline instead of g_idl_add method in MiracastPlayer
+
+## [1.0.0] - 2025-02-14
+### Added
+- Initial Commit

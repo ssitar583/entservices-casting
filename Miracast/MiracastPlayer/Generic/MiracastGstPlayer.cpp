@@ -637,57 +637,45 @@ gboolean MiracastGstPlayer::playbinPipelineBusMessage (GstBus * bus, GstMessage 
     return TRUE;
 }
 
-gboolean MiracastGstPlayer::pushBufferToAppsrc(gpointer userdata)
+void* MiracastGstPlayer::pushbuffer_handler_thread(void *ctx)
 {
-    MiracastGstPlayer *self = (MiracastGstPlayer *)userdata;
+    MiracastGstPlayer *self = (MiracastGstPlayer *)ctx;
     MIRACASTLOG_TRACE("Entering..!!!");
     void* buffer = nullptr;
     GstBuffer *gstBuffer = nullptr;
-
-    self->m_customQueueHandle->ReceiveData(buffer);
-
-    gstBuffer = static_cast<GstBuffer*>(buffer);
-
-    if (nullptr != gstBuffer)
+    self->m_pushBufferLoop = true;
+    while (self && (self->m_pushBufferLoop))
     {
-        //MIRACASTLOG_INFO("Sending GstBuffer to Appsrc");
-        // Push the new buffer to appsrc
-        GstFlowReturn ret = gst_app_src_push_buffer(GST_APP_SRC(self->m_appsrc), gstBuffer);
-        if (ret != GST_FLOW_OK)
+        MIRACASTLOG_TRACE("Pushing buffer to appsrc.!!!");
+        usleep(50);
+        self->m_customQueueHandle->ReceiveData(buffer);
+
+        if (nullptr != buffer)
         {
-            MIRACASTLOG_ERROR("Error pushing buffer to appsrc");
+            gstBuffer = static_cast<GstBuffer*>(buffer);
+            // Push the new buffer to appsrc
+            GstFlowReturn ret = gst_app_src_push_buffer(GST_APP_SRC(self->m_appsrc), gstBuffer);
+            if (ret != GST_FLOW_OK)
+            {
+                MIRACASTLOG_ERROR("Error pushing buffer to appsrc");
+            }
         }
+        gstBuffer = NULL;
+        buffer = NULL;
     }
     MIRACASTLOG_TRACE("Exiting..!!!");
-    return TRUE;
+    pthread_exit(nullptr);
 }
 
 // Module functions
 void MiracastGstPlayer::gst_bin_need_data(GstAppSrc *src, guint length, gpointer userdata)
 {
-    MIRACASTLOG_TRACE("Entering...");
-    MiracastGstPlayer *self = static_cast<MiracastGstPlayer*>(userdata);
-    MIRACASTLOG_TRACE("AppSrc empty");
-    if ((self->m_sourceId == 0) && (false == self->m_destroyTimer))
-    {
-        //MIRACASTLOG_INFO("start feeding\n");
-        //self->m_sourceId = g_idle_add((GSourceFunc)pushBufferToAppsrc, self);
-    }
-    MIRACASTLOG_TRACE("Exiting...");
-    return;
+    MIRACASTLOG_VERBOSE("AppSrc empty");
 }
 
 void MiracastGstPlayer::gst_bin_enough_data(GstAppSrc *src, gpointer userdata)
 {
-    MiracastGstPlayer *self = static_cast<MiracastGstPlayer*>(userdata);
-    MIRACASTLOG_INFO("AppSrc Full!!!!");
-    if (self->m_sourceId != 0)
-    {
-        MIRACASTLOG_INFO("stop feeding\n");
-        g_source_remove(self->m_sourceId);
-        self->m_sourceId = 0;
-    }
-    return;
+    MIRACASTLOG_VERBOSE("AppSrc Full!!!!");
 }
 
 /* This function is called when playbin2 has created the appsrc element, so we have
@@ -900,12 +888,12 @@ bool MiracastGstPlayer::createPipeline()
     g_main_context_pop_thread_default(m_main_loop_context);
     pthread_create(&m_playback_thread, nullptr, MiracastGstPlayer::playbackThread, this);
     pthread_create(&m_player_statistics_tid, nullptr, MiracastGstPlayer::monitor_player_statistics_thread, this);
+    pthread_create(&m_pushbuffer_handler_tid, nullptr, MiracastGstPlayer::pushbuffer_handler_thread, this);
 
     /* launching things */
     MIRACASTLOG_INFO("m_playbin_pipeline, GST_STATE_PLAYING");
     ret = gst_element_set_state(m_playbin_pipeline, GST_STATE_PLAYING);
     ret = gst_element_set_state(m_append_pipeline, GST_STATE_PLAYING);
-    m_sourceId = g_idle_add((GSourceFunc)pushBufferToAppsrc, this);
 
     if (ret == GST_STATE_CHANGE_FAILURE)
     {
@@ -932,13 +920,18 @@ bool MiracastGstPlayer::stop()
         MIRACASTLOG_ERROR("Pipeline is NULL");
         return false;
     }
-    m_destroyTimer = true;
-    if (m_sourceId != 0)
+    m_pushBufferLoop = false;
+
+    if (m_customQueueHandle)
     {
-        MIRACASTLOG_INFO("remove Timer");
-        g_source_remove(m_sourceId);
-        m_sourceId = 0;
+        MIRACASTLOG_INFO("detaching MsgQ");
+        m_customQueueHandle->detachQueue();
+        if(m_pushbuffer_handler_tid)
+        {
+            pthread_join(m_pushbuffer_handler_tid,nullptr);
+        }
     }
+
     ret = gst_element_set_state(m_playbin_pipeline, GST_STATE_NULL);
     if (ret == GST_STATE_CHANGE_FAILURE)
     {
@@ -1040,6 +1033,7 @@ bool MiracastGstPlayer::stop()
     }
     if (m_customQueueHandle)
     {
+        MIRACASTLOG_INFO("Flushing MsgQ");
         delete m_customQueueHandle;
         m_customQueueHandle = nullptr;
     }
