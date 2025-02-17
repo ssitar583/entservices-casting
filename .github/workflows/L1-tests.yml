@@ -169,6 +169,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-apis
           path: entservices-apis
+          ref: main
           run: rm -rf $GITHUB_WORKSPACE/entservices-apis/jsonrpc/DTV.json
 
       - name: Build entservices-apis
