@@ -167,7 +167,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v3
         with:
-          repository: rdkcentral/entservices-apis
+          repository: rdkcentral/entservices-infra
           path: entservices-apis
           ref: main
           run: rm -rf $GITHUB_WORKSPACE/entservices-apis/jsonrpc/DTV.json
