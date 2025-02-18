@@ -170,7 +170,7 @@ jobs:
           repository: rdk-e/rdkservices-apis
           path: rdkservices-apis
           ref: ${{env.INTERFACES_REF}}
-          token : ${{ secrets.RDKE_GITHUB_TOKEN }}
+          token : ${{ secrets.GITHUB_TOKEN }}
           run: rm -rf $GITHUB_WORKSPACE/entservices-apis/jsonrpc/DTV.json
 
       - name: Build entservices-apis
