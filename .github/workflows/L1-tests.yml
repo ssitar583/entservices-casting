@@ -400,14 +400,6 @@ jobs:
           /tmp/block/sdb/device/model
           &&
           cd /dev/disk/by-id/
-          &&
-          ln -s ../../sda /dev/disk/by-id/usb-Generic_Flash_Disk_B32FD507-0
-          &&
-          ln -s ../../sdb /dev/disk/by-id/usb-JetFlash_Transcend_16GB_UEUIRCXT-0
-          &&
-          ls -l /dev/disk/by-id/usb-Generic_Flash_Disk_B32FD507-0
-          &&
-          ls -l /dev/disk/by-id/usb-JetFlash_Transcend_16GB_UEUIRCXT-0
 
       - name: Run unit tests without valgrind
         run: >
