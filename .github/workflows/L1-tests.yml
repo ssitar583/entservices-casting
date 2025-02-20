@@ -354,18 +354,6 @@ jobs:
           /dev/disk/by-id
           /dev
           &&
-          mknod /dev/sda c 240 0
-          &&
-          mknod /dev/sdb c 240 0
-          &&
-          mknod /dev/sda1 c 240 0
-          &&
-          mknod /dev/sda2 c 240 0
-          &&
-          mknod /dev/sdb1 c 240 0
-          &&
-          mknod /dev/sdb2 c 240 0
-          &&
           sudo touch
           /tmp/test/testApp/etc/apps/testApp_package.json
           /opt/rdk_maintenance.conf
