@@ -250,7 +250,7 @@ jobs:
           gdialservice.h
           gdialservicecommon.h
           &&
-          cp -r /usr/include/gstreamer-1.0/gst /usr/include/glib-2.0/* /usr/lib/x86_64-linux-gnu/glib-2.0/include/* /usr/local/include/trower-base64/base64.h .
+          sudo cp -r /usr/include/gstreamer-1.0/gst /usr/include/glib-2.0/* /usr/lib/x86_64-linux-gnu/glib-2.0/include/* /usr/local/include/trower-base64/base64.h .
 
       - name: Set clang toolchain
         if: ${{ matrix.compiler == 'clang' }}
@@ -333,7 +333,7 @@ jobs:
 
       - name: Set up files
         run: >
-          mkdir -p -m 777
+          sudo mkdir -p -m 777
           /tmp/test/testApp/etc/apps
           /opt/persistent
           /opt/secure
@@ -366,7 +366,7 @@ jobs:
           &&
           mknod /dev/sdb2 c 240 0
           &&
-          touch
+          sudo touch
           /tmp/test/testApp/etc/apps/testApp_package.json
           /opt/rdk_maintenance.conf
           /opt/persistent/timeZoneDST
@@ -391,7 +391,7 @@ jobs:
           /tmp/block/sdb/device/vendor
           /tmp/block/sdb/device/model
           &&
-          chmod -R 777
+          sudo chmod -R 777
           /opt/rdk_maintenance.conf
           /opt/persistent/timeZoneDST
           /opt/standbyReason.txt
