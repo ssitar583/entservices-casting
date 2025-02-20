@@ -192,7 +192,7 @@ jobs:
         run: >
           cd "$GITHUB_WORKSPACE/rdkservices/Tests/"
           &&
-          mkdir -p
+          sudo mkdir -p
           headers
           headers/audiocapturemgr
           headers/rdk/ds
@@ -206,7 +206,7 @@ jobs:
           &&
           cd headers
           &&
-          touch
+          sudo touch
           audiocapturemgr/audiocapturemgr_iarm.h
           ccec/drivers/CecIARMBusMgr.h
           rdk/ds/audioOutputPort.hpp
