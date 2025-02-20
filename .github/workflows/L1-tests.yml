@@ -167,10 +167,10 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v3
         with:
-          repository: rdk-e/rdkservices-apis
-          path: rdkservices-apis
+          repository: rdkcentral/entservices-apis
+          path: entservices-apis
           ref: ${{env.INTERFACES_REF}}
-          token : ${{ secrets.GITHUB_TOKEN }}
+          token : ${{ secrets.RDKCM_RDKE }}
           run: rm -rf $GITHUB_WORKSPACE/entservices-apis/jsonrpc/DTV.json
 
       - name: Build entservices-apis
