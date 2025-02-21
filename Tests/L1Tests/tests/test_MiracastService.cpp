@@ -17,7 +17,7 @@
 * limitations under the License.
 **/
 
-if 0
+#if 0
 #include <gtest/gtest.h>
 #include "FactoriesImplementation.h"
 #include "ServiceMock.h"
