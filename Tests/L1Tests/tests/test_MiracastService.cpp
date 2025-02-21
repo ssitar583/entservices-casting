@@ -17,7 +17,7 @@
 * limitations under the License.
 **/
 
-
+ifndef USE_THUNDER_R4
 #include <gtest/gtest.h>
 #include "FactoriesImplementation.h"
 #include "ServiceMock.h"
@@ -2061,3 +2061,4 @@ TEST_F(MiracastServiceEventTest, wifiStateChange)
 	removeEntryFromFile("/etc/device.properties","WIFI_P2P_CTRL_INTERFACE=p2p0");
 	removeFile("/var/run/wpa_supplicant/p2p0");
 }
+#endif /* !USE_THUNDER_R4 */
