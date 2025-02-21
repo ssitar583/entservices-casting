@@ -186,7 +186,6 @@ jobs:
           &&
           cmake --install build/entservices-apis
 
-
       - name: Generate external headers
         # Empty headers to mute errors
         run: >
@@ -262,7 +261,7 @@ jobs:
 
       - name: Build rdkservices
         run: >
-          cmake -G Ninja
+          sudo cmake -G Ninja
           -S "$GITHUB_WORKSPACE/rdkservices"
           -B build/rdkservices
           -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/usr"
