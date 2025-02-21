@@ -29,12 +29,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(googletest)
 
-set (TEST_SRC
-    tests/test_UtilsFile.cpp
-    tests/test_FirmwareVersion.cpp
-    tests/test_JSON.cpp
-)
-
 set (TEST_LIB
     gmock_main
     ${NAMESPACE}Plugins::${NAMESPACE}Plugins
