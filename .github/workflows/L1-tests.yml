@@ -326,9 +326,9 @@ jobs:
           -DUSE_THUNDER_R4=ON
           -DHIDE_NON_EXTERNAL_SYMBOLS=OFF
           &&
-          cmake --build build/rdkservices -j8
+          sudo cmake --build build/rdkservices -j8
           &&
-          cmake --install build/rdkservices
+          sudo cmake --install build/rdkservices
 
       - name: Set up files
         run: >
