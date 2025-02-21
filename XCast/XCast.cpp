@@ -125,8 +125,6 @@ XCast::XCast()
     ,m_apiVersionNumber(API_VERSION_NUMBER_MAJOR)
 {
     m_instance = this;
-    _engine = Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create();
-    _communicatorClient = Core::ProxyType<RPC::CommunicatorClient>::Create(Core::NodeId("/tmp/communicator"), Core::ProxyType<Core::IIPCServer>(_engine));
 }
 
 XCast::~XCast()
@@ -161,12 +159,11 @@ void XCast::RegisterAll()
     Utils::Synchro::RegisterLockedApi(METHOD_GET_PROTOCOLVERSION, &XCast::getProtocolVersion, this);
 }
 
-void XCast::InitializePowerManager()
+void XCast::InitializePowerManager(PluginHost::IShell* service)
 {
     LOGINFO("Connect the COM-RPC socket\n");
-    _powerManagerPlugin = PowerManagerInterfaceBuilder(_communicatorClient, _T("org.rdk.PowerManager"))
-        .withTimeout(3000)
-        .withVersion(~0)
+    _powerManagerPlugin = PowerManagerInterfaceBuilder(_T("org.rdk.PowerManager"))
+        .withIShell(service)
         .createInterface();
     registerEventHandlers();
 }
@@ -365,7 +362,7 @@ const string XCast::Initialize(PluginHost::IShell *service)
 
         if(_xcast != nullptr) {
             InitializeIARM();
-            InitializePowerManager();
+            InitializePowerManager(service);
             _xcast->Register(&_notification);
             _xcast->Initialize(m_networkStandbyMode);
 
@@ -395,18 +392,6 @@ void XCast::Deinitialize(PluginHost::IShell* service)
 
     if (_powerManagerPlugin) {
         _powerManagerPlugin.Reset();
-    }
-
-    LOGINFO("Disconnect from the COM-RPC socket\n");
-
-    // Disconnect from the COM-RPC socket
-    if (_communicatorClient.IsValid()) {
-        _communicatorClient->Close(RPC::CommunicationTimeOut);
-        _communicatorClient.Release();
-    }
-
-    if (_engine.IsValid()) {
-        _engine.Release();
     }
 
     _registeredEventHandlers = false;
