@@ -16,7 +16,7 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 **/
-ifndef USE_THUNDER_R4
+#ifndef USE_THUNDER_R4
 #include <gtest/gtest.h>
 #include <future>
 #include <thread>
