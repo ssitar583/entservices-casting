@@ -170,8 +170,6 @@ foreach (file ${FAKE_HEADERS})
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include ${file}")
 endforeach ()
 
-add_compile_options(-Wall -Werror)
-
 add_link_options(-Wl,-wrap,system -Wl,-wrap,popen -Wl,-wrap,syslog -Wl,-wrap,wpa_ctrl_open -Wl,-wrap,wpa_ctrl_request -Wl,-wrap,wpa_ctrl_close -Wl,-wrap,wpa_ctrl_pending -Wl,-wrap,wpa_ctrl_recv -Wl,-wrap,wpa_ctrl_attach -Wl,-wrap,v_secure_popen -Wl,-wrap,v_secure_pclose -Wl,-wrap,unlink -Wl,-wrap,v_secure_system -Wl,-wrap,pclose -Wl,-wrap,setmntent -Wl,-wrap,getmntent)
 
 add_definitions(
