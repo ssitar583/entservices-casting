@@ -186,11 +186,10 @@ namespace WPEFramework
         {
         }
 
-        void MiracastService::InitializePowerManager()
+        void MiracastService::InitializePowerManager(PluginHost::IShell *service)
         {
-            _powerManagerPlugin = PowerManagerInterfaceBuilder(_communicatorClient, _T("org.rdk.PowerManager"))
-                                      .withVersion(~0)
-                                      .withTimeout(3000)
+            _powerManagerPlugin = PowerManagerInterfaceBuilder(_T("org.rdk.PowerManager"))
+                                      .withIShell(service)
                                       .createInterface();
             registerEventHandlers();
         }
@@ -287,7 +286,7 @@ namespace WPEFramework
 			{
 				MiracastError ret_code = MIRACAST_OK;
 
-                InitializePowerManager();
+                InitializePowerManager(service);
                 InitializePowerState();
 		
 				m_miracast_ctrler_obj = MiracastController::getInstance(ret_code, this,p2p_ctrl_iface);
