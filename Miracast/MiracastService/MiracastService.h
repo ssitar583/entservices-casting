@@ -192,7 +192,7 @@ namespace WPEFramework
             std::string getPowerStateString(PowerState pwrState);
             PowerState getPowerManagerPluginPowerState(uint32_t powerState);
             void setEnable(bool isEnabled);
-            void InitializePowerManager();
+            void InitializePowerManager(PluginHost::IShell *service);
             const void InitializePowerState();
             void DeinitializeIARM();
 
