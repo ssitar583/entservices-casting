@@ -57,10 +57,6 @@ void XCastManager::onApplicationLaunchRequest(string appName, string parameter)
 {
     if ( nullptr != m_observer )
     {
-        if (!strcmp(appName.c_str(),"Netflix"))
-        {
-            appName = "NetflixApp";
-        }
         m_observer->onXcastApplicationLaunchRequest(appName,parameter);
     }
 }
@@ -69,10 +65,6 @@ void XCastManager::onApplicationStopRequest(string appName, string appID)
 {
     if ( nullptr != m_observer )
     {
-        if (!strcmp(appName.c_str(),"Netflix"))
-        {
-            appName = "NetflixApp";
-        }
         m_observer->onXcastApplicationStopRequest(appName,appID);
     }
 }
@@ -81,10 +73,6 @@ void XCastManager::onApplicationHideRequest(string appName, string appID)
 {
     if ( nullptr != m_observer )
     {
-        if (!strcmp(appName.c_str(),"Netflix"))
-        {
-            appName = "NetflixApp";
-        }
         m_observer->onXcastApplicationHideRequest(appName,appID);
     }
 }
@@ -93,10 +81,6 @@ void XCastManager::onApplicationResumeRequest(string appName, string appID)
 {
     if ( nullptr != m_observer )
     {
-        if (!strcmp(appName.c_str(),"Netflix"))
-        {
-            appName = "NetflixApp";
-        }
         m_observer->onXcastApplicationResumeRequest(appName,appID);
     }
 }
@@ -105,10 +89,6 @@ void XCastManager::onApplicationStateRequest(string appName, string appID)
 {
     if ( nullptr != m_observer )
     {
-        if (!strcmp(appName.c_str(),"Netflix"))
-        {
-            appName = "NetflixApp";
-        }
         m_observer->onXcastApplicationStateRequest(appName,appID);
     }
 }

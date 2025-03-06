@@ -459,9 +459,6 @@ uint32_t XCast::applicationStateChanged(const JsonObject& parameters, JsonObject
     }
     if (!app.empty() && !state.empty() && (nullptr != _xcast))
     {
-        if (app == "NetflixApp")
-            app = "Netflix";
-        
         LOGINFO("XcastService::ApplicationStateChanged  ARGS = %s : %s : %s : %s ", app.c_str(), id.c_str() , state.c_str() , error.c_str());
         auto result = _xcast->applicationStateChanged(app,state,id,error);
         if (Core::ERROR_NONE == result)
@@ -1255,13 +1252,7 @@ void XCast::event_onApplicationLaunchRequestWithLaunchParam(string appName,strin
         }
 
         string strUrl = std::string (url);
-        if (appName == "Netflix") {
-            appName.assign("NetflixApp");
-            urlParam["pluginUrl"]=strUrl;
-        }
-        else {
-            urlParam["url"]=strUrl;
-        }
+        urlParam["url"]=strUrl;
 
         params["applicationName"]= appName;
         params["parameters"]= urlParam;
@@ -1276,10 +1267,8 @@ void XCast::event_onApplicationLaunchRequest(string appName, string parameter)
     LOGINFO ("XcastService::event_onApplicationLaunchRequest ");
     JsonObject params;
     JsonObject urlParam;
-    if (appName == "NetflixApp")
-        urlParam["pluginUrl"]=parameter;
-    else
-        urlParam["url"]=parameter;
+
+    urlParam["url"]=parameter;
     
     params["applicationName"]= appName;
     params["parameters"]= urlParam;
@@ -1302,10 +1291,7 @@ void XCast::event_onApplicationStopRequest(string appName, string appID)
 void XCast::event_onApplicationHideRequest(string appName, string appID)
 {
     LOGINFO("XcastService::event_onApplicationHideRequest : ");
-    if (appName.compare("Netflix") == 0 )
-        appName = "NetflixApp";
-    
-    
+
     JsonObject params;
     params["applicationName"] = appName;
     params["applicationId"]= appID;
@@ -1316,9 +1302,7 @@ void XCast::event_onApplicationHideRequest(string appName, string appID)
 void XCast::event_onApplicationStateRequest(string appName, string appID)
 {
     LOGINFO("XcastService::event_onApplicationStateRequest: ");
-    if (appName.compare("Netflix") == 0 )
-        appName = "NetflixApp";
-    
+
     JsonObject params;
     params["applicationName"] = appName;
     params["applicationId"]= appID;
@@ -1330,9 +1314,7 @@ void XCast::event_onApplicationStateRequest(string appName, string appID)
 void XCast::event_onApplicationResumeRequest(string appName, string appID)
 {
     LOGINFO("XcastService::event_onApplicationResumeRequest ");
-    if (appName.compare("Netflix") == 0 )
-        appName = "NetflixApp";
-    
+
     JsonObject params;
     params["applicationName"] = appName;
     params["applicationId"]= appID;
