@@ -111,9 +111,7 @@ namespace WPEFramework
             static MiracastController *m_miracast_ctrler_obj;
 
         private:
-            class PowerManagerNotification : public Exchange::IPowerManager::INotification,
-                                                     public Exchange::IPowerManager::IModePreChangeNotification,
-                                                     public Exchange::IPowerManager::IModeChangedNotification {
+            class PowerManagerNotification : public Exchange::IPowerManager::IModeChangedNotification {
             private:
                 PowerManagerNotification(const PowerManagerNotification&) = delete;
                 PowerManagerNotification& operator=(const PowerManagerNotification&) = delete;
@@ -130,11 +128,6 @@ namespace WPEFramework
                 {
                     _parent.onPowerModeChanged(currentState, newState);
                 }
-                void OnPowerModePreChange(const PowerState &currentState, const PowerState &newState) override {}
-                void OnDeepSleepTimeout(const int &wakeupTimeout) override {}
-                void OnNetworkStandbyModeChanged(const bool &enabled) override {}
-                void OnThermalModeChanged(const ThermalTemperature &currentThermalLevel, const ThermalTemperature &newThermalLevel, const float &currentTemperature) override {}
-                void OnRebootBegin(const string &rebootReasonCustom, const string &rebootReasonOther, const string &rebootRequestor) override {}
 
                 template <typename INTERFACE>
                 T* baseInterface()
@@ -144,8 +137,6 @@ namespace WPEFramework
                 }
 
                 BEGIN_INTERFACE_MAP(PowerManagerNotification)
-                INTERFACE_ENTRY(Exchange::IPowerManager::INotification)
-                INTERFACE_ENTRY(Exchange::IPowerManager::IModePreChangeNotification)
                 INTERFACE_ENTRY(Exchange::IPowerManager::IModeChangedNotification)
                 END_INTERFACE_MAP
             
