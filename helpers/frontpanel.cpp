@@ -135,6 +135,7 @@ namespace WPEFramework
                 {
                     _powerManagerPlugin = PowerManagerInterfaceBuilder(_T("org.rdk.PowerManager"))
                                       .withIShell(service)
+                                      .withRetry(25)
                                       .createInterface();
                 }
                 if (!s_instance)
