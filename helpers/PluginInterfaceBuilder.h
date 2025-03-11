@@ -101,6 +101,7 @@ namespace Plugin {
         WPEFramework::PluginHost::IShell* controller = builder.controller();
         const std::string& callsign = builder.callSign();
         const int retry_count = builder.retryCount();
+        const uint32_t retry_interval = builder.retryInterval();
         int count = 0;
 
         if (!controller) {
@@ -118,7 +119,7 @@ namespace Plugin {
             else
             {
                 count++;
-                usleep(200*1000);
+                usleep(retry_interval*1000);
             }
         }while(count < retry_count);
 
@@ -139,6 +140,7 @@ namespace Plugin {
         uint32_t _version;
         uint32_t _timeout;
         int _retry_count;
+        uint32_t _retry_interval;
 
     public:
         PluginInterfaceBuilder(const char* callsign)
@@ -147,6 +149,7 @@ namespace Plugin {
             , _version(static_cast<uint32_t>(~0))
             , _timeout(3000)
             ,_retry_count(0)
+            ,_retry_interval(0)
         {
         }
 
@@ -171,7 +174,13 @@ namespace Plugin {
             return *this;
         }
 
-        inline PluginInterfaceBuilder& withRetry(int retryCount)
+        inline PluginInterfaceBuilder& withRetryIntervalMS(int retryInterval)
+        {
+            _retry_interval = retryInterval;
+            return *this;
+        }
+
+        inline PluginInterfaceBuilder& withRetryCount(int retryCount)
         {
             _retry_count = retryCount;
             return *this;
@@ -187,6 +196,11 @@ namespace Plugin {
 
             // pass on the ownership of controller to interfaceRef
             return std::move(PluginInterfaceRef<INTERFACE>(interface, _service));
+        }
+
+        const uint32_t retryInterval() const
+        {
+            return _retry_interval;
         }
 
         const int retryCount() const
