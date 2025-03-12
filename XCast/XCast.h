@@ -169,7 +169,7 @@ namespace Plugin {
                 _parent.onNetworkStandbyModeChanged(enabled);
             }
 
-            template <typename INTERFACE>
+            template <typename T>
             T* baseInterface()
             {
                 static_assert(std::is_base_of<T, Notification>(), "base type mismatch");
