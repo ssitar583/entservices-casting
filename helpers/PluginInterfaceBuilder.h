@@ -114,11 +114,13 @@ namespace Plugin {
 
             if (pluginInterface) {
                 pluginInterface->AddRef();
+                LOGINFO("plugin interface succeed and retry count: %d",count);
                 return pluginInterface;
             }
             else
             {
                 count++;
+                LOGERR("plugin interface failed and retry: %d",count);
                 usleep(retry_interval*1000);
             }
         }while(count < retry_count);
