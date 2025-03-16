@@ -215,10 +215,12 @@ bool XCastManager::initialize(const std::string& gdial_interface_name, bool netw
         {
             LOGERR("MODEL_NUM not configured in device properties file");
         }
-        else{
-            gdial_args.push_back("-M");
-            gdial_args.push_back(m_modelName);
-        }
+    }
+
+    if (!m_modelName.empty())
+    {
+        gdial_args.push_back("-M");
+        gdial_args.push_back(m_modelName);
     }
 
     if (m_manufacturerName.empty())
@@ -227,10 +229,12 @@ bool XCastManager::initialize(const std::string& gdial_interface_name, bool netw
         {
             LOGERR("MFG_NAME not configured in device properties file");
         }
-        else{
-            gdial_args.push_back("-R");
-            gdial_args.push_back(m_manufacturerName);
-        }
+    }
+
+    if (!m_manufacturerName.empty())
+    {
+        gdial_args.push_back("-R");
+        gdial_args.push_back(m_manufacturerName);
     }
 
     if (m_defaultfriendlyName.empty())
@@ -458,6 +462,52 @@ string XCastManager::getProtocolVersion(void)
 	    strVersion = "2.1";
     }
     return strVersion;
+}
+
+int XCastManager::setManufacturerName( string manufacturer)
+{
+    int status = 0;
+    LOGINFO("Manufacturer[%s]", manufacturer.c_str());
+    lock_guard<recursive_mutex> lock(m_mutexSync);
+    if(gdialCastObj != NULL)
+    {
+        gdialCastObj->setManufacturerName( manufacturer );
+        status = 1;
+        m_manufacturerName = manufacturer;
+    }
+    else
+        LOGINFO(" gdialCastObj is NULL ");
+    return status;
+}
+
+string XCastManager::getManufacturerName(void)
+{
+    lock_guard<recursive_mutex> lock(m_mutexSync);
+    LOGINFO("ManufacturerName[%s]",m_manufacturerName.c_str());
+    return m_manufacturerName;
+}
+
+int XCastManager::setModelName( string model)
+{
+    int status = 0;
+    lock_guard<recursive_mutex> lock(m_mutexSync);
+    LOGINFO("Model[%s]", model.c_str());
+    if(gdialCastObj != NULL)
+    {
+        gdialCastObj->setModelName(model);
+        status = 1;
+        m_modelName = model;
+    }
+    else
+        LOGINFO(" gdialCastObj is NULL ");
+    return status;
+}
+
+string XCastManager::getModelName(void)
+{
+    lock_guard<recursive_mutex> lock(m_mutexSync);
+    LOGINFO("ModelName[%s]",m_modelName.c_str());
+    return m_modelName;
 }
 
 void XCastManager::registerApplications(std::vector<DynamicAppConfig*>& appConfigList)
