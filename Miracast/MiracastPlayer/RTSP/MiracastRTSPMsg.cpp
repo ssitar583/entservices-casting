@@ -2117,6 +2117,8 @@ void MiracastRTSPMsg::RTSPMessageHandler_Thread(void *args)
             start_monitor_keep_alive_msg = true;
             //start_streaming(video_rect_st);
             MIRACASTLOG_INFO("!!!! GstPlayer instance created, Waiting for first-frame !!!!");
+            MiracastGstPlayer *MiracastGstPlayerObj = MiracastGstPlayer::getInstance();
+            MiracastGstPlayerObj->update_rtsp_capability_completion_status( true );
         }
         else
         {

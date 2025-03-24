@@ -74,7 +74,6 @@ bool MiracastGstPlayer::launch(std::string& localip , std::string& streaming_por
 	if ( nullptr != rtsp_instance )
 	{
 		m_rtsp_reference_instance = rtsp_instance;
-		this->onFirstVideoFrameCallback(nullptr,0,0,this);
 	}
 	return true;
 }
@@ -119,4 +118,15 @@ void MiracastGstPlayer::notifyPlaybackState(eMIRA_GSTPLAYER_STATES gst_player_st
 		m_rtsp_reference_instance->send_msgto_rtsp_msg_hdler_thread(rtsp_hldr_msgq_data);
 	}
 	MIRACASTLOG_TRACE("Exiting..!!!");
+}
+
+void MiracastGstPlayer::update_rtsp_capability_completion_status(bool state)
+{
+    MIRACASTLOG_TRACE("Entering..!!!");
+    if (true == state)
+    {
+        MIRACASTLOG_INFO("RTSP Capability Status completed successfully");
+        this->onFirstVideoFrameCallback(nullptr,0,0,this);
+    }
+    MIRACASTLOG_TRACE("Exiting..!!!");
 }

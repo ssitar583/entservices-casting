@@ -63,6 +63,7 @@ public:
     double getCurrentPosition(GstElement *pipeline = nullptr);
     bool get_player_statistics();
     void print_pipeline_state(GstElement *pipeline = nullptr);
+    void update_rtsp_capability_completion_status(bool state = false);
 
 private:
     GstElement  *m_append_pipeline{nullptr};

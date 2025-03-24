@@ -1040,3 +1040,8 @@ bool MiracastGstPlayer::stop()
     MIRACASTLOG_TRACE("Exiting..");
     return true;
 }
+
+void MiracastGstPlayer::update_rtsp_capability_completion_status(bool state)
+{
+    /*NOP*/
+}
