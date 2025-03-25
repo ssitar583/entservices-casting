@@ -107,7 +107,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          branch: develop
+          ref: develop
 
       - name: Checkout entservices-casting
         uses: actions/checkout@v3
