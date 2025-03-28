@@ -1,7 +1,10 @@
 name: L1-tests
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [ main, develop, 'sprint/**', 'release/**' ]
+  pull_request:
+    branches: [ main, develop, 'sprint/**', 'release/**' ]
 
 env:
   BUILD_TYPE: Debug
