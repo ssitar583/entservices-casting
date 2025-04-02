@@ -207,7 +207,7 @@ namespace WPEFramework
         }
 
 
-		void MiracastService:: onPowerModeChanged(const PowerState &currentState, const PowerState &newState)
+		void MiracastService:: onPowerModeChanged(const PowerState currentState, const PowerState newState)
 		{
 			if (nullptr == _instance)
 			{

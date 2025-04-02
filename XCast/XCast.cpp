@@ -271,7 +271,7 @@ bool XCast::setPowerState(std::string powerState)
     return ret;
 }
 
-void XCast::onPowerModeChanged(const PowerState &currentState, const PowerState &newState)
+void XCast::onPowerModeChanged(const PowerState currentState, const PowerState newState)
 {
     LOGINFO("onPowerModeChanged: State Changed %d -- > %d\r",
         currentState, newState);
@@ -281,7 +281,7 @@ void XCast::onPowerModeChanged(const PowerState &currentState, const PowerState 
     powerModeChangeThread.detach();
 }
 
-void XCast::onNetworkStandbyModeChanged(const bool &enabled)
+void XCast::onNetworkStandbyModeChanged(const bool enabled)
 {
     m_networkStandbyMode = enabled;
     LOGWARN("creating worker thread for threadNetworkStandbyModeChangeEvent Mode :%u",m_networkStandbyMode);
