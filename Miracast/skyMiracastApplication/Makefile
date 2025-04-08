@@ -16,16 +16,19 @@ skyAppPlugin_SRCS = \
 				 ./utils/util_base64.cpp \
 				 ./utils/SkyAsProxy.cpp \
 				 ./utils/MiracastAppLogging.cpp \
+				 ./utils/helpers.cpp \
+				 ./utils/ThunderUtils.cpp \
 				 ./monitors/MiracastAppStateMonitor.cpp \
 				 ./Platform/MiracastApplication.cpp \
 				 ./Platform/MiracastAppInterface.cpp \
 				 ./Platform/MiracastAppMainStub.cpp \
+				 ./Platform/RDKPluginCore.cpp \
 				 ./Platform/Graphics/MiracastGraphicsDelegate.cpp \
 				 ./MiracastApp.cpp \
 				 ./MiracastAppMgr.cpp \
+				 ../common/MiracastCommon.cpp \
 				 ../MiracastPlayer/RTSP/MiracastRTSPMsg.cpp \
 				 ../MiracastPlayer/Generic/MiracastGstPlayer.cpp \
-				 ../common/MiracastCommon.cpp \
 				 $(NULL)
 
 skyAppPlugin_INCLUDES = \
@@ -39,6 +42,8 @@ skyAppPlugin_INCLUDES = \
 		   -I$(LOCAL_PATH)/Platform/ \
 		   -I$(LOCAL_PATH)/Platform/Graphics/ \
 		   -I$(LOCAL_PATH)/ \
+		   -I$(LOCAL_PATH)/../MiracastService/ \
+		   -I$(LOCAL_PATH)/../MiracastService/P2P \
 		   -I$(LOCAL_PATH)/../MiracastPlayer/ \
 		   -I$(LOCAL_PATH)/../MiracastPlayer/RTSP \
 		   -I$(LOCAL_PATH)/../MiracastPlayer/Generic \
@@ -57,12 +62,14 @@ skyAppPlugin_LIBS = -L$(STAGING_DIR)/usr/lib/ \
                                  -lglib-2.0 \
 								 -lgobject-2.0 \
 								 -lIARMBus \
-								 -lWPEFrameworkCore \
 								 -lwayland-client \
 								 -lwayland_skyq_client \
 								 -lsoup-2.4 \
 								 -lEGL \
+								 -lwpa_client \
 								 -lMiracastPlayerHal
+
+WPEFRAMEWORK_LIBS = -L$(STAGING_DIR)/usr/lib -lWPEFrameworkCore -lWPEFrameworkPlugins -lWPEFrameworkSecurityUtil -lWPEFrameworkCOM -lWPEFrameworkWebSocket
 
 GST_LIBS = -L$(STAGING_DIR)/usr/lib -L$(STAGING_DIR)/usr/lib/gstreamer-1.0 \
            -lsec_api -lgstreamer-1.0 -lgstbase-1.0 -lglib-2.0 \
@@ -81,7 +88,7 @@ $(BUILD_DIR)/%.cpp.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(skyAppPlugin_INCLUDES) $(GST_INCLUDES) -c $< -o $@
 
 $(BUILD_DIR)/$(BUILD_TARGETS): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(skyAppPlugin_LIBS) $(GST_LIBS) $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(skyAppPlugin_LIBS) $(WPEFRAMEWORK_LIBS) $(GST_LIBS) $(LDFLAGS)
 
 all: $(BUILD_TARGETS)
 

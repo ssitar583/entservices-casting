@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include "helpers.hpp"
 
 namespace LaunchDetails
 {
@@ -13,15 +14,6 @@ enum AppLaunchMethod
     PartnerButton
 };
 
-typedef struct videoRectSt
-{
-    int startX;
-    int startY;
-    int width;
-    int height;
-}
-VideoRectangleInfo;
-
 class AppLaunchDetails
 {
 public:
@@ -29,7 +21,6 @@ public:
     static void destroyInstance();
     std::string getEnvVariable(const std::string& key);
     bool parseLaunchDetails(const std::string& launchMethodStr, const std::string& encodedLaunchParamsStr);
-    bool getPlayRequestDetails(std::string& srcDevIP, std::string& srcDevMAC,std::string& srcDevName,std::string& sinkDevIP, VideoRectangleInfo* rect);
 
     AppLaunchMethod mLaunchMethod;
     std::string mSourceDevIP;

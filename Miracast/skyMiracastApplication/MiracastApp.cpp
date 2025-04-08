@@ -241,7 +241,7 @@ int main(int argc, char *argv[])
     MiracastAppMgr* miracastAppMgr = nullptr;
     MIRACASTLOG_VERBOSE("sky-MiracastAppPlugin: Entered \n");
     addSignalHandling();
-    miracastAppMgr = MiracastAppMgr::getInstance(argc, argv);
+    miracastAppMgr = MiracastAppMgr::getInstance();
     if ( nullptr != miracastAppMgr )
     {
         returnStatus = miracastAppMgr->startAppAndWaitForFinish();

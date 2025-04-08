@@ -17,9 +17,8 @@
  * limitations under the License.
  */
 #include "ThunderUtils.h"
-#include "RDKTextToSpeech.h"
+#include "RDKPluginCore.h"
 #include "MiracastApplication.hpp"
-#include "MiracastAppDeviceProperties.h"
 #include "MiracastAppLogging.hpp"
 #include <sys/types.h>
 #include <ifaddrs.h>
@@ -59,10 +58,6 @@ ThunderUtils::ThunderUtils()
         (it->second).obj = new WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>(it->first.c_str(), "", false, query);
         if ( (it->second).obj != nullptr)
         {
-            /* HOMEKITTV_CALLSIGN  will activate as part of service */
-            if (it->first == HOMEKITTV_CALLSIGN) {
-                continue;
-            }
             //Activate plugin
             JsonObject result, params;
             params["callsign"] = it->first.c_str();
@@ -83,9 +78,6 @@ ThunderUtils::ThunderUtils()
             }
         }
     }
-#ifdef SKY_BUILD // (SKY_BUILD_ENV != 1)
-    updateAppIPtoDaemon();
-#endif
 }
 
 ThunderUtils::~ThunderUtils()
@@ -110,6 +102,7 @@ ThunderUtils *ThunderUtils::getinstance()
     }
     return _instance;
 }
+
 void ThunderUtils::thunderInvoke(const std::string &callsign, const std::string &method, const JsonObject &param, JsonObject &result)
 {
     JsonObject response;
@@ -177,6 +170,7 @@ void ThunderUtils::thunderGet(const std::string &callsign, const std::string &me
         }
     }
 }
+
 string ThunderUtils::getAudioFormat(std::string AudioFormats)
 {
     JsonObject params, result;
@@ -456,8 +450,6 @@ void ThunderUtils::eventHandler_onttsstatechanged(const JsonObject& parameters)
     MIRACASTLOG_VERBOSE(" MiracastApp.TTS onttsstatechanged : %d \n", parameters["state"].Boolean());
     //Call registered listern to handle statechange event
     RDKTextToSpeech::ttsEventHandler(ttsNotificationType::EVENT_ONTTSSTATECHANGE, parameters);
-    //Call app engine to update the screen reader accessibility property
-    MiracastApp::Application::Engine::getAppEngineInstance()->_updatescreenReaderAccessibilityProperty(parameters["state"].Boolean());
 }
 
 void ThunderUtils::eventHandler_onConnectionStatusChanged(const JsonObject& parameters)
@@ -469,12 +461,12 @@ void ThunderUtils::eventHandler_onConnectionStatusChanged(const JsonObject& para
     
     if (nwInterface == "WIFI") {
         if (connectionStatus == "CONNECTED") {
-            MiracastAppDeviceProperties::getInstance()->updateNWConnectivityStatus(nwInterface, true);
+            MIRACASTLOG_VERBOSE(" MiracastApp onConnectionStatusChanged, CONNECTED and WIFI Interface");
         } else {
-            MiracastAppDeviceProperties::getInstance()->updateNWConnectivityStatus(nwInterface, false);
+            MIRACASTLOG_VERBOSE(" MiracastApp onConnectionStatusChanged, NOT_CONNECTED and WIFI Interface");
         }
     } else if (nwInterface == "ETHERNET" && connectionStatus != "CONNECTED") {
-        MiracastAppDeviceProperties::getInstance()->updateNWConnectivityStatus(nwInterface, false);
+        MIRACASTLOG_VERBOSE(" MiracastApp onConnectionStatusChanged, NOT_CONNECTED and ETHERNET Interface");
     }
 }
 
@@ -485,16 +477,47 @@ void ThunderUtils::eventHandler_onDefaultInterfaceChanged(const JsonObject& para
     newInterfaceName = parameters["newInterfaceName"].String();
 
     MIRACASTLOG_VERBOSE("MiracastApp onDefaultInterfaceChanged, old interface: %s, new interface: %s", oldInterfaceName.c_str(), newInterfaceName.c_str());
-    MiracastAppDeviceProperties::getInstance()->updateNWConnectivityStatus(newInterfaceName, true);   
 }
-void ThunderUtils::updateAppIPtoDaemon()
+
+void ThunderUtils::eventHandler_onMiracastServiceClientConnectionRequest(const JsonObject& parameters)
 {
-    std::string deviceIP = getIPAddress();
-    JsonObject params;
-    params["ipaddress"] = deviceIP.c_str();
-    MIRACASTLOG_INFO("IP address = %s", deviceIP.c_str());
-    thunderSet(HOMEKITTV_CALLSIGN, "setAppContainerIPAddress", params);
+    std::string client_mac, client_name;
+
+    client_mac = parameters["mac"].String();
+    client_name = parameters["name"].String();
+
+    MIRACASTLOG_INFO(">>> client mac: [%s], client name: [%s]", client_mac.c_str(), client_name.c_str());
+    RDKMiracastService::miracastServiceClientConnectionRequestHandler(client_mac, client_name);
 }
+
+void ThunderUtils::eventHandler_onMiracastServiceClientConnectionError(const JsonObject& parameters)
+{
+    std::string client_mac, client_name, error_code, reason;
+
+    client_mac = parameters["mac"].String();
+    client_name = parameters["name"].String();
+    error_code = parameters["error_code"].String();
+    reason = parameters["reason"].String();
+
+    MIRACASTLOG_INFO(">>> client mac: [%s], client name: [%s], error code: [%s], reason: [%s]", client_mac.c_str(), client_name.c_str(), error_code.c_str(), reason.c_str());
+    RDKMiracastService::miracastServiceClientConnectionErrorHandler(client_mac, client_name, error_code, reason);
+}
+
+void ThunderUtils::eventHandler_onMiracastServiceLaunchRequest(const JsonObject& parameters)
+{
+    std::string source_dev_ip, source_dev_mac, source_dev_name, sink_dev_ip;
+    JsonObject device_parameters;
+
+    device_parameters = parameters["device_parameters"].Object();
+    source_dev_ip = device_parameters["source_dev_ip"].String();
+    source_dev_mac = device_parameters["source_dev_mac"].String();
+    source_dev_name = device_parameters["source_dev_name"].String();
+    sink_dev_ip = device_parameters["sink_dev_ip"].String();
+
+    MIRACASTLOG_INFO(">>> source dev ip: [%s], source dev mac: [%s], source dev name: [%s], sink dev ip: [%s]", source_dev_ip.c_str(), source_dev_mac.c_str(), source_dev_name.c_str(), sink_dev_ip.c_str());
+    RDKMiracastService::miracastServiceLaunchRequestHandler(source_dev_ip, source_dev_mac, source_dev_name, sink_dev_ip);
+}
+
 std::string ThunderUtils::getIPAddress()
 {
     struct ifaddrs *ifAddrStruct = nullptr;
@@ -531,6 +554,7 @@ std::string ThunderUtils::getIPAddress()
     freeifaddrs(ifAddrStruct);
     return ipAddress;
 }
+
 bool ThunderUtils::getEnableAudioPort(string &enabledAudioPort)
 {
     bool enable_port = false;
@@ -550,4 +574,61 @@ bool ThunderUtils::getEnableAudioPort(string &enabledAudioPort)
     }
     return enable_port;
     MIRACASTLOG_TRACE("Exiting ...");
+}
+
+bool ThunderUtils::setMiracastDiscovery(bool enabledStatus)
+{
+    JsonObject params, result;
+    bool returnValue = false;
+    params["enabled"] = enabledStatus;
+    thunderInvoke(MIRACASTSERVICE_CALLSIGN, "setEnable", params, result);
+    returnValue = result["success"].Boolean();
+    if (returnValue)
+    {
+        MIRACASTLOG_VERBOSE("setMiracastDiscovery call success");
+    }
+    else
+    {
+        MIRACASTLOG_ERROR("setMiracastDiscovery call failed");
+    }
+    return returnValue;
+}
+
+bool ThunderUtils::acceptMiracastClientConnection(const string &requestStatus)
+{
+    JsonObject params, result;
+    bool returnValue = false;
+    params["requestStatus"] = requestStatus.c_str();;
+    thunderInvoke(MIRACASTSERVICE_CALLSIGN, "acceptClientConnection", params, result);
+    returnValue = result["success"].Boolean();
+    if (returnValue)
+    {
+        MIRACASTLOG_VERBOSE("acceptClientConnection call success");
+    }
+    else
+    {
+        MIRACASTLOG_ERROR("acceptClientConnection call failed");
+    }
+    return returnValue;
+}
+
+bool ThunderUtils::updateMiracastPlayerState(const string &clientMac, const string &state, const string &reason_code)
+{
+    JsonObject params, result;
+    bool returnValue = false;
+    params["mac"] = clientMac.c_str();
+    params["state"] = state.c_str();
+    params["reason_code"] = reason_code.c_str();
+    thunderInvoke(MIRACASTSERVICE_CALLSIGN, "updatePlayerState", params, result);
+
+    returnValue = result["success"].Boolean();
+    if (returnValue)
+    {
+        MIRACASTLOG_VERBOSE("updateMiracastPlayerState call success");
+    }
+    else
+    {
+        MIRACASTLOG_ERROR("updateMiracastPlayerState call failed");
+    }
+    return returnValue;
 }

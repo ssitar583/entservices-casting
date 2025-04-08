@@ -53,7 +53,7 @@ namespace LaunchDetails{
 
     bool AppLaunchDetails::parseLaunchDetails(const std::string& launchMethodStr, const std::string& encodedLaunchParamsStr)
     {
-        JsonObject MiracastAppAppParams, parameters;
+        JsonObject MiracastAppParams, parameters;
         char decode_str[1000] = {0};
         size_t decode_len=0;
         std::string config_option;
@@ -70,24 +70,10 @@ namespace LaunchDetails{
             decode_str[decode_len] = '\0';
             MIRACASTLOG_INFO("MiracastApp Widget:Decoded launch parameters: %s decode_len:%d\n",decode_str, decode_len);
             std::string paramStr = decode_str;
-            MiracastAppAppParams.FromString(paramStr);
-            if(MiracastAppAppParams.HasLabel("params"))
+            MiracastAppParams.FromString(paramStr);
+            if(MiracastAppParams.HasLabel("params"))
             {
-				parameters = MiracastAppAppParams["params"].Object();
-
-                if(parameters.HasLabel("device_parameters")) {
-                    JsonObject device_parameters = parameters["device_parameters"].Object();
-
-                    mSourceDevIP = device_parameters["source_dev_ip"].String();
-                    mSourceDevMAC = device_parameters["source_dev_mac"].String();
-                    mSourceDevName = device_parameters["source_dev_name"].String();
-                    mSinkDevIP = device_parameters["sink_dev_ip"].String();
-                }
-                else
-                {
-                    MIRACASTLOG_INFO("missing device_parameters from the received parameters\n");
-                    returnValue = false;
-                }
+				parameters = MiracastAppParams["params"].Object();
 
                 if(parameters.HasLabel("video_rectangle"))
                 {
@@ -118,35 +104,6 @@ namespace LaunchDetails{
             returnValue = false;
             MIRACASTLOG_ERROR("Widget:Failed to Decoded launch parameters are empty\n");
         }
-        return returnValue;
-    }
-
-    bool AppLaunchDetails::getPlayRequestDetails(std::string& srcDevIP, std::string& srcDevMAC,std::string& srcDevName,std::string& sinkDevIP, VideoRectangleInfo* rect)
-    {
-        bool returnValue = false;
-
-        MIRACASTLOG_TRACE("Entering ...");
-
-        if (!rect)
-        {
-            MIRACASTLOG_ERROR("NULL Rectangle pointer \n");
-        }
-        else
-        {
-            srcDevIP = mSourceDevIP;
-            srcDevMAC = mSourceDevMAC;
-            srcDevName = mSourceDevName;
-            sinkDevIP = mSinkDevIP;
-            rect->startX = mVideoRect.startX;
-            rect->startY = mVideoRect.startY;
-            rect->width = mVideoRect.width;
-            rect->height = mVideoRect.height;
-            returnValue = true;
-            MIRACASTLOG_INFO("srcDevIP[%s]srcDevMAC[%s]srcDevName[%s]sinkDevIP[%s]Rect[%d,%d,%d,%d]",
-                                srcDevIP.c_str(),srcDevMAC.c_str(),srcDevName.c_str(),sinkDevIP.c_str(),
-                                rect->startX,rect->startY,rect->width,rect->height);
-        }
-        MIRACASTLOG_TRACE("Exiting ...");
         return returnValue;
     }
 

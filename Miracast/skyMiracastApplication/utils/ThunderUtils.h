@@ -22,7 +22,6 @@
 
 #include "Module.h"
 #include "PluginDefines.h"
-//#include "RDKTextToSpeech.h"
 
 #include <WPEFramework/core/core.h>
 #include <WPEFramework/plugins/Service.h>
@@ -54,25 +53,29 @@ class ThunderUtils
     //thunder call
     string getAudioFormat(std::string AudioFormats);
     string getColorFormat(std::string ColorFormats);
-	  bool isttsenabled();
-	  void setttsRate(double& wpm);
-	  void cancelTts(int& speech_id);
-	  int SpeakTts(string& text,int speak_id);
-	  bool isspeaking(int& speech_id);
-      std::string getConnectedNWInterface();
-      std::string getModelName();
-      std::string getFirmwareVersion();
-      std::string getSystemLocale();
-      void getResolution(char* resolution, int sLen);
-      void getActiveAudioPorts(string &activeAudioPort);
-      bool getEnableAudioPort(string &enabledAudioPort); 
-      std::string getDeviceLocation();
-      std::string getIPAddress();
+    bool isttsenabled();
+    void setttsRate(double& wpm);
+    void cancelTts(int& speech_id);
+    int SpeakTts(string& text,int speak_id);
+    bool isspeaking(int& speech_id);
+    std::string getConnectedNWInterface();
+    std::string getModelName();
+    std::string getFirmwareVersion();
+    std::string getSystemLocale();
+    void getResolution(char* resolution, int sLen);
+    void getActiveAudioPorts(string &activeAudioPort);
+    bool getEnableAudioPort(string &enabledAudioPort); 
+    std::string getDeviceLocation();
+    std::string getIPAddress();
     void updateAppIPtoDaemon();
     void thunderGet(const std::string &callsign, const std::string &method, auto &result );
     void thunderSet(const std::string &callsign, const std::string &method, const JsonObject &param);
     void thunderInvoke(const std::string &callsign, const std::string &method, const JsonObject &param, JsonObject &result);
     void thunderInvoke(const std::string &callsign, const std::string &method, JsonObject &result);
+
+    bool setMiracastDiscovery(bool enabledStatus);
+    bool acceptMiracastClientConnection(const string &requestStatus);
+    bool updateMiracastPlayerState(const string &clientMac, const string &state, const string &reason_code);
 
 private:
     ThunderUtils();
@@ -87,6 +90,11 @@ private:
     static void eventHandler_onerror(const JsonObject& parameters);
     static void eventHandler_onConnectionStatusChanged(const JsonObject& parameters);
     static void eventHandler_onDefaultInterfaceChanged(const JsonObject& parameters);
+    
+    static void eventHandler_onMiracastServiceClientConnectionRequest(const JsonObject& parameters);
+    static void eventHandler_onMiracastServiceClientConnectionError(const JsonObject& parameters);
+    static void eventHandler_onMiracastServiceLaunchRequest(const JsonObject& parameters);
+
     void registerPlugins()
     {
         PluginDetails pluginDetails;
@@ -111,9 +119,12 @@ private:
         plugins[USER_PREFERENCES_CALLSIGN] = pluginDetails;
         plugins[LOCATION_CALLSIGN] = pluginDetails;
         plugins[PERSISTENTSTORE_CALLSIGN] = pluginDetails;
-#ifdef SKY_BUILD // (SKY_BUILD_ENV != 1)
-        plugins[HOMEKITTV_CALLSIGN] = pluginDetails;
-#endif
+        pluginDetails.events = {
+            {MIRACAST_CLIENT_CONNECTION_REQUEST_EVENT, &ThunderUtils::eventHandler_onMiracastServiceClientConnectionRequest},
+            {MIRACAST_CLIENT_CONNECTION_ERROR_EVENT, &ThunderUtils::eventHandler_onMiracastServiceClientConnectionError},
+            {MIRACAST_LAUNCH_REQUEST_EVENT, &ThunderUtils::eventHandler_onMiracastServiceLaunchRequest}
+        };
+        plugins[MIRACASTSERVICE_CALLSIGN] = pluginDetails;
     }
 };
 #endif

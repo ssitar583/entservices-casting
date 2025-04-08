@@ -1,7 +1,21 @@
-//
-//  MiracastGraphicsDelegate.hpp
-//  Copyright (C) 2020 Apple Inc. All Rights Reserved. Not to be used or disclosed without permission from Apple.
-//
+/*
+ * If not stated otherwise in this file or this component's Licenses.txt file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2025 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #ifndef MIRACAST_GRAPHICS_DELEGATE_HPP
 #define MIRACAST_GRAPHICS_DELEGATE_HPP
@@ -15,22 +29,6 @@
 #include "MiracastApplication.hpp"
 namespace MiracastApp{
 namespace Graphics{
-
-#define NATIVE_KEYCODE_SELECT 0x1C
-#define NATIVE_KEYCODE_UP 0x67
-#define NATIVE_KEYCODE_DOWN 0x6C
-#define NATIVE_KEYCODE_RIGHT 0x6A
-#define NATIVE_KEYCODE_LEFT 0x69
-#define NATIVE_KEYCODE_BACK 0x26
-#define NATIVE_KEYCODE_HOME 0x42
-#define NATIVE_KEYCODE_VOLUME_UP 0x73
-#define NATIVE_KEYCODE_VOLUME_DOWN 0x72
-#define NATIVE_KEYCODE_MUTE 0x71
-#define NATIVE_KEYCODE_STANDBY 0x57
-#define NATIVE_KEYCODE_VOICE 0x66
-#define NATIVE_KEYCODE_INPUT_SELECT 0x44
-#define NATIVE_KEYCODE_SWKEY_BACK 0x0E
-#define NATIVE_KEYCODE_SKYKEY_BACK 0x01
 
 class EssosDispatchThread;
 
