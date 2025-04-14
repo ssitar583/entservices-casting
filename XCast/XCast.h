@@ -64,8 +64,8 @@ namespace Plugin {
         XCast();
         virtual ~XCast();
         void registerEventHandlers();
-        void onPowerModeChanged(const PowerState &currentState, const PowerState &newState);
-        void onNetworkStandbyModeChanged(const bool &enabled);
+        void onPowerModeChanged(const PowerState currentState, const PowerState newState);
+        void onNetworkStandbyModeChanged(const bool enabled);
         virtual const string Initialize(PluginHost::IShell* service) override;
         virtual void Deinitialize(PluginHost::IShell* service) override;
         virtual string Information() const override { return {}; }
@@ -159,12 +159,12 @@ namespace Plugin {
             ~PowerManagerNotification() override = default;
 
         public:
-            void OnPowerModeChanged(const PowerState &currentState, const PowerState &newState) override
+            void OnPowerModeChanged(const PowerState currentState, const PowerState newState) override
             {
                 _parent.onPowerModeChanged(currentState, newState);
             }
 
-            void OnNetworkStandbyModeChanged(const bool &enabled)
+            void OnNetworkStandbyModeChanged(const bool enabled)
             {
                 _parent.onNetworkStandbyModeChanged(enabled);
             }
