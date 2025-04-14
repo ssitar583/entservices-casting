@@ -98,7 +98,7 @@ namespace WPEFramework
             virtual void onMiracastServiceClientConnectionError(string client_mac, string client_name , eMIRACAST_SERVICE_ERR_CODE error_code ) override;
             virtual void onMiracastServiceLaunchRequest(string src_dev_ip, string src_dev_mac, string src_dev_name, string sink_dev_ip, bool is_connect_req_reported ) override;
             virtual void onStateChange(eMIRA_SERVICE_STATES state ) override;
-            void onPowerModeChanged(const PowerState &currentState, const PowerState &newState);
+            void onPowerModeChanged(const PowerState currentState, const PowerState newState);
             void registerEventHandlers();
 
             BEGIN_INTERFACE_MAP(MiracastService)
@@ -124,7 +124,7 @@ namespace WPEFramework
                 ~PowerManagerNotification() override = default;
             
             public:
-                void OnPowerModeChanged(const PowerState &currentState, const PowerState &newState) override
+                void OnPowerModeChanged(const PowerState currentState, const PowerState newState) override
                 {
                     _parent.onPowerModeChanged(currentState, newState);
                 }
