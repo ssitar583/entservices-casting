@@ -22,11 +22,15 @@
 
 #include "Module.h"
 #include "PluginDefines.h"
+#include "helpers.hpp"
 
 #include <WPEFramework/core/core.h>
 #include <WPEFramework/plugins/Service.h>
 
 #include <map>
+
+#define LOGINFOMETHOD() { std::string json; parameters.ToString(json); MIRACASTLOG_INFO( "callsign[%s]method[%s]params[%s]",callsign.c_str(), method.c_str(), json.c_str() ); }
+#define LOGTRACEMETHODFIN() { std::string json; response.ToString(json); MIRACASTLOG_INFO( "callsign[%s]method[%s]response[%s]",callsign.c_str(), method.c_str(), json.c_str() ); }
 
 typedef void (*callback)(const JsonObject& parameters);
 typedef std::map<std::string,callback> Event;
@@ -76,6 +80,8 @@ class ThunderUtils
     bool setMiracastDiscovery(bool enabledStatus);
     bool acceptMiracastClientConnection(const string &requestStatus);
     bool updateMiracastPlayerState(const string &clientMac, const string &state, const string &reason_code);
+    bool playRequestToMiracastPlayer(const std::string &source_dev_ip, const std::string &source_dev_mac, const std::string &source_dev_name, const std::string &sink_dev_ip, VideoRectangleInfo &rect);
+    bool stopMiracastPlayer(void);
 
 private:
     ThunderUtils();
@@ -94,6 +100,8 @@ private:
     static void eventHandler_onMiracastServiceClientConnectionRequest(const JsonObject& parameters);
     static void eventHandler_onMiracastServiceClientConnectionError(const JsonObject& parameters);
     static void eventHandler_onMiracastServiceLaunchRequest(const JsonObject& parameters);
+
+    static void eventHandler_onMiracastPlayerStateChange(const JsonObject& parameters);
 
     void registerPlugins()
     {
@@ -125,6 +133,10 @@ private:
             {MIRACAST_LAUNCH_REQUEST_EVENT, &ThunderUtils::eventHandler_onMiracastServiceLaunchRequest}
         };
         plugins[MIRACASTSERVICE_CALLSIGN] = pluginDetails;
+        pluginDetails.events = {
+            {MIRACASTPLAYER_STATE_CHANGE_EVENT, &ThunderUtils::eventHandler_onMiracastPlayerStateChange}
+        };
+        plugins[MIRACASTPLAYER_CALLSIGN] = pluginDetails;
     }
 };
 #endif

@@ -34,7 +34,6 @@ class EssosDispatchThread;
 
 class MiracastGraphicsDelegate : public MiracastApp::Graphics::Delegate {
 	public:
-
 		static MiracastGraphicsDelegate* getInstance(); 
 		static void destroyInstance();
 		bool initialize();
@@ -44,10 +43,12 @@ class MiracastGraphicsDelegate : public MiracastApp::Graphics::Delegate {
 		EssCtx *getEssCtxInstance() {return mEssCtx;}
     	bool startDispatching();
     	void stopDispatching();
+        void fillColor(float alpha, float red, float green, float blue, bool swapBuffers );
+        void drawRectangle(float x, float y, float width, float height, float alpha, float red, float green, float blue);
     protected:
-                void OnKeyPressed(unsigned int key);
-                void OnKeyReleased(unsigned int key);
-				void OnKeyRepeat(unsigned int key);
+        void OnKeyPressed(unsigned int key);
+        void OnKeyReleased(unsigned int key);
+		void OnKeyRepeat(unsigned int key);
 	private: 
 		bool mResize_pending { false };
 		EssCtx *mEssCtx { nullptr };
@@ -58,7 +59,7 @@ class MiracastGraphicsDelegate : public MiracastApp::Graphics::Delegate {
 		EGLDisplay mDisplay;
 		EGLContext mContext;
 		EGLSurface mSurface;
-		pthread_mutex_t mDispatchMutex;
+		static pthread_mutex_t mDispatchMutex;
 		static MiracastGraphicsDelegate* mInstance;
 		static EssKeyListener keyListener;
 		EssosDispatchThread *mDispatchThread { nullptr };

@@ -40,44 +40,34 @@ typedef enum _MiracastTTSVoiceCommandTypes
 }
 MiracastTTSVoiceCommandTypes;
 
-typedef enum _MiracastServiceRequestEvents
+typedef enum _MiracastPluginRequestEvents
 {
-    ON_CLIENT_CONNECTION_REQUEST,
-    ON_CLIENT_CONNECTION_ERROR,
-    ON_LAUNCH_REQUEST,
+    MIRACASTSERVICE_ON_CLIENT_CONNECTION_REQUEST,
+    MIRACASTSERVICE_ON_CLIENT_CONNECTION_ERROR,
+    MIRACASTSERVICE_ON_LAUNCH_REQUEST,
+    MIRACASTPLAYER_ON_STATE_CHANGE,
     SELF_ABORT,
     INVALID_REQUEST
 }
-MiracastServiceRequestEvent;
+MiracastPluginRequestEvent;
 
-typedef struct miracast_request_hldr_msgq_st
+typedef struct _miracast_plugin_request_hldr_msgq_st
 {
-    MiracastServiceRequestEvent eventType;
+    MiracastPluginRequestEvent eventType;
     char src_dev_ip[24];
     char src_dev_mac[24];
     char sink_dev_ip[24];
+    char state[24];
     char error_code[32];
     char src_dev_name[40];
     char reason[64];
 }
-MIRACASTSERVICE_REQ_HANDLER_MSGQ_STRUCT;
+MIRACASTPLUGIN_REQ_HANDLER_MSGQ_STRUCT;
 
-#define MIRACASTSERVICE_REQ_HANDLER_THREAD_NAME ("MIRACASTSERVICE_REQ_HANDLER")
-#define MIRACASTSERVICE_REQ_HANDLER_THREAD_STACK ( 512 * 1024)
-#define MIRACASTSERVICE_REQ_HANDLER_MSG_COUNT (2)
-#define MIRACASTSERVICE_REQ_HANDLER_MSGQ_SIZE (sizeof(MIRACASTSERVICE_REQ_HANDLER_MSGQ_STRUCT))
-
-typedef struct _MiracastServiceRequestHandlerPayload
-{
-    std::string src_dev_ip;
-    std::string src_dev_mac;
-    std::string src_dev_name;
-    std::string sink_dev_ip;
-    std::string error_code;
-    std::string reason;
-    MiracastServiceRequestEvent eventType;
-}
-MiracastServiceRequestHandlerPayload;
+#define MIRACASTPLUGIN_REQ_HANDLER_THREAD_NAME ("MIRACASTPLUGIN_REQ_HANDLER")
+#define MIRACASTPLUGIN_REQ_HANDLER_THREAD_STACK ( 512 * 1024)
+#define MIRACASTPLUGIN_REQ_HANDLER_MSG_COUNT (2)
+#define MIRACASTPLUGIN_REQ_HANDLER_MSGQ_SIZE (sizeof(MIRACASTPLUGIN_REQ_HANDLER_MSGQ_STRUCT))
 
 enum Status {
 	// No error
@@ -96,37 +86,33 @@ enum Status {
 	APP_TERMINATED
 };
 
-class MiracastServiceEventListener : public MiracastService::IMiracastServiceListener
+class MiracastPluginEventListener : public MiracastPlugin::IMiracastPluginListener
 {
 public:
-    MiracastServiceEventListener() {MIRACASTLOG_INFO("MiracastServiceEventListener Constructor");};
-    void MiracastServiceEventHandler_Thread(void *args);
+    MiracastPluginEventListener() {MIRACASTLOG_INFO("MiracastPluginEventListener Constructor");};
+    void MiracastPluginEventHandler_Thread(void *args);
     void startRequestHandlerThread();
     void stopRequestHandlerThread();
-    //void sendRequestHandlerEvent(const MiracastServiceRequestHandlerPayload &payload);
-    void send_msgto_event_hdler_thread(MIRACASTSERVICE_REQ_HANDLER_MSGQ_STRUCT payload);
 
-    void onClientConnectionRequest(const string &client_mac, const string &client_name);
-    void onClientConnectionError(const std::string &client_mac, const std::string &client_name, const std::string &error_code, const std::string &reason );
-    void onLaunchRequest(const string &src_dev_ip, const string &src_dev_mac, const string &src_dev_name, const string & sink_dev_ip);
+    void send_msgto_event_hdler_thread(MIRACASTPLUGIN_REQ_HANDLER_MSGQ_STRUCT payload);
 
-    ~MiracastServiceEventListener() {};
+    void onMiracastServiceClientConnectionRequest(const string &client_mac, const string &client_name);
+    void onMiracastServiceClientConnectionError(const std::string &client_mac, const std::string &client_name, const std::string &error_code, const std::string &reason );
+    void onMiracastServiceLaunchRequest(const string &src_dev_ip, const string &src_dev_mac, const string &src_dev_name, const string & sink_dev_ip);
+
+    void onMiracastPlayerStateChange(const std::string &client_mac, const std::string &client_name, const std::string &state, const std::string &reason, const std::string &reason_code);
+
+    ~MiracastPluginEventListener() {};
 
 private:
-    MiracastThread *m_miracastservice_event_handler_thread;
-
-#if 0
-    static void *requestHandlerThread(void *ctx);
-    pthread_t m_request_handler_thread{0};
-    bool m_RequestHandlerThreadExit{0};
-    bool m_RequestHandlerThreadRun{0};
-    std::mutex m_RequestHandlerEventMutex;
-    std::queue<MiracastServiceRequestHandlerPayload> m_RequestHandlerQueue;
-    std::condition_variable m_RequestHandlerCV;
-#endif
+    MiracastThread *m_miracastplugin_event_handler_thread;
+    std::string     _source_dev_ip;
+    std::string     _source_dev_mac;
+    std::string     _source_dev_name;
+    std::string     _sink_dev_ip;
 };
 
-class Engine  : public MiracastPlayerNotifier
+class Engine
 {
 public:
 	enum State {
@@ -166,8 +152,8 @@ public:
 		}
 	}
 
-    RDKMiracastService *  getRDKMiracastServiceInstance(void){
-		return _mRDKMiracastService;
+    RDKMiracastPlugin *  getRDKMiracastPluginInstance(void){
+		return _mRDKMiracastPlugin;
 	}
 
     RDKTextToSpeech *  getRDKTextToSpeechInstance(void){
@@ -215,6 +201,7 @@ public:
 	bool _isAppStopRequested();
 
     void setVideoResolution(VideoRectangleInfo &rect);
+    void getVideoResolution(VideoRectangleInfo &rect);
     void playRequest(std::string source_dev_ip, std::string source_dev_mac , std::string source_dev_name, std::string sink_dev_ip);
     void stopRequest(void);
     void updateTTSVoiceCommand(MiracastTTSVoiceCommandTypes type, std::vector<std::string> args);
@@ -228,13 +215,11 @@ private:
 	bool                                    _appStopRequested;
 	State 									_state;
 	std::mutex                              _appEngineMutex;
-    VideoRectangleInfo                       _video_rect;
+    VideoRectangleInfo                      _video_rect;
 	static Engine * 						_appEngine;
-    static MiracastRTSPMsg *_mMiracastRTSPInstance;
-    static MiracastGstPlayer *_mMiracastGstPlayer;
     RDKTextToSpeech *                       _mRDKTextToSpeech {nullptr};
-    RDKMiracastService * 					_mRDKMiracastService {nullptr};
-    MiracastServiceEventListener *          _mRDKMiracastServiceListener {nullptr};
+    RDKMiracastPlugin * 					_mRDKMiracastPlugin {nullptr};
+    MiracastPluginEventListener *          _mRDKMiracastPluginListener {nullptr};
 	//To free up the command line  arguments 
 	void _freeSavedArgs();
 
@@ -243,7 +228,6 @@ private:
 
 	bool _shouldTick();
 
-    virtual void onStateChange(const std::string& client_mac, const std::string& client_name, eMIRA_PLAYER_STATES player_state, eM_PLAYER_REASON_CODE reason_code ) override;
     std::string stateDescription(eMIRA_PLAYER_STATES e);
     std::string reasonDescription(eM_PLAYER_REASON_CODE e);
 

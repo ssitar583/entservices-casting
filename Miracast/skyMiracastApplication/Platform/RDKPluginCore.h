@@ -5,7 +5,7 @@
 #include "MiracastAppLogging.hpp"
 
 using namespace TextToSpeech;
-using namespace MiracastService;
+using namespace MiracastPlugin;
 
 class RDKPluginCore
 {
@@ -58,30 +58,35 @@ public:
     static void ttsEventHandler(ThunderUtils::ttsNotificationType NotificationType, const JsonObject& parameters);
 };
 
-class RDKMiracastService : public MiracastService::Manager
+class RDKMiracastPlugin : public MiracastPlugin::Manager
 {
 private:
-    static RDKMiracastService *_mRDKMiracastService;
-    RDKMiracastService();
+    static RDKMiracastPlugin *_mRDKMiracastPlugin;
+    RDKMiracastPlugin();
 
 protected:
-    ~RDKMiracastService(){};
+    ~RDKMiracastPlugin(){};
 
 public:
-    MiracastService::IMiracastServiceListener *mEventListener;
-    static RDKMiracastService *getInstance();
+    MiracastPlugin::IMiracastPluginListener *mEventListener;
+    static RDKMiracastPlugin *getInstance();
     static void destroyInstance();
-    void registerListener(MiracastService::IMiracastServiceListener *const listener);
+    void registerListener(MiracastPlugin::IMiracastPluginListener *const listener);
 
     void setEnable(bool enabledStatus);
     void acceptClientConnection(const std::string &requestStatus);
     void updatePlayerState(const std::string &clientMac, const std::string &state, const std::string &reason_code);
+    void playRequestToMiracastPlayer(const std::string &source_dev_ip, const std::string &source_dev_mac, const std::string &source_dev_name, const std::string &sink_dev_ip, VideoRectangleInfo &rect);
+    void stopMiracastPlayer(void);
     
-    RDKMiracastService(const RDKMiracastService &) = delete;
-    const RDKMiracastService &operator=(const RDKMiracastService &) = delete;
+    RDKMiracastPlugin(const RDKMiracastPlugin &) = delete;
+    const RDKMiracastPlugin &operator=(const RDKMiracastPlugin &) = delete;
+
     static void miracastServiceClientConnectionRequestHandler(const std::string &client_mac, const std::string &client_name);
     static void miracastServiceClientConnectionErrorHandler(const std::string &client_mac, const std::string &client_name, const std::string &error_code, const std::string &reason);
     static void miracastServiceLaunchRequestHandler(const std::string &source_dev_ip, const std::string &source_dev_mac, const std::string &source_dev_name, const std::string &sink_dev_ip);
+
+    static void miracastPlayerStateChangeHandler(const std::string &client_mac, const std::string &client_name, const std::string &state, const std::string &reason, const std::string &reason_code);
 };
 
 #endif /*_RDK_PLUGIN_CORE_H_*/

@@ -4,7 +4,7 @@
 ThunderUtils *RDKPluginCore::_mThunderUtils{nullptr};
 RDKPluginCore *RDKPluginCore::_mRDKPluginCore{nullptr};
 RDKTextToSpeech *RDKTextToSpeech::_mRDKtts{nullptr};
-RDKMiracastService *RDKMiracastService::_mRDKMiracastService{nullptr};
+RDKMiracastPlugin *RDKMiracastPlugin::_mRDKMiracastPlugin{nullptr};
 
 #define WORDS_PER_MINUTE 140
 #define UINT32_MAX_ 4294967295
@@ -48,6 +48,7 @@ RDKTextToSpeech *RDKTextToSpeech::getInstance()
 {
     if (_mRDKtts == nullptr)
     {
+        RDKPluginCore::getInstance();
         _mRDKtts = new RDKTextToSpeech();
     }
     return _mRDKtts;
@@ -181,29 +182,30 @@ void RDKTextToSpeech::ttsEventHandler(ThunderUtils::ttsNotificationType event, c
     }
 }
 
-RDKMiracastService *RDKMiracastService::getInstance()
+RDKMiracastPlugin *RDKMiracastPlugin::getInstance()
 {
-    if (_mRDKMiracastService == nullptr)
+    if (_mRDKMiracastPlugin == nullptr)
     {
-        _mRDKMiracastService = new RDKMiracastService();
+        RDKPluginCore::getInstance();
+        _mRDKMiracastPlugin = new RDKMiracastPlugin();
     }
-    return _mRDKMiracastService;
+    return _mRDKMiracastPlugin;
 }
 
-RDKMiracastService::RDKMiracastService()
+RDKMiracastPlugin::RDKMiracastPlugin()
 {
     mEventListener = nullptr;
 }
 
-void RDKMiracastService::destroyInstance()
+void RDKMiracastPlugin::destroyInstance()
 {
-    if (_mRDKMiracastService != nullptr)
+    if (_mRDKMiracastPlugin != nullptr)
     {
-        delete _mRDKMiracastService;
-        _mRDKMiracastService = nullptr;
+        delete _mRDKMiracastPlugin;
+        _mRDKMiracastPlugin = nullptr;
     }
 }
-void RDKMiracastService::registerListener(MiracastService::IMiracastServiceListener *const listener)
+void RDKMiracastPlugin::registerListener(MiracastPlugin::IMiracastPluginListener *const listener)
 {
     MIRACASTLOG_INFO("RDK_TEXT_TO_SPEECH");
     mEventListener = listener;
@@ -211,33 +213,47 @@ void RDKMiracastService::registerListener(MiracastService::IMiracastServiceListe
         MIRACASTLOG_VERBOSE("TTS registration completed");
 }
 
-void RDKMiracastService::setEnable(bool enabledStatus)
+void RDKMiracastPlugin::setEnable(bool enabledStatus)
 {
     MIRACASTLOG_TRACE("Entering ...");
     RDKPluginCore::getInstance()->getThunderUtilsInstance()->setMiracastDiscovery(enabledStatus);
     MIRACASTLOG_TRACE("Exiting ...");
 }
 
-void RDKMiracastService::acceptClientConnection(const std::string &requestStatus)
+void RDKMiracastPlugin::acceptClientConnection(const std::string &requestStatus)
 {
     MIRACASTLOG_TRACE("Entering ...");
     RDKPluginCore::getInstance()->getThunderUtilsInstance()->acceptMiracastClientConnection(requestStatus);
     MIRACASTLOG_TRACE("Exiting ...");
 }
 
-void RDKMiracastService::updatePlayerState(const std::string &clientMac, const std::string &state, const std::string &reason_code)
+void RDKMiracastPlugin::updatePlayerState(const std::string &clientMac, const std::string &state, const std::string &reason_code)
 {
     MIRACASTLOG_TRACE("Entering ...");
     RDKPluginCore::getInstance()->getThunderUtilsInstance()->updateMiracastPlayerState(clientMac, state, reason_code);
     MIRACASTLOG_TRACE("Exiting ...");
 }
 
-void RDKMiracastService::miracastServiceClientConnectionRequestHandler(const std::string &client_mac, const std::string &client_name)
+void RDKMiracastPlugin::playRequestToMiracastPlayer(const std::string &source_dev_ip, const std::string &source_dev_mac, const std::string &source_dev_name, const std::string &sink_dev_ip, VideoRectangleInfo &rect)
+{
+    MIRACASTLOG_TRACE("Entering ...");
+    RDKPluginCore::getInstance()->getThunderUtilsInstance()->playRequestToMiracastPlayer(source_dev_ip, source_dev_mac, source_dev_name, sink_dev_ip, rect);
+    MIRACASTLOG_TRACE("Exiting ...");
+}
+
+void RDKMiracastPlugin::stopMiracastPlayer(void)
+{
+    MIRACASTLOG_TRACE("Entering ...");
+    RDKPluginCore::getInstance()->getThunderUtilsInstance()->stopMiracastPlayer();
+    MIRACASTLOG_TRACE("Exiting ...");
+}
+
+void RDKMiracastPlugin::miracastServiceClientConnectionRequestHandler(const std::string &client_mac, const std::string &client_name)
 {
     MIRACASTLOG_VERBOSE("client_mac:[%s] client_name:[%s]", client_mac.c_str(), client_name.c_str());
-    if (RDKMiracastService::getInstance()->mEventListener != nullptr)
+    if (RDKMiracastPlugin::getInstance()->mEventListener != nullptr)
     {
-        RDKMiracastService::getInstance()->mEventListener->onClientConnectionRequest(client_mac, client_name);
+        RDKMiracastPlugin::getInstance()->mEventListener->onMiracastServiceClientConnectionRequest(client_mac, client_name);
     }
     else
     {
@@ -245,12 +261,12 @@ void RDKMiracastService::miracastServiceClientConnectionRequestHandler(const std
     }
 }
 
-void RDKMiracastService::miracastServiceClientConnectionErrorHandler(const std::string &client_mac, const std::string &client_name, const std::string &error_code, const std::string &reason)
+void RDKMiracastPlugin::miracastServiceClientConnectionErrorHandler(const std::string &client_mac, const std::string &client_name, const std::string &error_code, const std::string &reason)
 {
     MIRACASTLOG_VERBOSE("client_mac:[%s] client_name:[%s] error_code:[%s] reason:[%s]", client_mac.c_str(), client_name.c_str(), error_code.c_str(), reason.c_str());
-    if (RDKMiracastService::getInstance()->mEventListener != nullptr)
+    if (RDKMiracastPlugin::getInstance()->mEventListener != nullptr)
     {
-        RDKMiracastService::getInstance()->mEventListener->onClientConnectionError(client_mac, client_name, error_code, reason);
+        RDKMiracastPlugin::getInstance()->mEventListener->onMiracastServiceClientConnectionError(client_mac, client_name, error_code, reason);
     }
     else
     {
@@ -258,12 +274,25 @@ void RDKMiracastService::miracastServiceClientConnectionErrorHandler(const std::
     }
 }
 
-void RDKMiracastService::miracastServiceLaunchRequestHandler(const std::string &source_dev_ip, const std::string &source_dev_mac, const std::string &source_dev_name, const std::string &sink_dev_ip)
+void RDKMiracastPlugin::miracastServiceLaunchRequestHandler(const std::string &source_dev_ip, const std::string &source_dev_mac, const std::string &source_dev_name, const std::string &sink_dev_ip)
 {
     MIRACASTLOG_VERBOSE("source_dev_ip:[%s] source_dev_mac:[%s] source_dev_name:[%s] sink_dev_ip:[%s]", source_dev_ip.c_str(), source_dev_mac.c_str(), source_dev_name.c_str(), sink_dev_ip.c_str());
-    if (RDKMiracastService::getInstance()->mEventListener != nullptr)
+    if (RDKMiracastPlugin::getInstance()->mEventListener != nullptr)
     {
-        RDKMiracastService::getInstance()->mEventListener->onLaunchRequest(source_dev_ip, source_dev_mac, source_dev_name, sink_dev_ip);
+        RDKMiracastPlugin::getInstance()->mEventListener->onMiracastServiceLaunchRequest(source_dev_ip, source_dev_mac, source_dev_name, sink_dev_ip);
+    }
+    else
+    {
+        MIRACASTLOG_WARNING("No Registered listener");
+    }
+}
+
+void RDKMiracastPlugin::miracastPlayerStateChangeHandler(const std::string &source_dev_mac, const std::string &source_dev_name, const std::string &state, const std::string &reason, const std::string &reason_code)
+{
+    MIRACASTLOG_VERBOSE("client_mac:[%s] client_name:[%s] state:[%s] reason:[%s] reason_code:[%s]", source_dev_mac.c_str(), source_dev_name.c_str(), state.c_str(), reason.c_str(), reason_code.c_str());
+    if (RDKMiracastPlugin::getInstance()->mEventListener != nullptr)
+    {
+        RDKMiracastPlugin::getInstance()->mEventListener->onMiracastPlayerStateChange(source_dev_mac, source_dev_name, state, reason, reason_code);
     }
     else
     {

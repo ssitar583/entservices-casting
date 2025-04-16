@@ -172,6 +172,8 @@ namespace WPEFramework
 			bool success = false;
 			MIRACASTLOG_INFO("Entering..!!!");
 
+            LOGINFOMETHOD();
+
 			if(parameters.HasLabel("device_parameters")) {
 				JsonObject device_parameters;
 				std::string	source_dev_ip = "",
@@ -224,7 +226,7 @@ namespace WPEFramework
 
 					if (0 == access("/opt/miracast_westeros_env", F_OK))
 					{
-						if (0 != setenv("XDG_RUNTIME_DIR", "/run", 1))
+						if (0 != setenv("XDG_RUNTIME_DIR", "/tmp", 1))
 						{
 							MIRACASTLOG_ERROR("Failed, setenv for XDG_RUNTIME_DIR: [%s]",strerror(errno));
 						}
@@ -248,8 +250,19 @@ namespace WPEFramework
 						{
 							MIRACASTLOG_ERROR("Failed, setenv for WESTEROS_GL_USE_AMLOGIC_AVSYNC: [%s]",strerror(errno));
 						}
-						if (0 != setenv("WAYLAND_DISPLAY", "main0", 1))
-						{
+                        std::string waylandDisplayName = "";
+
+                        MiracastCommon::execute_PopenCommand( "cat /tmp/rdk/dobby/bundles/com.sky.as.apps_MiracastApp.*/config.json | grep -i \"westeros-\" | cut -d'\"' -f4 | cut -d\"/\" -f3 | xargs echo -n" , nullptr , 15 , waylandDisplayName , 1000000 );
+
+                        if (waylandDisplayName.empty())
+                        {
+                            MIRACASTLOG_ERROR("Failed to get Wayland Display Name from config.json");
+                            waylandDisplayName = "main0";
+                        }
+                        MIRACASTLOG_INFO("Wayland Display Name: %s", waylandDisplayName.c_str());
+
+                        if (0 != setenv("WAYLAND_DISPLAY", waylandDisplayName.c_str(), 1))
+                        {
 							MIRACASTLOG_ERROR("Failed, setenv for WAYLAND_DISPLAY: [%s]",strerror(errno));
 						}
 						if (0 != setenv("WESTEROS_SINK_AMLOGIC_USE_DMABUF", "1", 1))
@@ -272,7 +285,8 @@ namespace WPEFramework
 				}
 			}
 
-			MIRACASTLOG_INFO("Exiting..!!!");
+			LOGTRACEMETHODFIN();
+            MIRACASTLOG_INFO("Exiting..!!!");
 			returnResponse(success);
 		}
 
@@ -284,6 +298,8 @@ namespace WPEFramework
 			bool success = true;
 
 			MIRACASTLOG_INFO("Entering..!!!");
+
+            LOGINFOMETHOD();
 
 			returnIfNumberParamNotFound(parameters, "reason_code");
 
@@ -311,7 +327,8 @@ namespace WPEFramework
 				m_miracast_rtsp_obj->send_msgto_rtsp_msg_hdler_thread(rtsp_hldr_msgq_data);
 			}
 
-			MIRACASTLOG_INFO("Exiting..!!!");
+			LOGTRACEMETHODFIN();
+            MIRACASTLOG_INFO("Exiting..!!!");
 			returnResponse(success);
 		}
 

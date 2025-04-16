@@ -29,9 +29,14 @@
 #define LOCATION_CALLSIGN "LocationSync.1"
 #define PERSISTENTSTORE_CALLSIGN "org.rdk.PersistentStore.1"
 #define MIRACASTSERVICE_CALLSIGN "org.rdk.MiracastService.1"
+#define MIRACASTPLAYER_CALLSIGN "org.rdk.MiracastPlayer.1"
 
 #define MIRACAST_CLIENT_CONNECTION_REQUEST_EVENT    "onClientConnectionRequest"
 #define MIRACAST_CLIENT_CONNECTION_ERROR_EVENT      "onClientConnectionError"
 #define MIRACAST_LAUNCH_REQUEST_EVENT               "onLaunchRequest"
+
+#define MIRACASTPLAYER_STATE_CHANGE_EVENT           "onStateChange"
+
+//#define MIRACAST_PLAYER_APP_REQ_TO_STOP_ON_EXIT 300
 
 #endif

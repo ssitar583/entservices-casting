@@ -40,6 +40,7 @@ namespace Graphics{
 
 NativeDisplayType display;
 MiracastGraphicsDelegate* MiracastGraphicsDelegate::mInstance;
+pthread_mutex_t MiracastGraphicsDelegate::mDispatchMutex;
 
 #define ESS_DISPATCH_THREAD_NAME "EssDispatchTh"
 #define kESSRunLoopPeriod 16
@@ -57,8 +58,10 @@ public:
 	struct sigaction sigact;
 	static void signalHandler(int signum)
 	{
+        MIRACASTLOG_TRACE("Entering ...");
 		MIRACASTLOG_VERBOSE("signalHandler: signum %d\n",signum);
 		mEssDispTh->setRunning(false);
+        MIRACASTLOG_TRACE("Exiting ...");
 	}
 
 	EssosDispatchThread();
@@ -74,14 +77,17 @@ public:
 
     void setRunning(bool running)
     {
+        MIRACASTLOG_TRACE("Entering ...");
     	pthread_mutex_lock(&mRunningMutex);
         mRunning = running;
 		pthread_mutex_unlock(&mRunningMutex);
+        MIRACASTLOG_TRACE("Exiting ...");
     }
 
 private:
     static void* run(void *arg)
     {
+        MIRACASTLOG_TRACE("Entering ...");
 		struct timespec tspec;
 		long long delay = 0, curr_time = 0, diff_time = 0, ess_evloop_last_ts = 0;
 		while(mEssDispTh->isRunning()){
@@ -96,6 +102,7 @@ private:
 			}
 			ess_evloop_last_ts = curr_time;
 		}
+        MIRACASTLOG_TRACE("Exiting ...");
 		return nullptr;
     }
 
@@ -108,6 +115,7 @@ EssosDispatchThread * EssosDispatchThread::mEssDispTh;
     EssosDispatchThread::EssosDispatchThread()
         : mRunning(true)
     {
+        MIRACASTLOG_TRACE("Entering ...");
 	    if (pthread_mutex_init(&mRunningMutex, NULL) != 0) {
         	MIRACASTLOG_VERBOSE("mutex init has failed\n");
     	}
@@ -128,6 +136,7 @@ EssosDispatchThread * EssosDispatchThread::mEssDispTh;
 				MIRACASTLOG_VERBOSE("Failure to set Thread name\n");
 			}
 		}
+        MIRACASTLOG_TRACE("Exiting ...");
     }
 
 static EssTerminateListener terminateListener =
@@ -174,34 +183,42 @@ static EssSettingsListener settingsListener=
 };
 
 MiracastGraphicsDelegate::MiracastGraphicsDelegate() {
+    MIRACASTLOG_TRACE("Entering ...");
 	mEssCtx = nullptr;
 	if (pthread_mutex_init(&mDispatchMutex, NULL) != 0) {
     	MIRACASTLOG_ERROR("<com.miracastapp.graphics> mutex init failed\n");
 	}
+    MIRACASTLOG_TRACE("Exiting ...");
 }
 MiracastGraphicsDelegate::~MiracastGraphicsDelegate() {
+    MIRACASTLOG_TRACE("Entering ...");
 	EssContextDestroy(mEssCtx);
+    MIRACASTLOG_TRACE("Exiting ...");
 }
 
 MiracastGraphicsDelegate* MiracastGraphicsDelegate::getInstance() {
-	if(!mInstance) {
+    if(!mInstance) {
 		mInstance = new MiracastGraphicsDelegate;
 	}
-	return mInstance;
+    return mInstance;
 }
 
 void MiracastGraphicsDelegate::destroyInstance(){
+    MIRACASTLOG_TRACE("Entering ...");
 	if(mInstance != NULL){
 		delete mInstance;
 		mInstance = NULL;
 	}
+    MIRACASTLOG_TRACE("Exiting ...");
 }
 
 bool MiracastGraphicsDelegate::BuildEssosContext() {
+    MIRACASTLOG_TRACE("Entering ...");
 	mEssCtx = EssContextCreate();
 	bool error = false;
 	if(!mEssCtx) {
 		MIRACASTLOG_ERROR("<com.miracastapp.graphics> Failed to create Essos context\n");
+        MIRACASTLOG_TRACE("Exiting ...");
 	    return false;
 	}
 	else {
@@ -248,13 +265,16 @@ bool MiracastGraphicsDelegate::BuildEssosContext() {
             const char *detail = EssContextGetLastErrorDetail(mEssCtx);
            MIRACASTLOG_VERBOSE("<com.miracastapp.graphics>BuildEssosContext(): Essos error: '%s'\n",detail);
         }	
-	
+    MIRACASTLOG_TRACE("Exiting ...");
 	return error;
 }
 
 void MiracastGraphicsDelegate::DestroyNativeWindow() {
-  if (mNativewindow == 0)
+    MIRACASTLOG_TRACE("Entering ...");
+  if (mNativewindow == 0) {
+    MIRACASTLOG_TRACE("Exiting...");
     return;
+  }
 
   if ( !EssContextDestroyNativeWindow(mEssCtx, mNativewindow) ) {
     const char *detail = EssContextGetLastErrorDetail(mEssCtx);
@@ -262,9 +282,11 @@ void MiracastGraphicsDelegate::DestroyNativeWindow() {
   }
 
   mNativewindow = 0;
+  MIRACASTLOG_TRACE("Exiting ...");
 }
 
 bool MiracastGraphicsDelegate::initialize() {
+    MIRACASTLOG_TRACE("Entering ...");
 	//Perform platform-specific initialization of the graphics system here
 	bool error = BuildEssosContext();
 	if(!error){
@@ -279,23 +301,24 @@ bool MiracastGraphicsDelegate::initialize() {
 				startDispatching();
 		}
 	}
-	if(error)
-		return false;
-	else
-		return true;
+    MIRACASTLOG_TRACE("Exiting ...");
+    return !error;
 }
 
 bool MiracastGraphicsDelegate::InitializeEGL()
 {
+    MIRACASTLOG_TRACE("Entering ...");
    MIRACASTLOG_VERBOSE("MiracastGraphicsDelegate::InitializeEGL\n");
 	EGLint major, minor;
 	if (eglInitialize(mDisplay, &major, &minor) != EGL_TRUE)
 	{
       	MIRACASTLOG_ERROR("MiracastGraphicsDelegate::InitializeEGL eglInitialize failed\n");
+        MIRACASTLOG_TRACE("Exiting ...");
 		return true;
 	}
     if(eglBindAPI(EGL_OPENGL_ES_API) != EGL_TRUE) {
-         MIRACASTLOG_VERBOSE("Unable to bind EGL API 0x%x",eglGetError());
+        MIRACASTLOG_VERBOSE("Unable to bind EGL API 0x%x",eglGetError());
+        MIRACASTLOG_TRACE("Exiting ...");
         return true;
     }
 	/*
@@ -307,7 +330,6 @@ bool MiracastGraphicsDelegate::InitializeEGL()
 
 	if (eglGetConfigs(mDisplay, nullptr, 0, &configCount))
 	{
-
 		EGLConfig eglConfigs[configCount];
 
 		EGLint attributes[] = {
@@ -364,8 +386,6 @@ bool MiracastGraphicsDelegate::InitializeEGL()
 	}
 	
 	MIRACASTLOG_VERBOSE("Extentions: %s\n", eglQueryString(mDisplay, EGL_EXTENSIONS));
-
-
    	/*
 	 * Create a window surface
 	 */
@@ -384,24 +404,101 @@ bool MiracastGraphicsDelegate::InitializeEGL()
 	MIRACASTLOG_VERBOSE("EGL window surface is %dx%d\n", gDisplayWidth, gDisplayHeight);
     if(eglMakeCurrent(mDisplay, mSurface, mSurface, mContext) != EGL_TRUE) {
         MIRACASTLOG_ERROR(" Unable to make EGL context current 0x%x", eglGetError());
+        MIRACASTLOG_TRACE("Exiting ...");
         return true;
     }
+
 	eglSwapInterval(mDisplay, 1);
+
+    glEnable(GL_BLEND);
+
+    glBlendFuncSeparate( GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE );
+
+    fillColor(0.5f, 0.5f, 0, 0 , true);
+
+    MIRACASTLOG_TRACE("Exiting ...");
    return false;
 }
 
-void MiracastGraphicsDelegate::preFrameHook() {
+void MiracastGraphicsDelegate::drawRectangle(float x, float y, float width, float height, float red, float green, float blue, float alpha)
+{
+    MIRACASTLOG_TRACE("Entering ...");
+
+    // Define the rectangle's vertices (normalized device coordinates)
+    GLfloat vertices[] = {
+        x, y, 0.0f,               // Top-left
+        x + width, y, 0.0f,       // Top-right
+        x, y - height, 0.0f,      // Bottom-left
+        x + width, y - height, 0.0f // Bottom-right
+    };
+
+    // Define the color for the rectangle
+    GLfloat colors[] = {
+        red, green, blue, alpha,  // Top-left
+        red, green, blue, alpha,  // Top-right
+        red, green, blue, alpha,  // Bottom-left
+        red, green, blue, alpha   // Bottom-right
+    };
+
+    // Create and bind a vertex buffer object (VBO) for vertices
+    GLuint vertexBuffer;
+    glGenBuffers(1, &vertexBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    // Create and bind a VBO for colors
+    GLuint colorBuffer;
+    glGenBuffers(1, &colorBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW);
+
+    // Enable vertex attributes
+    glEnableVertexAttribArray(0); // Position attribute
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+
+    glEnableVertexAttribArray(1); // Color attribute
+    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
+
+    // Draw the rectangle as two triangles
+    GLushort indices[] = {0, 1, 2, 1, 2, 3};
+    GLuint indexBuffer;
+    glGenBuffers(1, &indexBuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, nullptr);
+
+    // Cleanup
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
+    glDeleteBuffers(1, &vertexBuffer);
+    glDeleteBuffers(1, &colorBuffer);
+    glDeleteBuffers(1, &indexBuffer);
+
+    // Swap buffers to display the rectangle
+    if (eglSwapBuffers(mDisplay, mSurface) != EGL_TRUE) {
+        MIRACASTLOG_ERROR("eglSwapBuffers failed with error: 0x%x", eglGetError());
+    }
+
+    MIRACASTLOG_TRACE("Exiting ...");
+}
+
+void MiracastGraphicsDelegate::preFrameHook() 
+{
 
 }
 
 void MiracastGraphicsDelegate::postFrameHook(bool flush) {
-	if(flush){
-		eglSwapBuffers(mDisplay, mSurface);
-	}
+    if(flush)
+    {
+        eglSwapBuffers(mDisplay, mSurface);
+    }
 }
 
 void MiracastGraphicsDelegate::teardown() {
-
+    MIRACASTLOG_TRACE("Entering ...");
     eglMakeCurrent(mDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
     eglDestroyContext(mDisplay, mContext);
     mContext = 0;
@@ -409,22 +506,28 @@ void MiracastGraphicsDelegate::teardown() {
 	DestroyNativeWindow();
 	stopDispatching();
 	MIRACASTLOG_VERBOSE("<com.miracastapp.graphics> teardown() completed\n");
+    MIRACASTLOG_TRACE("Exiting ...");
 }
 
 bool MiracastGraphicsDelegate::startDispatching()
 {
+    MIRACASTLOG_TRACE("Entering ...");
     pthread_mutex_lock(&mDispatchMutex);
     if ( !mDispatchThread )
     {
+        MIRACASTLOG_TRACE("Before creating EssosDispatchThread");
         mDispatchThread = new EssosDispatchThread();
+        MIRACASTLOG_TRACE("After creating EssosDispatchThread");
     }
 	pthread_mutex_unlock(&mDispatchMutex);
 	MIRACASTLOG_VERBOSE("<com.miracastapp.graphics>: startDispatching()\n");
+    MIRACASTLOG_TRACE("Exiting ...");
     return true;
 }
 
 void MiracastGraphicsDelegate::stopDispatching()
 {
+    MIRACASTLOG_TRACE("Entering ...");
     pthread_mutex_lock(&mDispatchMutex);
     if(mDispatchThread)
     {
@@ -435,6 +538,28 @@ void MiracastGraphicsDelegate::stopDispatching()
 	pthread_mutex_unlock(&mDispatchMutex);
 	pthread_mutex_destroy(&mDispatchMutex);
 	MIRACASTLOG_VERBOSE("<com.miracastapp.graphics>: stopDispatching()\n");
+    MIRACASTLOG_TRACE("Exiting ...");
+}
+
+void MiracastGraphicsDelegate::fillColor(float alpha, float red, float green, float blue, bool swapBuffers )
+{
+    MIRACASTLOG_TRACE("Entering ...");
+
+    // Set the clear color (RGBA)
+    glClearColor(red, green, blue, alpha);
+
+    // Clear the color buffer
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    if (swapBuffers)
+    {
+        // Swap buffers to display the color
+        if (eglSwapBuffers(mDisplay, mSurface) != EGL_TRUE) {
+            MIRACASTLOG_ERROR("eglSwapBuffers failed with error: 0x%x", eglGetError());
+        }
+    }
+
+    MIRACASTLOG_TRACE("Exiting ...");
 }
 
 }

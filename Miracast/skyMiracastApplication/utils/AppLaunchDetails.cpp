@@ -85,6 +85,9 @@ namespace LaunchDetails{
                     mVideoRect.startY = video_rectangle["Y"].Number();
                     mVideoRect.width = video_rectangle["W"].Number();
                     mVideoRect.height = video_rectangle["H"].Number();
+
+                    MIRACASTLOG_INFO("video_rectangle received: startX:%d, startY:%d, width:%d, height:%d\n",
+                        mVideoRect.startX, mVideoRect.startY, mVideoRect.width, mVideoRect.height);
                 }
                 else
                 {

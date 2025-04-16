@@ -217,25 +217,25 @@ public:
 } // namespace TextToSpeech
 
 
-namespace MiracastService
+namespace MiracastPlugin
 {
 //forward declaration
-class IMiracastServiceListener;
+class IMiracastPluginListener;
 
 class Manager
 {
 public:
     /*^*
-     * @class MiracastService::Manager
-     * @function void registerListener(MiracastService::IMiracastServiceListener *listener)
-     * @param listener  pointer to a IMiracastServiceListener object. This should be stored which can be notified during Miracast connection and launch request.
+     * @class MiracastPlugin::Manager
+     * @function void registerListener(MiracastPlugin::IMiracastPluginListener *listener)
+     * @param listener  pointer to a IMiracastPluginListener object. This should be stored which can be notified during Miracast connection and launch request.
      * 
      * @description  Registers a listener for informing MiracastApp for connect and launch request.
      *^*/
-    virtual void registerListener( IMiracastServiceListener * const listener) = 0;
+    virtual void registerListener( IMiracastPluginListener * const listener) = 0;
     
     /*^*
-     * @class MiracastService::Manager
+     * @class MiracastPlugin::Manager
      * @function  void setEnable()
      * 
      * @description  Function that enables the Miracast discovery.
@@ -243,7 +243,7 @@ public:
     virtual void setEnable(bool enabledStatus) = 0;
 
     /*^*
-     * @class MiracastService::Manager
+     * @class MiracastPlugin::Manager
      * @function  void acceptClientConnection()
      * @param requestStatus either Accept or Reject
      * 
@@ -252,7 +252,7 @@ public:
     virtual void acceptClientConnection(const std::string &requestStatus) = 0;
 
     /*^*
-     * @class MiracastService::Manager
+     * @class MiracastPlugin::Manager
      * @function  void acceptClientConnection()
      * @param clientMac - Mac addres of the Source device
      * @param state - current Miracast Player state
@@ -264,7 +264,7 @@ public:
 
 protected:
     /*^*
-     * @class MiracastService::Manager
+     * @class MiracastPlugin::Manager
      * @function  ~Manager()
      * 
      * @description  Destructor
@@ -276,43 +276,44 @@ private:
 
 };  //class Manager
 
-class IMiracastServiceListener
+class IMiracastPluginListener
 {
 public:
     /*^*
-     * @class MiracastService::IMiracastServiceListener
-     * @function  void onClientConnectionRequest(const string &client_mac, const string &client_name)
+     * @class MiracastPlugin::IMiracastPluginListener
+     * @function  void onMiracastServiceClientConnectionRequest(const string &client_mac, const string &client_name)
      * @param client_mac - Source Device Mac Address .
      * @param client_name - Source Device Mac Name .
      * @description  This function is implemented in the MiracastApp.  This is to be called from the registered listeners to inform MiracastApp that the state has changed.
      *^*/
-    virtual void onClientConnectionRequest(const string &client_mac, const string &client_name) {};
+    virtual void onMiracastServiceClientConnectionRequest(const string &client_mac, const string &client_name) {};
 
     /*^*
-     * @class MiracastService::IMiracastServiceListener
-     * @function  void onClientConnectionError(const std::string &client_mac, const std::string &client_name, const std::string &error_code, const std::string &reason )
+     * @class MiracastPlugin::IMiracastPluginListener
+     * @function  void onMiracastServiceClientConnectionError(const std::string &client_mac, const std::string &client_name, const std::string &error_code, const std::string &reason )
      * @param client_mac - Source Device Mac Address .
      * @param client_name - Source Device Mac Name .
      * @param error_code - Error code if any failure .
      * @param reason - Error code reason for the failure .
      * @description  This function is implemented in the MiracastApp.  This is to be called from the registered listeners to inform MiracastApp that the state has changed.
      *^*/
-    virtual void onClientConnectionError(const std::string &client_mac, const std::string &client_name, const std::string &error_code, const std::string &reason ) {};
+    virtual void onMiracastServiceClientConnectionError(const std::string &client_mac, const std::string &client_name, const std::string &error_code, const std::string &reason ) {};
 
     /*^*
-     * @class MiracastService::IMiracastServiceListener
-     * @function  void onClientConnectionError(const std::string &client_mac, const std::string &client_name, const std::string &error_code, const std::string &reason )
+     * @class MiracastPlugin::IMiracastPluginListener
+     * @function  void onMiracastServiceClientConnectionError(const std::string &client_mac, const std::string &client_name, const std::string &error_code, const std::string &reason )
      * @param src_dev_ip - Source Device IP Address .
      * @param src_dev_mac - Source Device Mac Name .
      * @param src_dev_name - Error code if any failure .
      * @param sink_dev_ip - Our Device P2P ip address .
      * @description  This function is implemented in the MiracastApp.  This is to be called from the registered listeners to inform MiracastApp that the state has changed.
      *^*/
-    virtual void onLaunchRequest(const string &src_dev_ip, const string &src_dev_mac, const string &src_dev_name, const string & sink_dev_ip) {};
+    virtual void onMiracastServiceLaunchRequest(const string &src_dev_ip, const string &src_dev_mac, const string &src_dev_name, const string & sink_dev_ip) {};
 
-    virtual ~IMiracastServiceListener() {};
+    virtual void onMiracastPlayerStateChange(const std::string &client_mac, const std::string &client_name, const std::string &state, const std::string &reason, const std::string &reason_code) {};
+
+    virtual ~IMiracastPluginListener() {};
 };
-} // namespace MiracastService
-
+} // namespace MiracastPlugin
 
 #endif // _RDK_PLUGIN_HELPER_H_

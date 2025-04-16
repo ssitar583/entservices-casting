@@ -326,7 +326,8 @@ bool MiracastGstPlayer::get_player_statistics()
     }
     MIRACASTLOG_INFO("============= Player Statistics =============");
 
-    double cur_position = getCurrentPosition();
+    double append_pipeline_cur_pos = getCurrentPosition(m_append_pipeline);
+    double playbin_cur_pos = getCurrentPosition(m_playbin_pipeline);
 
     g_object_get( G_OBJECT(m_video_sink), "stats", &stats, nullptr );
 
@@ -356,7 +357,9 @@ bool MiracastGstPlayer::get_player_statistics()
         total_video_frames = render_frame + dropped_frame;
         dropped_video_frames = dropped_frame;
 
-        MIRACASTLOG_INFO("Current PTS: [ %f ]",cur_position);
+        MIRACASTLOG_INFO("Append Pipeline Current PTS: [ %f ]",append_pipeline_cur_pos);
+        MIRACASTLOG_INFO("Playbin Pipeline Current PTS: [ %f ]",playbin_cur_pos);
+
         MIRACASTLOG_INFO("Total Frames: [ %lu], Rendered Frames : [ %lu ], Dropped Frames: [%lu]",
                             total_video_frames,
                             render_frame,

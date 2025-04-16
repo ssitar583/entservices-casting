@@ -24,6 +24,7 @@
 #include <ifaddrs.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+
 using namespace WPEFramework;
 
 #define SECURITY_TOKEN_LEN_MAX 1024
@@ -103,12 +104,13 @@ ThunderUtils *ThunderUtils::getinstance()
     return _instance;
 }
 
-void ThunderUtils::thunderInvoke(const std::string &callsign, const std::string &method, const JsonObject &param, JsonObject &result)
+void ThunderUtils::thunderInvoke(const std::string &callsign, const std::string &method, const JsonObject &parameters, JsonObject &result)
 {
+    LOGINFOMETHOD();
     JsonObject response;
     if (plugins[callsign].obj != nullptr)
     {
-        uint32_t ret = plugins[callsign].obj->Invoke<JsonObject, JsonObject>(THUNDER_RPC_TIMEOUT, method.c_str(), param, response);
+        uint32_t ret = plugins[callsign].obj->Invoke<JsonObject, JsonObject>(THUNDER_RPC_TIMEOUT, method.c_str(), parameters, response);
         if (ret == Core::ERROR_NONE)
         {
             MIRACASTLOG_VERBOSE("%s -%s call success", callsign.c_str(), method.c_str());
@@ -119,6 +121,7 @@ void ThunderUtils::thunderInvoke(const std::string &callsign, const std::string 
             MIRACASTLOG_ERROR("%s -%s call Failed", callsign.c_str(), method.c_str());
         }
     }
+    LOGTRACEMETHODFIN();
 }
 
 void ThunderUtils::thunderInvoke(const std::string &callsign, const std::string &method, JsonObject &result)
@@ -487,7 +490,7 @@ void ThunderUtils::eventHandler_onMiracastServiceClientConnectionRequest(const J
     client_name = parameters["name"].String();
 
     MIRACASTLOG_INFO(">>> client mac: [%s], client name: [%s]", client_mac.c_str(), client_name.c_str());
-    RDKMiracastService::miracastServiceClientConnectionRequestHandler(client_mac, client_name);
+    RDKMiracastPlugin::miracastServiceClientConnectionRequestHandler(client_mac, client_name);
 }
 
 void ThunderUtils::eventHandler_onMiracastServiceClientConnectionError(const JsonObject& parameters)
@@ -500,7 +503,7 @@ void ThunderUtils::eventHandler_onMiracastServiceClientConnectionError(const Jso
     reason = parameters["reason"].String();
 
     MIRACASTLOG_INFO(">>> client mac: [%s], client name: [%s], error code: [%s], reason: [%s]", client_mac.c_str(), client_name.c_str(), error_code.c_str(), reason.c_str());
-    RDKMiracastService::miracastServiceClientConnectionErrorHandler(client_mac, client_name, error_code, reason);
+    RDKMiracastPlugin::miracastServiceClientConnectionErrorHandler(client_mac, client_name, error_code, reason);
 }
 
 void ThunderUtils::eventHandler_onMiracastServiceLaunchRequest(const JsonObject& parameters)
@@ -515,7 +518,22 @@ void ThunderUtils::eventHandler_onMiracastServiceLaunchRequest(const JsonObject&
     sink_dev_ip = device_parameters["sink_dev_ip"].String();
 
     MIRACASTLOG_INFO(">>> source dev ip: [%s], source dev mac: [%s], source dev name: [%s], sink dev ip: [%s]", source_dev_ip.c_str(), source_dev_mac.c_str(), source_dev_name.c_str(), sink_dev_ip.c_str());
-    RDKMiracastService::miracastServiceLaunchRequestHandler(source_dev_ip, source_dev_mac, source_dev_name, sink_dev_ip);
+    RDKMiracastPlugin::miracastServiceLaunchRequestHandler(source_dev_ip, source_dev_mac, source_dev_name, sink_dev_ip);
+}
+
+void ThunderUtils::eventHandler_onMiracastPlayerStateChange(const JsonObject& parameters)
+{
+    std::string client_mac, client_name, state, reason, reason_code;
+
+    client_mac = parameters["mac"].String();
+    client_name = parameters["name"].String();
+    state = parameters["state"].String();
+    reason = parameters["reason"].String();
+    reason_code = parameters["reason_code"].String();
+
+    MIRACASTLOG_INFO(">>> client mac: [%s], client name: [%s], state: [%s], reason: [%s], reason code: [%s]", client_mac.c_str(), client_name.c_str(), state.c_str(), reason.c_str(), reason_code.c_str());
+
+    RDKMiracastPlugin::miracastPlayerStateChangeHandler(client_mac, client_name, state, reason, reason_code);
 }
 
 std::string ThunderUtils::getIPAddress()
@@ -620,6 +638,59 @@ bool ThunderUtils::updateMiracastPlayerState(const string &clientMac, const stri
     params["state"] = state.c_str();
     params["reason_code"] = reason_code.c_str();
     thunderInvoke(MIRACASTSERVICE_CALLSIGN, "updatePlayerState", params, result);
+
+    returnValue = result["success"].Boolean();
+    if (returnValue)
+    {
+        MIRACASTLOG_VERBOSE("updateMiracastPlayerState call success");
+    }
+    else
+    {
+        MIRACASTLOG_ERROR("updateMiracastPlayerState call failed");
+    }
+    return returnValue;
+}
+
+bool ThunderUtils::playRequestToMiracastPlayer(const std::string &source_dev_ip, const std::string &source_dev_mac, const std::string &source_dev_name, const std::string &sink_dev_ip, VideoRectangleInfo &rect)
+{
+    JsonObject params, result, device_parameters, video_rectangle;
+    bool returnValue = false;
+
+    device_parameters["source_dev_ip"] = source_dev_ip.c_str();
+    device_parameters["source_dev_mac"] = source_dev_mac.c_str();
+    device_parameters["source_dev_name"] = source_dev_name.c_str();
+    device_parameters["sink_dev_ip"] = sink_dev_ip.c_str();
+
+    video_rectangle["X"] = rect.startX;
+    video_rectangle["Y"] = rect.startY;
+    video_rectangle["W"] = rect.width;
+    video_rectangle["H"] = rect.height;
+
+    params["device_parameters"] = device_parameters;
+    params["video_rectangle"] = video_rectangle;
+
+    thunderInvoke(MIRACASTPLAYER_CALLSIGN, "playRequest", params, result);
+
+    returnValue = result["success"].Boolean();
+    if (returnValue)
+    {
+        MIRACASTLOG_VERBOSE("updateMiracastPlayerState call success");
+    }
+    else
+    {
+        MIRACASTLOG_ERROR("updateMiracastPlayerState call failed");
+    }
+    return returnValue;
+}
+
+bool ThunderUtils::stopMiracastPlayer(void)
+{
+    JsonObject params, result;
+    bool returnValue = false;
+
+    params["reason_code"] = MIRACAST_PLAYER_APP_REQ_TO_STOP_ON_EXIT;
+
+    thunderInvoke(MIRACASTPLAYER_CALLSIGN, "playRequest", params, result);
 
     returnValue = result["success"].Boolean();
     if (returnValue)

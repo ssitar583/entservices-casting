@@ -195,6 +195,7 @@ uint32_t MiracastAppMain::launchMiracastAppMain(int argc, const char **argv,void
     {
         VideoRectangleInfo video_rect;
         _miracastAppMgrInstance->getVideoResolution(video_rect);
+        mAppEngine->setVideoResolution(video_rect);
     }
 
     mAppEngine->setGraphicsDelegate(mGraphicsDelegate);
