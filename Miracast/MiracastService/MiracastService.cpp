@@ -167,7 +167,7 @@ namespace WPEFramework
 
         const void MiracastService::InitializePowerState()
         {
-            uint32_t res = Core::ERROR_GENERAL;
+            Core::hresult res = Core::ERROR_GENERAL;
             PowerState pwrStateCur = WPEFramework::Exchange::IPowerManager::POWER_STATE_UNKNOWN;
             PowerState pwrStatePrev = WPEFramework::Exchange::IPowerManager::POWER_STATE_UNKNOWN;
 
