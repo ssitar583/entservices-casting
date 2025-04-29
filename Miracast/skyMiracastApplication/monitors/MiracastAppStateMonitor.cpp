@@ -116,6 +116,7 @@ bool MiracastAppStateMonitor::start()
         mWaylandComponents.mRegistry = registry;
         wl_registry_add_listener(mWaylandComponents.mRegistry, &registryListener,this);
         
+        MIRACASTLOG_VERBOSE("Waiting for registry roundtrip for display [%p] ...", mWaylandComponents.mDisplay);
         assert(wl_display_roundtrip(mWaylandComponents.mDisplay) != -1);
 		if(setAppVisibilityAtLaunch_thread_)
             pthread_cancel(setAppVisibilityAtLaunch_thread_);

@@ -248,6 +248,13 @@ void RDKMiracastPlugin::stopMiracastPlayer(void)
     MIRACASTLOG_TRACE("Exiting ...");
 }
 
+void RDKMiracastPlugin::setWesterosEnvToMiracastPlayer(void)
+{
+    MIRACASTLOG_TRACE("Entering ...");
+    RDKPluginCore::getInstance()->getThunderUtilsInstance()->setWesterosEnvToMiracastPlayer();
+    MIRACASTLOG_TRACE("Exiting ...");
+}
+
 void RDKMiracastPlugin::miracastServiceClientConnectionRequestHandler(const std::string &client_mac, const std::string &client_name)
 {
     MIRACASTLOG_VERBOSE("client_mac:[%s] client_name:[%s]", client_mac.c_str(), client_name.c_str());

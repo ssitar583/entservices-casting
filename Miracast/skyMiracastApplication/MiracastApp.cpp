@@ -12,6 +12,12 @@
 #include "MiracastAppLogging.hpp"
 #include "CrashLogger.h"
 
+#include <QGuiApplication>
+#include <QImage>
+#include <QPainter>
+#include <QFontDatabase>
+#include <QFont>
+
 #ifdef ENABLE_BREAKPAD
 #include "client/linux/handler/exception_handler.h"
 #endif
@@ -240,6 +246,8 @@ int main(int argc, char *argv[])
     int returnStatus = -1;
     MiracastAppMgr* miracastAppMgr = nullptr;
     MIRACASTLOG_VERBOSE("sky-MiracastAppPlugin: Entered \n");
+    qputenv("QT_QPA_FONTDIR", "/usr/share/fonts/ttf");
+    QGuiApplication app(argc, argv);
     addSignalHandling();
     miracastAppMgr = MiracastAppMgr::getInstance();
     if ( nullptr != miracastAppMgr )

@@ -18,7 +18,7 @@
  */
 #include "ThunderUtils.h"
 #include "RDKPluginCore.h"
-#include "MiracastApplication.hpp"
+#include "MiracastCommon.h"
 #include "MiracastAppLogging.hpp"
 #include <sys/types.h>
 #include <ifaddrs.h>
@@ -34,9 +34,26 @@ std::string client_id_;
 std::mutex thunderUtilsMutex_;
 ThunderUtils *ThunderUtils::_instance(nullptr);
 
+static std::map<std::string, std::string> westerosEnvArgs = 
+{
+    {"WAYLAND_DISPLAY", ""},
+    {"XDG_RUNTIME_DIR", "/tmp"},
+    {"LD_PRELOAD", "libwesteros_gl.so.0.0.0"},
+    {"WESTEROS_GL_GRAPHICS_MAX_SIZE", "1920x1080"},
+    {"WESTEROS_GL_MODE", "3840x2160x60"},
+    {"WESTEROS_GL_USE_REFRESH_LOCK", "1"},
+    {"WESTEROS_GL_USE_AMLOGIC_AVSYNC", "1"},
+    {"WESTEROS_SINK_AMLOGIC_USE_DMABUF", "1"},
+    {"WESTEROS_SINK_USE_FREERUN", "1"},
+    {"WESTEROS_SINK_USE_ESSRMGR", "1"}
+};
+
 ThunderUtils::ThunderUtils()
 {
 #ifndef SKY_BUILD // (SKY_BUILD_ENV != 1)
+    for (const auto& arg : envArgs) {
+        Core::SystemInfo::SetEnvironment(_T(arg.first.c_str()), _T(arg.second.c_str()));
+    }
     Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("127.0.0.1:9998")));
     MIRACASTLOG_INFO(" Thunder plugins setEnvironment\n");
 #else 
@@ -651,6 +668,37 @@ bool ThunderUtils::updateMiracastPlayerState(const string &clientMac, const stri
     return returnValue;
 }
 
+bool ThunderUtils::setWesterosEnvToMiracastPlayer(void){
+    JsonObject params, result;
+    JsonArray westerosArgsArray;
+    bool returnValue = false;
+
+    for (auto &envArg : westerosEnvArgs)
+    {
+        JsonObject argObject;
+
+        argObject["argName"] = envArg.first.c_str();
+        argObject["argValue"] = envArg.second.c_str();
+        westerosArgsArray.Add(argObject);
+        MIRACASTLOG_INFO("westerosEnvArgs: [%s] = [%s]", envArg.first.c_str(), envArg.second.c_str());
+    }
+    params["westerosArgs"] = westerosArgsArray;
+    params["appName"] = "MiracastApp";
+
+    thunderInvoke(MIRACASTPLAYER_CALLSIGN, "setWesterosEnvironment", params, result);
+
+    returnValue = result["success"].Boolean();
+    if (returnValue)
+    {
+        MIRACASTLOG_VERBOSE("setWesterosEnvironment call success");
+    }
+    else
+    {
+        MIRACASTLOG_ERROR("setWesterosEnvironment call failed");
+    }
+    return returnValue;
+}
+
 bool ThunderUtils::playRequestToMiracastPlayer(const std::string &source_dev_ip, const std::string &source_dev_mac, const std::string &source_dev_name, const std::string &sink_dev_ip, VideoRectangleInfo &rect)
 {
     JsonObject params, result, device_parameters, video_rectangle;
@@ -674,11 +722,11 @@ bool ThunderUtils::playRequestToMiracastPlayer(const std::string &source_dev_ip,
     returnValue = result["success"].Boolean();
     if (returnValue)
     {
-        MIRACASTLOG_VERBOSE("updateMiracastPlayerState call success");
+        MIRACASTLOG_VERBOSE("playRequest call success");
     }
     else
     {
-        MIRACASTLOG_ERROR("updateMiracastPlayerState call failed");
+        MIRACASTLOG_ERROR("playRequest call failed");
     }
     return returnValue;
 }

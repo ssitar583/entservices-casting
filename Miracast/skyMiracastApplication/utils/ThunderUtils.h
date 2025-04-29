@@ -26,7 +26,7 @@
 
 #include <WPEFramework/core/core.h>
 #include <WPEFramework/plugins/Service.h>
-
+#include <mutex>
 #include <map>
 
 #define LOGINFOMETHOD() { std::string json; parameters.ToString(json); MIRACASTLOG_INFO( "callsign[%s]method[%s]params[%s]",callsign.c_str(), method.c_str(), json.c_str() ); }
@@ -82,6 +82,7 @@ class ThunderUtils
     bool updateMiracastPlayerState(const string &clientMac, const string &state, const string &reason_code);
     bool playRequestToMiracastPlayer(const std::string &source_dev_ip, const std::string &source_dev_mac, const std::string &source_dev_name, const std::string &sink_dev_ip, VideoRectangleInfo &rect);
     bool stopMiracastPlayer(void);
+    bool setWesterosEnvToMiracastPlayer(void);
 
 private:
     ThunderUtils();

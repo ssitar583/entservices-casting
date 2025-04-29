@@ -102,13 +102,21 @@ bool MiracastAppMgr::islaunchAppOnStartup()
 MiracastAppMgr::MiracastAppMgr(void)
 
 {
+    MIRACASTLOG_TRACE("Entering ...");
+
+    MIRACASTLOG_VERBOSE("MiracastAppMgr %p ",_mMiracastAppMgrInstance);
     assert(!_mMiracastAppMgrInstance);
     _mMiracastAppMgrInstance = this;
+    MIRACASTLOG_TRACE("Exiting ...");
 }
 
-MiracastAppMgr::~MiracastAppMgr(){
+MiracastAppMgr::~MiracastAppMgr()
+{
+    MIRACASTLOG_TRACE("Entering ...");
+    MIRACASTLOG_VERBOSE("MiracastAppMgr %p - %p",_mMiracastAppMgrInstance, this);
     assert(_mMiracastAppMgrInstance == this);
     _mMiracastAppMgrInstance = nullptr;
+    MIRACASTLOG_TRACE("Exiting ...");
 }
 
 void MiracastAppMgr::initializeMonitors(bool isLaunchAppOnStart)

@@ -56,6 +56,8 @@ GST_INCLUDES =  -I$(STAGING_DIR)/usr/include/gstreamer-1.0 \
 				-I$(STAGING_DIR)/usr/lib/gstreamer-1.0/include \
 				-I$(STAGING_DIR)/usr/lib/glib-2.0/include
 
+QT_INCLUDES = -I$(STAGING_DIR)/usr/include/QtGui 
+
 OBJS := $(skyAppPlugin_SRCS:%=$(BUILD_DIR)/%.o)
 
 skyAppPlugin_LIBS = -L$(STAGING_DIR)/usr/lib/ \
@@ -75,6 +77,8 @@ GST_LIBS = -L$(STAGING_DIR)/usr/lib -L$(STAGING_DIR)/usr/lib/gstreamer-1.0 \
            -lsec_api -lgstreamer-1.0 -lgstbase-1.0 -lglib-2.0 \
            -lgobject-2.0 -lgstapp-1.0 -lgstallocators-1.0 -lgstsecmemallocator -lrdkgstreamerutils -lrdkgstreamerutilsplatform
 
+QT_LIBS = -L$(STAGING_DIR)/usr/lib -lQt5Gui -lQt5Core -lQt5Widgets
+
 # ---------------------------------------------------------------------
 #  Build rules
 # ---------------------------------------------------------------------
@@ -85,10 +89,10 @@ DIR_CREATE = @mkdir -p $(@D)
 
 $(BUILD_DIR)/%.cpp.o: %.cpp
 	$(DIR_CREATE)
-	$(CXX) $(CXXFLAGS) $(skyAppPlugin_INCLUDES) $(GST_INCLUDES) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(skyAppPlugin_INCLUDES) $(GST_INCLUDES) $(QT_INCLUDES) -c $< -o $@
 
 $(BUILD_DIR)/$(BUILD_TARGETS): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(skyAppPlugin_LIBS) $(WPEFRAMEWORK_LIBS) $(GST_LIBS) $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(skyAppPlugin_LIBS) $(WPEFRAMEWORK_LIBS) $(GST_LIBS) $(QT_LIBS) $(LDFLAGS)
 
 all: $(BUILD_TARGETS)
 

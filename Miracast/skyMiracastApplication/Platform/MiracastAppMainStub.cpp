@@ -17,8 +17,6 @@
  * limitations under the License.
  */
 
-#include "MiracastAppMainStub.hpp"
-
 #include <unistd.h>
 #include <signal.h>
 #include <cstring>
@@ -26,14 +24,15 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#include "MiracastApplication.hpp"
-#include "MiracastAppLogging.hpp"
+#include "MiracastAppCommon.hpp"
 #include "MiracastGraphicsDelegate.hpp"
+#include "MiracastAppMainStub.hpp"
+#include "MiracastAppLogging.hpp"
 #include "MiracastAppMgr.h"
 #include "helpers.hpp"
 
 using namespace MiracastApp;
-using namespace MiracastApp::Graphics;
+
 typedef MiracastApp::Application::Status AppStatus;
 extern void appInterface_destroyAppInstance();
 extern bool isAppExitRequested();
@@ -160,8 +159,7 @@ MiracastAppMain::MiracastAppMain()
 }
 
 MiracastAppMain::~MiracastAppMain(){
-        MiracastGraphicsDelegate::destroyInstance();
-        MiracastApp::Application::Engine::destroyAppEngineInstance();
+    MiracastApp::Application::Engine::destroyAppEngineInstance();
 }
 
 uint32_t MiracastAppMain::launchMiracastAppMain(int argc, const char **argv,void* userdata)
@@ -177,13 +175,7 @@ uint32_t MiracastAppMain::launchMiracastAppMain(int argc, const char **argv,void
 
     MIRACASTLOG_TRACE("Entering ...");
 
-    mGraphicsDelegate = MiracastGraphicsDelegate::getInstance();
     mAppEngine->setLaunchArguments(argc, argv);
-
-    if(nullptr == mGraphicsDelegate)
-    {
-        MIRACASTLOG_ERROR("GraphicsDelegate nullptr!");
-    }
 
     if (nullptr == mAppEngine)
     {
@@ -198,8 +190,7 @@ uint32_t MiracastAppMain::launchMiracastAppMain(int argc, const char **argv,void
         mAppEngine->setVideoResolution(video_rect);
     }
 
-    mAppEngine->setGraphicsDelegate(mGraphicsDelegate);
-	MIRACASTLOG_VERBOSE("starting appEngine!");
+    MIRACASTLOG_VERBOSE("starting appEngine!");
 	status = mAppEngine->start();
 	if ( status != AppStatus::OK ) {
         MIRACASTLOG_ERROR("Failed to start AppEngine [%x]",status);
@@ -209,16 +200,21 @@ uint32_t MiracastAppMain::launchMiracastAppMain(int argc, const char **argv,void
 		uint8_t state = mAppEngine->_getAppstate();
 
         while ( true ) {
+            MIRACASTLOG_TRACE("AppEngine state: %d", state);
 			state = mAppEngine->_getAppstate();
-			if(state == mAppEngine->State::STARTED || state ==  mAppEngine->State::RUNNING  || state ==  mAppEngine->State::BACKGROUNDING || state ==  mAppEngine->State::RESUMING || mAppEngine->_isAppStopRequested() == true){
-			status = mAppEngine->tick();
+            MIRACASTLOG_TRACE("AppEngine state: %d", state);
+			if(state == mAppEngine->State::STARTED || state ==  mAppEngine->State::RUNNING  || state ==  mAppEngine->State::BACKGROUNDING || state ==  mAppEngine->State::RESUMING || mAppEngine->_isAppStopRequested() == true)
+            {
+                MIRACASTLOG_TRACE("Before appEngine.tick()");
+			    status = mAppEngine->tick();
+                MIRACASTLOG_TRACE("After appEngine.tick() status: %d", status);
 				if ( status != AppStatus::OK ) {
 					MIRACASTLOG_ERROR("Connection_Error: appEngine.tick() returned NOT Status::OK, so Stop appEngine!");
 					break;
 				}
 			}
 			else {
-				usleep(10*1000);
+				usleep(1000*1000);
 			}
 		// Please note: if the engine is backgrounded, you should also be suspending this loop
 		// Since the logic to call appEngine.background is not provided for you (it is system dependent)

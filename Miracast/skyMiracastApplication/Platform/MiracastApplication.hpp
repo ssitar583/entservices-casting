@@ -17,28 +17,18 @@
  * limitations under the License.
  */
 
-#ifndef MiracastApplication_hpp
-#define MiracastApplication_hpp
+#ifndef _MIRACAST_APPLICATION_H_
+#define _MIRACAST_APPLICATION_H_
 
 //TODO: locking
 #include <mutex>
-
-#include "MiracastGraphicsPAL.hpp"
 #include "RDKPluginCore.h"
-#include "MiracastRTSPMsg.h"
-#include "MiracastGstPlayer.h"
+#include "MiracastCommon.h"
 
 namespace MiracastApp {
 namespace Application {
 
-typedef enum _MiracastTTSVoiceCommandTypes
-{
-    READY_TO_CAST_TTS_VOICE_COMMAND,
-    CONNECT_REQUEST_TTS_VOICE_COMMAND,
-    LAUNCH_REQUEST_TTS_VOICE_COMMAND,
-    CONNECTION_ERROR_TTS_VOICE_COMMAND
-}
-MiracastTTSVoiceCommandTypes;
+//class MiracastGraphicsDelegate;
 
 typedef enum _MiracastPluginRequestEvents
 {
@@ -54,13 +44,13 @@ MiracastPluginRequestEvent;
 typedef struct _miracast_plugin_request_hldr_msgq_st
 {
     MiracastPluginRequestEvent eventType;
+    char reason[64];
+    char src_dev_name[40];
+    char error_code[32];
     char src_dev_ip[24];
     char src_dev_mac[24];
     char sink_dev_ip[24];
     char state[24];
-    char error_code[32];
-    char src_dev_name[40];
-    char reason[64];
 }
 MIRACASTPLUGIN_REQ_HANDLER_MSGQ_STRUCT;
 
@@ -130,14 +120,12 @@ public:
 		RESUMING,
 		
 	};
-	
-	// Call setGraphicsDelegate before start(). Required.
-	Status setGraphicsDelegate(MiracastApp::Graphics::Delegate* graphicsDelegate);
+
+    void setCurrentAppScreenState(MiracastAppScreenState state, const std::string &deviceName, const std::string &errorCode);
 	
 	// Call setLaunchArguments before start() with the command line arguments passed to the application by the MiracastApp daemon
 	Status setLaunchArguments(int argc, const char **argv);
-	
-	// Call setMediaImplementation before start()
+
 	static Engine *  getAppEngineInstance(void){
 		if(_appEngine == nullptr){
 			_appEngine = new Engine();
@@ -156,11 +144,7 @@ public:
 		return _mRDKMiracastPlugin;
 	}
 
-    RDKTextToSpeech *  getRDKTextToSpeechInstance(void){
-		return _mRDKTextToSpeech;
-	}
-
-	// The main thread is the thread which owns the OpenGL context.
+    // The main thread is the thread which owns the OpenGL context.
 	// These methods should only be called from the main thread:
 	//
 	// start()
@@ -204,20 +188,18 @@ public:
     void getVideoResolution(VideoRectangleInfo &rect);
     void playRequest(std::string source_dev_ip, std::string source_dev_mac , std::string source_dev_name, std::string sink_dev_ip);
     void stopRequest(void);
-    void updateTTSVoiceCommand(MiracastTTSVoiceCommandTypes type, std::vector<std::string> args);
 
 private:
 	// TODO: locking
 	//	std::mutex _lock;
 	int 									_argc;
 	const char **							_argv;
-	MiracastApp::Graphics::Delegate *       _graphicsDelegate;
 	bool                                    _appStopRequested;
 	State 									_state;
 	std::mutex                              _appEngineMutex;
     VideoRectangleInfo                      _video_rect;
 	static Engine * 						_appEngine;
-    RDKTextToSpeech *                       _mRDKTextToSpeech {nullptr};
+    MiracastApp::Graphics::MiracastGraphicsDelegate*               _mGraphicsDelegate {nullptr};
     RDKMiracastPlugin * 					_mRDKMiracastPlugin {nullptr};
     MiracastPluginEventListener *          _mRDKMiracastPluginListener {nullptr};
 	//To free up the command line  arguments 
@@ -240,4 +222,4 @@ private:
 }
 }
 
-#endif /* MiracastApplication_hpp */
+#endif /* _MIRACAST_APPLICATION_H_ */

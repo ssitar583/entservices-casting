@@ -1,3 +1,5 @@
+#include "MiracastAppCommon.hpp"
+#include "MiracastGraphicsDelegate.hpp"
 #include "MiracastAppInterface.hpp"
 #include "MiracastAppMainStub.hpp"
 #include "MiracastAppLogging.hpp"

@@ -17,62 +17,67 @@
  * limitations under the License.
  */
 
-#ifndef MIRACAST_GRAPHICS_DELEGATE_HPP
-#define MIRACAST_GRAPHICS_DELEGATE_HPP
+#ifndef _MIRACAST_GRAPHICS_DELEGATE_HPP_
+#define _MIRACAST_GRAPHICS_DELEGATE_HPP_
 
 #include <iostream>
 #include <essos.h>
+#include <EGL/egl.h>
+#include <GLES2/gl2.h>
 #include <pthread.h>
 #include <map>
 
-#include "MiracastGraphicsPAL.hpp"
-#include "MiracastApplication.hpp"
+#include "RDKPluginCore.h"
+
 namespace MiracastApp{
 namespace Graphics{
 
-class EssosDispatchThread;
+class EssosRenderThread;
 
-class MiracastGraphicsDelegate : public MiracastApp::Graphics::Delegate {
+class MiracastGraphicsDelegate
+{
 	public:
 		static MiracastGraphicsDelegate* getInstance(); 
 		static void destroyInstance();
 		bool initialize();
-		void preFrameHook();
-		void postFrameHook(bool flush);
 		void teardown();
-		EssCtx *getEssCtxInstance() {return mEssCtx;}
-    	bool startDispatching();
-    	void stopDispatching();
-        void fillColor(float alpha, float red, float green, float blue, bool swapBuffers );
-        void drawRectangle(float x, float y, float width, float height, float alpha, float red, float green, float blue);
-    protected:
-        void OnKeyPressed(unsigned int key);
-        void OnKeyReleased(unsigned int key);
-		void OnKeyRepeat(unsigned int key);
-	private: 
+		void setAppScreenState(MiracastAppScreenState state, const std::string &deviceName, const std::string &errorCode);
+        MiracastAppScreenState getAppScreenState() {return mCurrentAppScreenState;}
+        void setFriendlyName(const std::string &friendlyName) { mFriendlyName = friendlyName; }
+        void setLanguageCode(const std::string &languageCode) { mLanguageCode = languageCode; }
+        std::string getFriendlyName() { return mFriendlyName; }
+        std::string getLanguageCode() { return mLanguageCode; }
+        std::string getWelcomePageHeader() { return mWelcomePageHeader; }
+        std::string getWelcomePageDescription() { return mWelcomePageDescription; }
+        std::string getConnectingPageHeader() { return mConnectingPageHeader; }
+        std::string getMirroringPageHeader() { return mMirroringPageHeader; }
+        std::string getErrorPageHeader() { return mErrorPageHeader; }
+        std::string getErrorPageDescription() { return mErrorPageDescription; }
+        std::string getButtonText() { return mButtonText; }
+        void updateTTSVoiceCommand(const std::string &voiceMsg);
+    private:
 		bool mResize_pending { false };
-		EssCtx *mEssCtx { nullptr };
-		int gDisplayWidth { 0 };
-		int gDisplayHeight { 0 };
-		NativeWindowType mNativewindow { 0 };
-		EGLConfig mConfig;
-		EGLDisplay mDisplay;
-		EGLContext mContext;
-		EGLSurface mSurface;
-		static pthread_mutex_t mDispatchMutex;
+		static pthread_mutex_t _mRenderMutex;
 		static MiracastGraphicsDelegate* mInstance;
-		static EssKeyListener keyListener;
-		EssosDispatchThread *mDispatchThread { nullptr };
-		MiracastApp::Application::Engine * mAppEngine { nullptr }; 
-		MiracastGraphicsDelegate();	
+		EssosRenderThread*  _mRenderThread { nullptr };
+        RDKTextToSpeech*    _mRDKTextToSpeech {nullptr};
+
+        std::string mFriendlyName;
+        std::string mLanguageCode;
+        std::string mWelcomePageHeader;
+        std::string mWelcomePageDescription;
+        std::string mConnectingPageHeader;
+        std::string mMirroringPageHeader;
+        std::string mErrorPageHeader;
+        std::string mErrorPageDescription;
+        std::string mButtonText;
+        MiracastAppScreenState mCurrentAppScreenState;
+
+        MiracastGraphicsDelegate();	
 		MiracastGraphicsDelegate & operator=(const MiracastGraphicsDelegate &) = delete;
 		MiracastGraphicsDelegate(const MiracastGraphicsDelegate &) = delete;
 		virtual ~MiracastGraphicsDelegate();
-		bool BuildEssosContext();
-		void DestroyNativeWindow();
-		void displaySize(void *userData, int width, int height );
-		bool InitializeEGL();
-};
+    };
 }
 }
-#endif /* MIRACAST_GRAPHICS_DELEGATE_HPP */
+#endif /* _MIRACAST_GRAPHICS_DELEGATE_HPP_ */

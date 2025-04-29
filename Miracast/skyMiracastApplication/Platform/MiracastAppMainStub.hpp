@@ -22,12 +22,10 @@
 
 #include<mutex>
 
-#include "MiracastApplication.hpp"
-#include "MiracastGraphicsDelegate.hpp"
 #include "ThunderUtils.h"
+#include "MiracastApplication.hpp"
 
 using namespace MiracastApp;
-using namespace MiracastApp::Graphics;
 
 class MiracastAppMain{
     public:
@@ -40,7 +38,6 @@ class MiracastAppMain{
     void setMiracastAppVisibility(bool visible);
     private:
         static MiracastAppMain * mMiracastAppMain;
-    	MiracastGraphicsDelegate * mGraphicsDelegate {nullptr};
         MiracastApp::Application::Engine *mAppEngine {nullptr};
 	    std::mutex mAppRunnerMutex;
         MiracastAppMain();

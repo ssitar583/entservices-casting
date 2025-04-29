@@ -16,6 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include "MiracastAppCommon.hpp"
 #include "MiracastGraphicsDelegate.hpp"
 #include "MiracastApplication.hpp"
 #include <cstdlib>
@@ -24,6 +25,9 @@
 #include <string.h>
 
 #include "MiracastAppLogging.hpp"
+
+using namespace MiracastApp;
+using namespace MiracastApp::Graphics;
 
 static void redirect_std_out_err_logs()
 {
@@ -85,7 +89,6 @@ static void MiracastPluginEventHandlerCallback(void *args)
 Engine::Engine()
  : _argc(0)
  , _argv(nullptr)
- , _graphicsDelegate(nullptr)
  , _appStopRequested(false)
  , _state(STOPPED)
 {
@@ -93,13 +96,11 @@ Engine::Engine()
 
     MIRACASTLOG_INFO("Constructor() MiracastApp Application instance");
 
-    _mRDKTextToSpeech = RDKTextToSpeech::getInstance();
-    MIRACASTLOG_INFO("TRACE: RDKTextToSpeech instance created");
+    _mGraphicsDelegate = MiracastGraphicsDelegate::getInstance();
+
     _mRDKMiracastPlugin = RDKMiracastPlugin::getInstance();
-    MIRACASTLOG_INFO("TRACE: RDKMiracastPlugin instance created");
     if (_mRDKMiracastPlugin)
     {
-        MIRACASTLOG_INFO("TRACE: RDKMiracastPlugin instance created");
         _mRDKMiracastPluginListener = new MiracastPluginEventListener();
         if (nullptr == _mRDKMiracastPluginListener)
         {
@@ -107,9 +108,7 @@ Engine::Engine()
         }
         else
         {
-            MIRACASTLOG_INFO("TRACE: RDKMiracastPluginEventListener instance created");
             _mRDKMiracastPluginListener->startRequestHandlerThread();
-            MIRACASTLOG_INFO("TRACE: RDKMiracastPluginEventListener request handler thread started");
             _mRDKMiracastPlugin->registerListener(_mRDKMiracastPluginListener);
         }
     }
@@ -120,12 +119,6 @@ Engine::Engine()
 Engine::~Engine() {
     this->_freeSavedArgs();
 
-    if ( _mRDKTextToSpeech )
-    {
-        RDKTextToSpeech::destroyInstance();
-        _mRDKTextToSpeech = nullptr;
-    }
-
     if( _mRDKMiracastPlugin )
     {
         if ( nullptr != _mRDKMiracastPluginListener ){
@@ -135,16 +128,12 @@ Engine::~Engine() {
         RDKMiracastPlugin::destroyInstance();
         _mRDKMiracastPlugin = nullptr;
     }
-}
 
-Status Engine::setGraphicsDelegate(MiracastApp::Graphics::Delegate* graphicsDelegate) {
-        //TODO: lock (?)
-        if (this->_state != State::STOPPED) {
-                return Status::INVALID_STATE;
-        }
-        this->_graphicsDelegate = graphicsDelegate;
-        MIRACASTLOG_VERBOSE("setGraphicsDelegate");
-        return Status::OK;
+    if (_mGraphicsDelegate)
+    {
+        MiracastGraphicsDelegate::destroyInstance();
+        _mGraphicsDelegate = nullptr;
+    }
 }
 
 void Engine::setVideoResolution(VideoRectangleInfo &rect)
@@ -168,6 +157,16 @@ void Engine::getVideoResolution(VideoRectangleInfo &rect)
     rect.height = _video_rect.height;
     MIRACASTLOG_INFO("Video resolution retrieved: startX=%d, startY=%d, width=%d, height=%d",
                      rect.startX, rect.startY, rect.width, rect.height);
+    MIRACASTLOG_TRACE("Exiting ...");
+}
+
+void Engine::setCurrentAppScreenState(MiracastAppScreenState state, const std::string &deviceName, const std::string &errorCode)
+{
+    MIRACASTLOG_TRACE("Entering ...");
+    if (_mGraphicsDelegate)
+    {
+        _mGraphicsDelegate->setAppScreenState(state, deviceName, errorCode);
+    }
     MIRACASTLOG_TRACE("Exiting ...");
 }
 
@@ -204,10 +203,9 @@ Status Engine::start() {
         else if (!this->_readyToStart()) {
                 return Status::NOT_READY;
         }
-        updateTTSVoiceCommand(READY_TO_CAST_TTS_VOICE_COMMAND, {});
         if (_mRDKMiracastPlugin)
         {
-            _mRDKMiracastPlugin->setEnable(true);
+            _mRDKMiracastPlugin->setEnable(true);       
         }
         this->_state = State::STARTED;
         return Status::OK;
@@ -230,10 +228,11 @@ Status Engine::tick(bool forceFrameDraw) {
         if (this->_state == State::STARTED) {
                 // Initialize first-run
                 // Force the first frame to draw
-                bool didSucceed = this->_graphicsDelegate->initialize();
+                bool didSucceed = this->_mGraphicsDelegate->initialize();
                 if (didSucceed) 
                 {
                     this->_state = State::RUNNING;
+                    setCurrentAppScreenState(APPSCREEN_STATE_WELCOME, "", "");
                 }
                 else {
                         //TODO: handle failure to initialize (displayInfo might be stale on second run)
@@ -251,9 +250,7 @@ Status Engine::tick(bool forceFrameDraw) {
         }
 
         if (this->_state == State::RUNNING) {
-            bool platformShouldSwapFrame = false;
-            this->_graphicsDelegate->preFrameHook();
-            this->_graphicsDelegate->postFrameHook(platformShouldSwapFrame);
+            
         } else if (this->_state == State::BACKGROUNDED) {
             MIRACASTLOG_INFO("BACKGROUNDED \n");
         }
@@ -288,8 +285,8 @@ bool Engine::_isAppStopRequested(){
 Status Engine::stop() {
         if (this->_state != State::STOPPED) {
 		    MIRACASTLOG_INFO("AppEngine stop() free-up resources");
-            if(this->_graphicsDelegate != nullptr)
-                this->_graphicsDelegate->teardown();
+            if(this->_mGraphicsDelegate != nullptr)
+                this->_mGraphicsDelegate->teardown();
         }
         //Reset
         this->_state = State::STOPPED;
@@ -306,7 +303,7 @@ bool Engine::_readyToStart() {
         if (this->_state != State::STOPPED) {
             MIRACASTLOG_ERROR(" Application engine state is not STOPPED");
         }
-        else if (!this->_graphicsDelegate) {
+        else if (!this->_mGraphicsDelegate) {
                 
 			MIRACASTLOG_ERROR(" Graphics delegate not set");
         }
@@ -324,131 +321,13 @@ static bool _controlHndlr(void *context, const std::string &control, const std::
 	return true;
 }
 
-uint8_t Engine::_getAppstate(){
-        return this->_state;
-}
-
-void Engine::updateTTSVoiceCommand(MiracastTTSVoiceCommandTypes type, std::vector<std::string> args)
+uint8_t Engine::_getAppstate()
 {
-    std::string command;
-
-    switch (type)
-    {
-        case READY_TO_CAST_TTS_VOICE_COMMAND:
-        {
-            command = "Miracast Ready to cast";
-        }
-        break;
-        case CONNECT_REQUEST_TTS_VOICE_COMMAND:
-        {
-            if ( 1 == args.size()) {
-                command = args[0] + "  wants to connect to this TV and Connecting to it";
-            }
-        }
-        break;
-        case LAUNCH_REQUEST_TTS_VOICE_COMMAND:
-        {
-            if ( 1 == args.size()) {
-                command = "Starting to cast from " + args[0];
-            }
-        }
-        break;
-        case CONNECTION_ERROR_TTS_VOICE_COMMAND:
-        {
-            if ( 2 == args.size()) {
-                command = args[0] + " couldn't connect to this TV\nUse your device to try again.\nError code: ENT-32" + args[1];
-            }
-        }
-        break;
-        default:
-            break;
-    }
-    if (_mRDKTextToSpeech)
-    {
-        MIRACASTLOG_INFO("TTS command: %s", command.c_str());
-        _mRDKTextToSpeech->speak(command);
-    }
-}
-
-void Engine::playRequest(std::string source_dev_ip, std::string source_dev_mac , std::string source_dev_name, std::string sink_dev_ip)
-{
-    RTSP_HLDR_MSGQ_STRUCT rtsp_hldr_msgq_data = {0};
-    MIRACASTLOG_INFO("Entering..!!!");
-
-    strncpy( rtsp_hldr_msgq_data.source_dev_ip, source_dev_ip.c_str() , sizeof(rtsp_hldr_msgq_data.source_dev_ip));
-    rtsp_hldr_msgq_data.source_dev_ip[sizeof(rtsp_hldr_msgq_data.source_dev_ip) - 1] = '\0';
-    strncpy( rtsp_hldr_msgq_data.source_dev_mac, source_dev_mac.c_str() , sizeof(rtsp_hldr_msgq_data.source_dev_mac));
-    rtsp_hldr_msgq_data.source_dev_mac[sizeof(rtsp_hldr_msgq_data.source_dev_mac) - 1] = '\0';
-    strncpy( rtsp_hldr_msgq_data.source_dev_name, source_dev_name.c_str() , sizeof(rtsp_hldr_msgq_data.source_dev_name));
-    rtsp_hldr_msgq_data.source_dev_name[sizeof(rtsp_hldr_msgq_data.source_dev_name) - 1] = '\0';
-    strncpy( rtsp_hldr_msgq_data.sink_dev_ip, sink_dev_ip.c_str() , sizeof(rtsp_hldr_msgq_data.sink_dev_ip));
-    rtsp_hldr_msgq_data.sink_dev_ip[sizeof(rtsp_hldr_msgq_data.sink_dev_ip) - 1] = '\0';
-
-    rtsp_hldr_msgq_data.state = RTSP_START_RECEIVE_MSGS;
-
-    rtsp_hldr_msgq_data.videorect.startX = _video_rect.startX;
-    rtsp_hldr_msgq_data.videorect.startY = _video_rect.startY;
-    rtsp_hldr_msgq_data.videorect.width = _video_rect.width;
-    rtsp_hldr_msgq_data.videorect.height = _video_rect.height;
-
-    MIRACASTLOG_INFO("Exiting..!!!");
-}
-
-void Engine::stopRequest(void)
-{
-    MIRACASTLOG_INFO("Entering ..!!!");
-    RTSP_HLDR_MSGQ_STRUCT rtsp_hldr_msgq_data = {0};
-
-    rtsp_hldr_msgq_data.state = RTSP_TEARDOWN_FROM_SINK2SRC;
-    rtsp_hldr_msgq_data.stop_reason_code = MIRACAST_PLAYER_APP_REQ_TO_STOP_ON_EXIT;
-    MIRACASTLOG_INFO("Exiting..!!!");
-}
-
-std::string Engine::stateDescription(eMIRA_PLAYER_STATES e)
-{
-    switch (e)
-    {
-        case MIRACAST_PLAYER_STATE_IDLE:
-            return "IDLE";
-        case MIRACAST_PLAYER_STATE_INITIATED:
-            return "INITIATED";
-        case MIRACAST_PLAYER_STATE_INPROGRESS:
-            return "INPROGRESS";
-        case MIRACAST_PLAYER_STATE_PLAYING:
-            return "PLAYING";
-        case MIRACAST_PLAYER_STATE_STOPPED:
-        case MIRACAST_PLAYER_STATE_SELF_ABORT:
-            return "STOPPED";
-        default:
-            return "Unimplemented state";
-    }
-}
-
-std::string Engine::reasonDescription(eM_PLAYER_REASON_CODE e)
-{
-    switch (e)
-    {
-        case MIRACAST_PLAYER_REASON_CODE_SUCCESS:
-            return "SUCCESS";
-        case MIRACAST_PLAYER_REASON_CODE_APP_REQ_TO_STOP:
-            return "APP REQUESTED TO STOP.";
-        case MIRACAST_PLAYER_REASON_CODE_SRC_DEV_REQ_TO_STOP:
-            return "SRC DEVICE REQUESTED TO STOP.";
-        case MIRACAST_PLAYER_REASON_CODE_RTSP_ERROR:
-            return "RTSP Failure.";
-        case MIRACAST_PLAYER_REASON_CODE_RTSP_TIMEOUT:
-            return "RTSP Timeout.";
-        case MIRACAST_PLAYER_REASON_CODE_RTSP_METHOD_NOT_SUPPORTED:
-            return "RTSP Method Not Supported.";
-        case MIRACAST_PLAYER_REASON_CODE_GST_ERROR:
-            return "GStreamer Failure.";
-        case MIRACAST_PLAYER_REASON_CODE_INT_FAILURE:
-            return "Internal Failure.";
-        case MIRACAST_PLAYER_REASON_CODE_NEW_SRC_DEV_CONNECT_REQ:
-            return "APP REQ TO STOP FOR NEW CONNECTION.";
-        default:
-            return "Unimplemented item.";
-    }
+    uint8_t state = -1;
+    MIRACASTLOG_TRACE("TRACE1");
+    state = this->_state;
+    MIRACASTLOG_TRACE("TRACE2");
+    return state;
 }
 
 void MiracastPluginEventListener::startRequestHandlerThread()
@@ -501,7 +380,7 @@ void MiracastPluginEventListener::send_msgto_event_hdler_thread(MIRACASTPLUGIN_R
 
 void MiracastPluginEventListener::onMiracastServiceClientConnectionRequest(const string &client_mac, const string &client_name)
 {
-    MIRACASTPLUGIN_REQ_HANDLER_MSGQ_STRUCT payload = {0};
+    MIRACASTPLUGIN_REQ_HANDLER_MSGQ_STRUCT payload;
 
     payload.eventType = MIRACASTSERVICE_ON_CLIENT_CONNECTION_REQUEST;
     strncpy(payload.src_dev_mac, client_mac.c_str(),sizeof(payload.src_dev_mac));
@@ -515,16 +394,16 @@ void MiracastPluginEventListener::onMiracastServiceClientConnectionRequest(const
 
 void MiracastPluginEventListener::onMiracastServiceClientConnectionError(const std::string &client_mac, const std::string &client_name, const std::string &error_code, const std::string &reason )
 {
-    MIRACASTPLUGIN_REQ_HANDLER_MSGQ_STRUCT payload = {0};
+    MIRACASTPLUGIN_REQ_HANDLER_MSGQ_STRUCT payload;
 
     payload.eventType = MIRACASTSERVICE_ON_CLIENT_CONNECTION_ERROR;
     strncpy(payload.src_dev_mac, client_mac.c_str(),sizeof(payload.src_dev_mac));
     payload.src_dev_mac[sizeof(payload.src_dev_mac) - 1] = '\0';
     strncpy(payload.src_dev_name, client_name.c_str(),sizeof(payload.src_dev_name));
     payload.src_dev_name[sizeof(payload.src_dev_name) - 1] = '\0';
-    strncpy(payload.error_code, client_mac.c_str(),sizeof(payload.error_code));
+    strncpy(payload.error_code, error_code.c_str(),sizeof(payload.error_code));
     payload.error_code[sizeof(payload.error_code) - 1] = '\0';
-    strncpy(payload.reason, client_name.c_str(),sizeof(payload.reason));
+    strncpy(payload.reason, reason.c_str(),sizeof(payload.reason));
     payload.reason[sizeof(payload.reason) - 1] = '\0';
 
     MIRACASTLOG_INFO("client_mac:[%s] client_name:[%s] error_code:[%s] reason:[%s]", client_mac.c_str(), client_name.c_str(), error_code.c_str(), reason.c_str());
@@ -533,7 +412,7 @@ void MiracastPluginEventListener::onMiracastServiceClientConnectionError(const s
 
 void MiracastPluginEventListener::onMiracastServiceLaunchRequest(const string &src_dev_ip, const string &src_dev_mac, const string &src_dev_name, const string & sink_dev_ip)
 {
-    MIRACASTPLUGIN_REQ_HANDLER_MSGQ_STRUCT payload = {0};
+    MIRACASTPLUGIN_REQ_HANDLER_MSGQ_STRUCT payload;
 
     payload.eventType = MIRACASTSERVICE_ON_LAUNCH_REQUEST;
     strncpy(payload.src_dev_ip, src_dev_ip.c_str(),sizeof(payload.src_dev_ip));
@@ -552,7 +431,7 @@ void MiracastPluginEventListener::onMiracastServiceLaunchRequest(const string &s
 
 void MiracastPluginEventListener::onMiracastPlayerStateChange(const std::string &client_mac, const std::string &client_name, const std::string &state, const std::string &reason, const std::string &reason_code)
 {
-    MIRACASTPLUGIN_REQ_HANDLER_MSGQ_STRUCT payload = {0};
+    MIRACASTPLUGIN_REQ_HANDLER_MSGQ_STRUCT payload;
 
     payload.eventType = MIRACASTPLAYER_ON_STATE_CHANGE;
     strncpy(payload.src_dev_mac, client_mac.c_str(),sizeof(payload.src_dev_mac));
@@ -574,10 +453,8 @@ void MiracastPluginEventListener::MiracastPluginEventHandler_Thread(void *args)
 {
     MIRACASTPLUGIN_REQ_HANDLER_MSGQ_STRUCT payload = {};
     bool m_running_state = true;
-    vector<std::string> strArgs;
     while (m_miracastplugin_event_handler_thread && m_running_state)
     {
-        strArgs.clear();
         memset(&payload, 0x00, sizeof(payload));
         m_miracastplugin_event_handler_thread->receive_message(&payload, sizeof(payload), THREAD_RECV_MSG_INDEFINITE_WAIT);
         MIRACASTLOG_INFO("Request : Event:0x%x",payload.eventType);
@@ -587,8 +464,7 @@ void MiracastPluginEventListener::MiracastPluginEventHandler_Thread(void *args)
             {
                 std::string client_mac = payload.src_dev_mac,
                             client_name = payload.src_dev_name;
-                strArgs.push_back(client_name);
-                MiracastApp::Application::Engine::getAppEngineInstance()->updateTTSVoiceCommand(CONNECT_REQUEST_TTS_VOICE_COMMAND, strArgs);
+                MiracastApp::Application::Engine::getAppEngineInstance()->setCurrentAppScreenState(APPSCREEN_STATE_CONNECTING, client_name, "");
                 MIRACASTLOG_INFO("AutoConnecting [%s - %s]",client_name.c_str(),client_mac.c_str());
                 MiracastApp::Application::Engine::getAppEngineInstance()->getRDKMiracastPluginInstance()->acceptClientConnection("Accept");
             }
@@ -598,11 +474,10 @@ void MiracastPluginEventListener::MiracastPluginEventHandler_Thread(void *args)
                 std::string client_mac = payload.src_dev_mac,
                             client_name = payload.src_dev_name,
                             error_code = payload.error_code,
-                            reason = payload.reason;
+                            reason = payload.reason,
+                            actual_error_code = "ENT-32" + error_code;
                 MIRACASTLOG_INFO("ON_CLIENT_CONNECTION_ERROR : client_mac:[%s] client_name:[%s] error_code:[%s] reason:[%s]",client_mac.c_str(),client_name.c_str(),error_code.c_str(),reason.c_str());
-                strArgs.push_back(client_name);
-                strArgs.push_back(error_code);
-                MiracastApp::Application::Engine::getAppEngineInstance()->updateTTSVoiceCommand(CONNECTION_ERROR_TTS_VOICE_COMMAND, strArgs);
+                MiracastApp::Application::Engine::getAppEngineInstance()->setCurrentAppScreenState(APPSCREEN_STATE_ERROR, client_name, actual_error_code);
             }
             break;
             case MIRACASTSERVICE_ON_LAUNCH_REQUEST:
@@ -614,9 +489,9 @@ void MiracastPluginEventListener::MiracastPluginEventHandler_Thread(void *args)
                 _sink_dev_ip = payload.sink_dev_ip;
                 MiracastApp::Application::Engine::getAppEngineInstance()->getVideoResolution(video_rect);
 
+                MiracastApp::Application::Engine::getAppEngineInstance()->setCurrentAppScreenState(APPSCREEN_STATE_MIRRORING, _source_dev_name, "");
                 MIRACASTLOG_INFO("ON_LAUNCH_REQUEST : source_dev_ip:[%s] source_dev_mac:[%s] source_dev_name:[%s] sink_dev_ip:[%s]",_source_dev_ip.c_str(),_source_dev_mac.c_str(),_source_dev_name.c_str(),_sink_dev_ip.c_str());
-                strArgs.push_back(_source_dev_name);
-                MiracastApp::Application::Engine::getAppEngineInstance()->updateTTSVoiceCommand(LAUNCH_REQUEST_TTS_VOICE_COMMAND, strArgs);
+                MiracastApp::Application::Engine::getAppEngineInstance()->getRDKMiracastPluginInstance()->setWesterosEnvToMiracastPlayer();
                 MiracastApp::Application::Engine::getAppEngineInstance()->getRDKMiracastPluginInstance()->playRequestToMiracastPlayer(_source_dev_ip, _source_dev_mac, _source_dev_name, _sink_dev_ip, video_rect);
             }
             break;
@@ -625,15 +500,25 @@ void MiracastPluginEventListener::MiracastPluginEventHandler_Thread(void *args)
                 std::string client_mac = payload.src_dev_mac,
                             client_name = payload.src_dev_name,
                             state = payload.state,
+                            reason = payload.reason,
                             reason_code = payload.error_code;
-                vector<std::string> strArgs;
-                MIRACASTLOG_INFO("client_mac:[%s] client_name:[%s] state:[%s] reason_code:[%s]",client_mac.c_str(),client_name.c_str(),state.c_str(),reason_code.c_str());
+                MIRACASTLOG_INFO(">>> client_mac:[%s] client_name:[%s] state:[%s] reason:[%s] reason_code:[%s]",client_mac.c_str(),client_name.c_str(),state.c_str(),reason.c_str());
 
-                if (( "STOPPED" == state ) && ( "SUCCESS" != reason_code ))
+                if ("PLAYING" == state)
                 {
-                    strArgs.push_back(client_name);
-                    strArgs.push_back(reason_code);
-                    MiracastApp::Application::Engine::getAppEngineInstance()->updateTTSVoiceCommand(CONNECTION_ERROR_TTS_VOICE_COMMAND, strArgs);
+                    MiracastApp::Application::Engine::getAppEngineInstance()->setCurrentAppScreenState(APPSCREEN_STATE_CONNECTED, client_name, "");
+                }
+                else if ( "STOPPED" == state )
+                {
+                    if (("200" == reason_code)||("201" == reason_code)||("202" == reason_code))
+                    {
+                        MiracastApp::Application::Engine::getAppEngineInstance()->setCurrentAppScreenState(APPSCREEN_STATE_STOPPED, client_name, "");
+                    }
+                    else
+                    {
+                        std::string actual_error_code = "ENT-32" + reason_code;
+                        MiracastApp::Application::Engine::getAppEngineInstance()->setCurrentAppScreenState(APPSCREEN_STATE_ERROR, client_name, actual_error_code);
+                    }
                 }
                 MiracastApp::Application::Engine::getAppEngineInstance()->getRDKMiracastPluginInstance()->updatePlayerState(client_mac, state, reason_code);
             }

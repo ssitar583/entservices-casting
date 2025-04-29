@@ -78,6 +78,7 @@ public:
     void updatePlayerState(const std::string &clientMac, const std::string &state, const std::string &reason_code);
     void playRequestToMiracastPlayer(const std::string &source_dev_ip, const std::string &source_dev_mac, const std::string &source_dev_name, const std::string &sink_dev_ip, VideoRectangleInfo &rect);
     void stopMiracastPlayer(void);
+    void setWesterosEnvToMiracastPlayer(void);
     
     RDKMiracastPlugin(const RDKMiracastPlugin &) = delete;
     const RDKMiracastPlugin &operator=(const RDKMiracastPlugin &) = delete;

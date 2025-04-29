@@ -17,7 +17,6 @@
  * limitations under the License.
  */
 
-#include "MiracastGraphicsDelegate.hpp"
 #include <stdlib.h>
 #include <cassert>
 #include <pthread.h>
@@ -27,6 +26,14 @@
 #include <sys/time.h>
 #include <math.h>
 #include <unistd.h>
+#include <QGuiApplication>
+#include <QImage>
+#include <QPainter>
+#include <QFontDatabase>
+#include <QFont>
+#include "MiracastAppCommon.hpp"
+#include "MiracastGraphicsDelegate.hpp"
+#include "EssosEGLInternal.hpp"
 #include "MiracastAppLogging.hpp"
 
 namespace MiracastApp{
@@ -38,106 +45,392 @@ namespace Graphics{
 #define ALPHA_SIZE (8)
 #define DEPTH_SIZE (24)
 
-NativeDisplayType display;
-MiracastGraphicsDelegate* MiracastGraphicsDelegate::mInstance;
-pthread_mutex_t MiracastGraphicsDelegate::mDispatchMutex;
+#define BG_IMAGE_PATH "/package/bg.jpg"
+#define SPINNER_IMAGE_PATH "/package/spinner.png"
 
-#define ESS_DISPATCH_THREAD_NAME "EssDispatchTh"
+#define ESS_RENDER_THREAD_NAME "EssRenderTh"
 #define kESSRunLoopPeriod 16
 
-struct Arg_EssDispatchTh{
-	EssosDispatchThread * essDispTh;
-	EssCtx *essCtx;
+#define SKY_BG_PURPLE_COLOR 0xFF1D0E1F
+#define BLACK_COLOR 0xFF000000
+
+#define BACKGROUND_SCREEN_COLOR SKY_BG_PURPLE_COLOR
+
+#define BG_COLOR_ALPHA_F ((BACKGROUND_SCREEN_COLOR >> 24) / 255.0)
+#define BG_COLOR_RED_F (((BACKGROUND_SCREEN_COLOR >> 16) & 0xFF) / 255.0)
+#define BG_COLOR_GREEN_F (((BACKGROUND_SCREEN_COLOR >> 8) & 0xFF) / 255.0)
+#define BG_COLOR_BLUE_F ((BACKGROUND_SCREEN_COLOR & 0xFF) / 255.0)
+
+#define VIRTUAL_DISPLAY_WIDTH 1920
+#define VIRTUAL_DISPLAY_HEIGHT 1080
+
+#define BUTTON_WIDTH 200
+#define BUTTON_HEIGHT 50
+#define BUTTON_Y_OFFSET 50
+
+#define TITLE_WIDTH 800
+#define TITLE_HEIGHT 100
+
+#define DESCRIPTION_X_OFFSET 120
+#define DESCRIPTION_Y_OFFSET 20
+
+#define DESCRIPTION_WIDTH (TITLE_WIDTH + (DESCRIPTION_X_OFFSET * 2))
+#define DESCRIPTION_HEIGHT 100
+
+#define ENTIRE_TITLE_WIDTH (DESCRIPTION_WIDTH)
+#define ENTIRE_TITLE_HEIGHT (TITLE_HEIGHT + DESCRIPTION_HEIGHT + DESCRIPTION_Y_OFFSET + BUTTON_HEIGHT + BUTTON_Y_OFFSET)
+
+#define TITLE_START_X ((VIRTUAL_DISPLAY_WIDTH - ENTIRE_TITLE_WIDTH) >> 1)
+#define TITLE_START_Y ((VIRTUAL_DISPLAY_HEIGHT - ENTIRE_TITLE_HEIGHT) >> 1)
+
+#define DESCRIPTION_START_X (TITLE_START_X - DESCRIPTION_X_OFFSET)
+#define DESCRIPTION_START_Y (TITLE_START_Y + TITLE_HEIGHT + DESCRIPTION_Y_OFFSET)
+
+#define BUTTON_START_X (TITLE_START_X + ((TITLE_WIDTH - BUTTON_WIDTH) >> 1))
+#define BUTTON_START_Y (DESCRIPTION_START_Y + DESCRIPTION_HEIGHT + BUTTON_Y_OFFSET)
+
+NativeDisplayType display;
+EssosRenderThread * EssosRenderThread::_mEssRenderTh = nullptr;
+MiracastGraphicsDelegate* MiracastGraphicsDelegate::mInstance = nullptr;
+pthread_mutex_t MiracastGraphicsDelegate::_mRenderMutex;
+
+static GLuint program;
+static GLuint textTexture = 0;
+static GLuint okButtonTexture = 0;
+static GLuint bgTexture = 0;
+static GLuint spinnerTexture = 0;
+int bgW = 0, bgH = 0;
+int spinnerAngle = 0;
+std::chrono::steady_clock::time_point lastSpinnerUpdate = std::chrono::steady_clock::now();
+int windowWidth = 1920;
+int windowHeight = 1080;
+
+static std::map<std::string, std::map<std::string, std::string>> localizedStrings = {
+    {"en_US", {
+        {"title", "Screen Mirroring to Your TV"},
+        {"description", "Find and select screen mirroring on your phone, tablet or computer. Then\n select [%s] to view your device's screen on your TV."},
+        {"connecting", "Connecting to "},
+        {"mirroring", "Mirroring to "},
+        {"error_info", "Let's try that again"},
+        {"error_description", "Something went wrong and [%s] couldn't be mirrored to this TV.\nPlease try again from your device.\n Error: %s"},
+        {"ok", "OK"}
+    }},
+    {"es_US", {
+        {"title", "Duplicación de pantalla en tu televisor"},
+        {"description", "Busca y selecciona la función de duplicación de pantalla en tu teléfono, tableta o computadora. Luego\n Seleccione [%s] para ver la pantalla de su dispositivo en su televisor."},
+        {"connecting", "Conectando a "},
+        {"mirroring", "Duplicando a "},
+        {"error_info", "Intentémoslo de nuevo"},
+        {"error_description", "Algo salió mal y [%s] no se pudo duplicar en este televisor.\nInténtalo de nuevo desde tu dispositivo.\nCódigo: %s"},
+        {"ok", "Aceptar"}
+    }}
 };
 
-class EssosDispatchThread 
+static QImage prepareQImageByText(const QString& text, int w, int h, bool isButton, uint8_t fontSize, Qt::GlobalColor bgcolor, Qt::GlobalColor penColor)
 {
-public:
-	pthread_t EssDispatchT_Id;
-	struct Arg_EssDispatchTh arg_DispTh;
-	struct sigaction sigact;
-	static void signalHandler(int signum)
-	{
-        MIRACASTLOG_TRACE("Entering ...");
-		MIRACASTLOG_VERBOSE("signalHandler: signum %d\n",signum);
-		mEssDispTh->setRunning(false);
-        MIRACASTLOG_TRACE("Exiting ...");
-	}
+    MIRACASTLOG_TRACE("Entering ...");
+    MIRACASTLOG_VERBOSE("text[%s] w=%d h=%d isButton=%d fontSize=%d bgcolor=%x penColor=%x", text.toStdString().c_str(), w, h, isButton, fontSize, bgcolor, penColor);
 
-	EssosDispatchThread();
-     ~EssosDispatchThread()
-    {
-        // don't let the thread outlive the object
+    QImage img(w, h, QImage::Format_ARGB32);
+    img.fill(Qt::transparent);
+    
+    QFontDatabase::addApplicationFont("/usr/share/fonts/ttf/LiberationSans-Regular.ttf");
+    QString family = QFontDatabase::applicationFontFamilies(0).at(0);
+    QFont font(family, fontSize);
+
+    QPainter p(&img);
+    p.setPen(penColor);
+    p.setRenderHint(QPainter::Antialiasing);
+    p.setFont(font);
+
+    // Determine drawing area
+    QRect rect = img.rect();
+
+    if (!isButton) {
+        p.fillRect(rect, bgcolor);
+    }
+    else{
+        p.setBrush(bgcolor);
+        p.setPen(penColor);
+        int radius = 12;
+        p.drawRoundedRect(rect, radius, radius);
     }
 
-    bool isRunning()
+    p.drawText(img.rect(), Qt::AlignCenter | Qt::TextWordWrap, text);
+    p.end();
+    MIRACASTLOG_TRACE("Exiting ...");
+    return img;
+}
+
+static GLuint prepareTextureFromQImage(const QImage &img, int &w, int &h)
+{
+    MIRACASTLOG_TRACE("Entering ...");
+    w = img.width();
+    h = img.height();
+    MIRACASTLOG_VERBOSE("w=%d h=%d", w, h);
+    QImage glImg = img.convertToFormat(QImage::Format_RGBA8888).mirrored();
+    GLuint tex;
+    glGenTextures(1, &tex);
+    MIRACASTLOG_VERBOSE("tex=%d", tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, glImg.bits());
+    MIRACASTLOG_TRACE("Exiting ...");
+    return tex;
+}
+
+static QImage loadImage(const QString& path)
+{
+    MIRACASTLOG_TRACE("Entering ...");
+    QImage img;
+    img.load(path);
+    if (img.isNull())
     {
-        return mRunning;
+        MIRACASTLOG_ERROR("Failed to load image from path: %s", path.toStdString().c_str());
+    }
+    else{
+        MIRACASTLOG_VERBOSE("img.width()=%d img.height()=%d", img.width(), img.height());
+    }
+    MIRACASTLOG_TRACE("Exiting ...");
+    return img;
+}
+
+static void loadBackgroundTexture()
+{
+    MIRACASTLOG_TRACE("Entering ...");
+    MIRACASTLOG_VERBOSE("windowWidth=%d windowHeight=%d", windowWidth, windowHeight);
+    QImage bg = loadImage(BG_IMAGE_PATH);
+    if (bg.isNull())
+    {
+        MIRACASTLOG_ERROR("Failed to load background image");
+        return;
+    }
+    MIRACASTLOG_VERBOSE("bg.width()=%d bg.height()=%d", bg.width(), bg.height());
+    bg = bg.scaled(windowWidth, windowHeight, Qt::IgnoreAspectRatio);
+    bgTexture = prepareTextureFromQImage(bg, bgW, bgH);
+    MIRACASTLOG_VERBOSE("bgTexture=%d bgW=%d bgH=%d", bgTexture, bgW, bgH);
+    MIRACASTLOG_TRACE("Exiting ...");
+}
+
+static void drawTexture(GLuint texture, int texWidth, int texHeight, int centerX, int centerY)
+{
+    MIRACASTLOG_TRACE("Entering ...");
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+#if 0
+    int halfW = texWidth / 2;
+    int halfH = texHeight / 2;
+
+    GLfloat vertices[] = {
+        (GLfloat)(centerX - halfW), (GLfloat)(centerY - halfH),
+        (GLfloat)(centerX + halfW), (GLfloat)(centerY - halfH),
+        (GLfloat)(centerX - halfW), (GLfloat)(centerY + halfH),
+        (GLfloat)(centerX + halfW), (GLfloat)(centerY + halfH)
+    };
+#else
+    GLfloat vertices[] = {
+        (GLfloat)(centerX), (GLfloat)(centerY),
+        (GLfloat)(centerX+texWidth), (GLfloat)(centerY),
+        (GLfloat)(centerX), (GLfloat)(centerY+texHeight),
+        (GLfloat)(centerX+texWidth), (GLfloat)(centerY+texHeight)
+    };
+#endif
+
+    GLfloat texCoords[] = {
+        0.0f, 1.0f,
+        1.0f, 1.0f,
+        0.0f, 0.0f,
+        1.0f, 0.0f
+    };
+
+    GLint posAttr = glGetAttribLocation(program, "a_position");
+    GLint texAttr = glGetAttribLocation(program, "a_texCoord");
+
+    glEnableVertexAttribArray(posAttr);
+    glVertexAttribPointer(posAttr, 2, GL_FLOAT, GL_FALSE, 0, vertices);
+    glEnableVertexAttribArray(texAttr);
+    glVertexAttribPointer(texAttr, 2, GL_FLOAT, GL_FALSE, 0, texCoords);
+
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glDisableVertexAttribArray(posAttr);
+    glDisableVertexAttribArray(texAttr);
+
+    MIRACASTLOG_TRACE("Exiting ...");
+}
+
+static void drawBackground(void)
+{
+    MIRACASTLOG_TRACE("Entering ...");
+    if (!bgTexture)
+    {
+        MIRACASTLOG_VERBOSE("Loading background texture");
+        loadBackgroundTexture();
+    }
+    if (bgTexture) {
+        drawTexture(bgTexture, bgW, bgH, 0, 0);
+        MIRACASTLOG_VERBOSE("drawBackground: bgTexture=%d bgW=%d bgH=%d", bgTexture, bgW, bgH);
+    }
+    MIRACASTLOG_TRACE("Exiting ...");
+}
+
+EssosRenderThread::EssosRenderThread()
+    : mRunning(true)
+{
+    MIRACASTLOG_TRACE("Entering ...");
+	mEssCtx = nullptr;
+    if (pthread_mutex_init(&mRunningMutex, NULL) != 0) {
+        MIRACASTLOG_VERBOSE("mutex init has failed\n");
+    }
+    EssosRenderThread::_mEssRenderTh = this;
+    sigact.sa_handler= EssosRenderThread::signalHandler;
+    sigemptyset(&sigact.sa_mask);
+    sigact.sa_flags= SA_RESETHAND;
+    sigaction(SIGINT, &sigact, NULL);
+    sigaction(SIGSEGV, &sigact, NULL);
+
+    if(pthread_create(&EssRenderT_Id, nullptr, &EssosRenderThread::run, nullptr )){
+        MIRACASTLOG_VERBOSE("Failure to create Thread name\n");
+    }
+    else{
+        if(pthread_setname_np(EssRenderT_Id, ESS_RENDER_THREAD_NAME )){
+            MIRACASTLOG_VERBOSE("Failure to set Thread name\n");
+        }
+    }
+    MIRACASTLOG_TRACE("Exiting ...");
+}
+
+void EssosRenderThread::setRunning(bool running)
+{
+    MIRACASTLOG_TRACE("Entering ...");
+    pthread_mutex_lock(&mRunningMutex);
+    mRunning = running;
+    pthread_mutex_unlock(&mRunningMutex);
+    MIRACASTLOG_TRACE("Exiting ...");
+}
+
+void* EssosRenderThread::run(void *arg)
+{
+    MiracastAppScreenState  LastAppScreenState = APPSCREEN_STATE_DEFAULT,
+                            currentAppScreenState = APPSCREEN_STATE_DEFAULT;
+
+    bool error = _mEssRenderTh->BuildEssosContext();
+    if(!error){
+        if( !EssContextStart(_mEssRenderTh->mEssCtx)){
+            error = true;
+        }
+        if(!error)
+        {
+            error = _mEssRenderTh->InitializeEGL();
+            if(error)
+            {
+                MIRACASTLOG_ERROR("Unable to start rendering");
+                _mEssRenderTh->setRunning(false);
+            }
+        }
     }
 
-    void setRunning(bool running)
+    struct timespec tspec;
+    long long delay = 0, curr_time = 0, diff_time = 0, ess_evloop_last_ts = 0;
+    std::string ttsVoiceMsg = "";
+    while(_mEssRenderTh->isRunning())
     {
-        MIRACASTLOG_TRACE("Entering ...");
-    	pthread_mutex_lock(&mRunningMutex);
-        mRunning = running;
-		pthread_mutex_unlock(&mRunningMutex);
-        MIRACASTLOG_TRACE("Exiting ...");
+        currentAppScreenState = MiracastGraphicsDelegate::getInstance()->getAppScreenState();
+
+        if (LastAppScreenState != currentAppScreenState)
+        {
+            ttsVoiceMsg.clear();
+            MIRACASTLOG_VERBOSE(">>>> MiracastAppScreenState changed from %d to %d", LastAppScreenState, currentAppScreenState);
+            LastAppScreenState = currentAppScreenState;
+            switch (currentAppScreenState)
+            {
+                case APPSCREEN_STATE_WELCOME:
+                case APPSCREEN_STATE_STOPPED:
+                {
+                    std::string welcomePageHeader = MiracastGraphicsDelegate::getInstance()->getWelcomePageHeader();
+                    std::string welcomePageDescription = MiracastGraphicsDelegate::getInstance()->getWelcomePageDescription();
+
+                    MIRACASTLOG_VERBOSE("Welcome screen");
+                    drawBackground();
+                    _mEssRenderTh->displayMessage(  welcomePageHeader, welcomePageDescription,"");
+                    ttsVoiceMsg = welcomePageHeader + "\n\n" + welcomePageDescription;
+                }
+                break;
+                case APPSCREEN_STATE_CONNECTING:
+                {
+                    std::string connectingPageHeader = MiracastGraphicsDelegate::getInstance()->getConnectingPageHeader();
+                    MIRACASTLOG_VERBOSE("Connecting screen");
+                    drawBackground();
+                    _mEssRenderTh->displayMessage(  connectingPageHeader , "", "");
+                    ttsVoiceMsg = connectingPageHeader;
+                }
+                break;
+                case APPSCREEN_STATE_MIRRORING:
+                {
+                    std::string mirroringPageHeader = MiracastGraphicsDelegate::getInstance()->getMirroringPageHeader();
+                    MIRACASTLOG_VERBOSE("Mirroring screen");
+                    drawBackground();
+                    _mEssRenderTh->displayMessage(  mirroringPageHeader, "", "");
+                    ttsVoiceMsg = mirroringPageHeader;
+                }
+                break;
+                case APPSCREEN_STATE_ERROR:
+                {
+                    std::string errorPageHeader = MiracastGraphicsDelegate::getInstance()->getErrorPageHeader();
+                    std::string errorPageDescription = MiracastGraphicsDelegate::getInstance()->getErrorPageDescription();
+
+                    MIRACASTLOG_VERBOSE("Error screen");
+                    drawBackground();
+                    _mEssRenderTh->displayMessage( errorPageHeader, errorPageDescription, MiracastGraphicsDelegate::getInstance()->getButtonText());
+                    ttsVoiceMsg = errorPageHeader + "\n\n" + errorPageDescription;
+                }
+                break;
+                case APPSCREEN_STATE_CONNECTED:
+                {
+                    MIRACASTLOG_VERBOSE("Connected screen");
+                    _mEssRenderTh->fillColor(0.0, 0.0, 0.0, 0.0, false);
+                }
+                break;
+                default:
+                    break;
+            }
+            LastAppScreenState = currentAppScreenState;
+            eglSwapBuffers(_mEssRenderTh->mDisplay, _mEssRenderTh->mSurface);
+            EssContextUpdateDisplay( _mEssRenderTh->mEssCtx );
+            if (!ttsVoiceMsg.empty())
+            {
+                MiracastGraphicsDelegate::getInstance()->updateTTSVoiceCommand(ttsVoiceMsg);
+            }
+        }
+        EssContextRunEventLoopOnce(_mEssRenderTh->mEssCtx);
+        clock_gettime(CLOCK_MONOTONIC,&tspec);
+        curr_time = tspec.tv_sec * 1000 + tspec.tv_nsec / 1e6;
+        diff_time = curr_time - ess_evloop_last_ts;
+        delay = (long long)kESSRunLoopPeriod - diff_time;
+        if(delay > 0 && delay <= kESSRunLoopPeriod )
+        {
+            usleep(delay*1000);
+        }
+        ess_evloop_last_ts = curr_time;
     }
+    eglMakeCurrent(_mEssRenderTh->mDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    eglDestroyContext(_mEssRenderTh->mDisplay, _mEssRenderTh->mContext);
+    eglDestroySurface(_mEssRenderTh->mDisplay, _mEssRenderTh->mSurface);
+	_mEssRenderTh->DestroyNativeWindow();
+    EssContextStop(_mEssRenderTh->mEssCtx);
+    _mEssRenderTh->mContext = 0;
+    MIRACASTLOG_TRACE("Exiting ...");
+    return nullptr;
+}
 
-private:
-    static void* run(void *arg)
-    {
-        MIRACASTLOG_TRACE("Entering ...");
-		struct timespec tspec;
-		long long delay = 0, curr_time = 0, diff_time = 0, ess_evloop_last_ts = 0;
-		while(mEssDispTh->isRunning()){
-            EssContextRunEventLoopOnce(MiracastGraphicsDelegate::getInstance()->getEssCtxInstance());
-			clock_gettime(CLOCK_MONOTONIC,&tspec);
-			curr_time = tspec.tv_sec * 1000 + tspec.tv_nsec / 1e6;
-			diff_time = curr_time - ess_evloop_last_ts;
-			delay = (long long)kESSRunLoopPeriod - diff_time;
-			if(delay > 0 && delay <= kESSRunLoopPeriod )
-			{
-				usleep(delay*1000);
-			}
-			ess_evloop_last_ts = curr_time;
-		}
-        MIRACASTLOG_TRACE("Exiting ...");
-		return nullptr;
-    }
-
-    bool mRunning;
-	static EssosDispatchThread *mEssDispTh;
-    pthread_mutex_t mRunningMutex;
-};
-EssosDispatchThread * EssosDispatchThread::mEssDispTh;
-
-    EssosDispatchThread::EssosDispatchThread()
-        : mRunning(true)
-    {
-        MIRACASTLOG_TRACE("Entering ...");
-	    if (pthread_mutex_init(&mRunningMutex, NULL) != 0) {
-        	MIRACASTLOG_VERBOSE("mutex init has failed\n");
-    	}
-		EssosDispatchThread::mEssDispTh = this;
-        sigact.sa_handler= EssosDispatchThread::signalHandler;
-        sigemptyset(&sigact.sa_mask);
-        sigact.sa_flags= SA_RESETHAND;
-        sigaction(SIGINT, &sigact, NULL);
-		sigaction(SIGSEGV, &sigact, NULL);
-
-		arg_DispTh.essDispTh = this;
-		arg_DispTh.essCtx = MiracastGraphicsDelegate::getInstance()->getEssCtxInstance();
-		if(pthread_create(&EssDispatchT_Id, nullptr, &EssosDispatchThread::run, nullptr )){
-			MIRACASTLOG_VERBOSE("Failure to create Thread name\n");
-		}
-		else{
-			if(pthread_setname_np(EssDispatchT_Id, ESS_DISPATCH_THREAD_NAME )){
-				MIRACASTLOG_VERBOSE("Failure to set Thread name\n");
-			}
-		}
-        MIRACASTLOG_TRACE("Exiting ...");
-    }
+void EssosRenderThread::signalHandler(int signum)
+{
+    MIRACASTLOG_TRACE("Entering ...");
+    MIRACASTLOG_VERBOSE("signalHandler: signum %d\n",signum);
+    _mEssRenderTh->setRunning(false);
+    MIRACASTLOG_TRACE("Exiting ...");
+}
 
 static EssTerminateListener terminateListener =
 {
@@ -147,27 +440,32 @@ static EssTerminateListener terminateListener =
     }
 };
 
-void MiracastGraphicsDelegate::OnKeyPressed(unsigned int key){
-	MIRACASTLOG_VERBOSE(" <com.miracastapp.graphics> OnKeyPressed() key_code: %02X translated code: ?\n", key);
+void EssosRenderThread::OnKeyPressed(unsigned int keyCode)
+{
+	MIRACASTLOG_VERBOSE(" <com.miracastapp.graphics> OnKeyPressed() key_code: %02X translated code: ?\n", keyCode);
+    if (( 0x1C == keyCode) && ( APPSCREEN_STATE_ERROR == MiracastGraphicsDelegate::getInstance()->getAppScreenState())) {
+        MIRACASTLOG_INFO("OK button pressed");
+        MiracastGraphicsDelegate::getInstance()->setAppScreenState(APPSCREEN_STATE_WELCOME, "", "");
+    }
 }
 
-void MiracastGraphicsDelegate::OnKeyReleased(unsigned int key){
+void EssosRenderThread::OnKeyReleased(unsigned int key){
 	MIRACASTLOG_VERBOSE(" <com.miracastapp.graphics> OnKeyReleased() key_code: %02X translated code: ?\n", key);
 }
 
-void MiracastGraphicsDelegate::OnKeyRepeat(unsigned int key)
+void EssosRenderThread::OnKeyRepeat(unsigned int key)
 {
 	MIRACASTLOG_VERBOSE(" <com.miracastapp.graphics> OnKeyRepeat() key_code: %02X translated code: ?\n", key);
 }
 
-EssKeyListener MiracastGraphicsDelegate::keyListener =
+EssKeyListener EssosRenderThread::keyListener =
 {
   // keyPressed
-  [](void* data, unsigned int key) { reinterpret_cast<MiracastGraphicsDelegate*>(data)->OnKeyPressed(key); },
+  [](void* data, unsigned int key) { reinterpret_cast<EssosRenderThread*>(data)->OnKeyPressed(key); },
   // keyReleased
-  [](void* data, unsigned int key) { reinterpret_cast<MiracastGraphicsDelegate*>(data)->OnKeyReleased(key); },
+  [](void* data, unsigned int key) { reinterpret_cast<EssosRenderThread*>(data)->OnKeyReleased(key); },
   // keyRepeat
-  [](void* data, unsigned int key) { reinterpret_cast<MiracastGraphicsDelegate*>(data)->OnKeyRepeat(key); }
+  [](void* data, unsigned int key) { reinterpret_cast<EssosRenderThread*>(data)->OnKeyRepeat(key); }
 };
 
 //this callback is invoked with the new width and height values
@@ -182,37 +480,8 @@ static EssSettingsListener settingsListener=
    displaySize
 };
 
-MiracastGraphicsDelegate::MiracastGraphicsDelegate() {
-    MIRACASTLOG_TRACE("Entering ...");
-	mEssCtx = nullptr;
-	if (pthread_mutex_init(&mDispatchMutex, NULL) != 0) {
-    	MIRACASTLOG_ERROR("<com.miracastapp.graphics> mutex init failed\n");
-	}
-    MIRACASTLOG_TRACE("Exiting ...");
-}
-MiracastGraphicsDelegate::~MiracastGraphicsDelegate() {
-    MIRACASTLOG_TRACE("Entering ...");
-	EssContextDestroy(mEssCtx);
-    MIRACASTLOG_TRACE("Exiting ...");
-}
-
-MiracastGraphicsDelegate* MiracastGraphicsDelegate::getInstance() {
-    if(!mInstance) {
-		mInstance = new MiracastGraphicsDelegate;
-	}
-    return mInstance;
-}
-
-void MiracastGraphicsDelegate::destroyInstance(){
-    MIRACASTLOG_TRACE("Entering ...");
-	if(mInstance != NULL){
-		delete mInstance;
-		mInstance = NULL;
-	}
-    MIRACASTLOG_TRACE("Exiting ...");
-}
-
-bool MiracastGraphicsDelegate::BuildEssosContext() {
+bool EssosRenderThread::BuildEssosContext()
+{
     MIRACASTLOG_TRACE("Entering ...");
 	mEssCtx = EssContextCreate();
 	bool error = false;
@@ -245,6 +514,11 @@ bool MiracastGraphicsDelegate::BuildEssosContext() {
 			error = true;
 		}
 		mDisplay = eglGetDisplay((NativeDisplayType)display);
+        if (mDisplay == EGL_NO_DISPLAY)
+        {
+            MIRACASTLOG_ERROR("Unable to get EGL display 0x%x", eglGetError());
+            error = true;
+        }
 		assert(mDisplay != EGL_NO_DISPLAY);
 
 		if ( !EssContextGetDisplaySize( mEssCtx, &gDisplayWidth, &gDisplayHeight ) )
@@ -269,55 +543,32 @@ bool MiracastGraphicsDelegate::BuildEssosContext() {
 	return error;
 }
 
-void MiracastGraphicsDelegate::DestroyNativeWindow() {
-    MIRACASTLOG_TRACE("Entering ...");
-  if (mNativewindow == 0) {
-    MIRACASTLOG_TRACE("Exiting...");
-    return;
-  }
-
-  if ( !EssContextDestroyNativeWindow(mEssCtx, mNativewindow) ) {
-    const char *detail = EssContextGetLastErrorDetail(mEssCtx);
-    MIRACASTLOG_VERBOSE("<com.miracastapp.graphics> DestroyNativeWindow() Essos error: '%s'\n", detail);
-  }
-
-  mNativewindow = 0;
-  MIRACASTLOG_TRACE("Exiting ...");
-}
-
-bool MiracastGraphicsDelegate::initialize() {
-    MIRACASTLOG_TRACE("Entering ...");
-	//Perform platform-specific initialization of the graphics system here
-	bool error = BuildEssosContext();
-	if(!error){
-		if( !EssContextStart(mEssCtx)){
-			error = true;
-		}
-		if(!error)
-		{
-			mAppEngine = MiracastApp::Application::Engine::getAppEngineInstance();
-            error = InitializeEGL();
-			if(!error)
-				startDispatching();
-		}
-	}
-    MIRACASTLOG_TRACE("Exiting ...");
-    return !error;
-}
-
-bool MiracastGraphicsDelegate::InitializeEGL()
+void EssosRenderThread::DestroyNativeWindow()
 {
     MIRACASTLOG_TRACE("Entering ...");
-   MIRACASTLOG_VERBOSE("MiracastGraphicsDelegate::InitializeEGL\n");
+    if (0 != mNativewindow)
+    {
+        if ( !EssContextDestroyNativeWindow(mEssCtx, mNativewindow) ) {
+            const char *detail = EssContextGetLastErrorDetail(mEssCtx);
+            MIRACASTLOG_VERBOSE("<com.miracastapp.graphics> DestroyNativeWindow() Essos error: '%s'\n", detail);
+        }
+        mNativewindow = 0;
+    }
+    MIRACASTLOG_TRACE("Exiting ...");
+}
+
+bool EssosRenderThread::InitializeEGL()
+{
+    MIRACASTLOG_TRACE("Entering ...");
 	EGLint major, minor;
 	if (eglInitialize(mDisplay, &major, &minor) != EGL_TRUE)
 	{
-      	MIRACASTLOG_ERROR("MiracastGraphicsDelegate::InitializeEGL eglInitialize failed\n");
+        MIRACASTLOG_ERROR("Unable to Initialize EGL API 0x%x",eglGetError());
         MIRACASTLOG_TRACE("Exiting ...");
 		return true;
 	}
     if(eglBindAPI(EGL_OPENGL_ES_API) != EGL_TRUE) {
-        MIRACASTLOG_VERBOSE("Unable to bind EGL API 0x%x",eglGetError());
+        MIRACASTLOG_ERROR("Unable to bind EGL API 0x%x",eglGetError());
         MIRACASTLOG_TRACE("Exiting ...");
         return true;
     }
@@ -395,7 +646,12 @@ bool MiracastGraphicsDelegate::InitializeEGL()
 		mNativewindow,
 		nullptr);
 
-	assert(EGL_NO_SURFACE != mSurface);
+	if (mSurface == EGL_NO_SURFACE)
+        MIRACASTLOG_ERROR("Unable to create EGL window surface 0x%x", eglGetError());
+    else
+        MIRACASTLOG_VERBOSE("EGL window surface created");
+
+    assert(EGL_NO_SURFACE != mSurface);
 
 	EGLint surfaceType(0);
 	eglQuerySurface(mDisplay, mSurface, EGL_WIDTH, &gDisplayWidth);
@@ -410,138 +666,252 @@ bool MiracastGraphicsDelegate::InitializeEGL()
 
 	eglSwapInterval(mDisplay, 1);
 
-    glEnable(GL_BLEND);
-
-    glBlendFuncSeparate( GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE );
-
-    fillColor(0.5f, 0.5f, 0, 0 , true);
+    InitializeQtRendering();
 
     MIRACASTLOG_TRACE("Exiting ...");
-   return false;
+    return false;
 }
 
-void MiracastGraphicsDelegate::drawRectangle(float x, float y, float width, float height, float red, float green, float blue, float alpha)
+void EssosRenderThread::InitializeQtRendering(void)
 {
+    int argc = 1;
+    char* argv[] = { (char*)"MiracastApp", nullptr };
+
     MIRACASTLOG_TRACE("Entering ...");
 
-    // Define the rectangle's vertices (normalized device coordinates)
-    GLfloat vertices[] = {
-        x, y, 0.0f,               // Top-left
-        x + width, y, 0.0f,       // Top-right
-        x, y - height, 0.0f,      // Bottom-left
-        x + width, y - height, 0.0f // Bottom-right
+    //qputenv("QT_QPA_FONTDIR", "/usr/share/fonts");
+    //QGuiApplication app(argc, argv);
+
+    const char* vertShaderSrc = R"(
+        attribute vec2 a_position;
+        attribute vec2 a_texCoord;
+        varying vec2 v_texCoord;
+        void main() {
+            gl_Position = vec4(2.0 * a_position.x / 1920.0 - 1.0,
+                                1.0 - 2.0 * a_position.y / 1080.0, 0.0, 1.0);
+            v_texCoord = a_texCoord;
+        }
+    )";
+
+    const char* fragShaderSrc = R"(
+        precision mediump float;
+        varying vec2 v_texCoord;
+        uniform sampler2D u_texture;
+        void main() {
+            gl_FragColor = texture2D(u_texture, v_texCoord);
+        }
+    )";
+
+    auto compileShader = [](GLenum type, const char* src) {
+        GLuint shader = glCreateShader(type);
+        glShaderSource(shader, 1, &src, nullptr);
+        glCompileShader(shader);
+        return shader;
     };
 
-    // Define the color for the rectangle
-    GLfloat colors[] = {
-        red, green, blue, alpha,  // Top-left
-        red, green, blue, alpha,  // Top-right
-        red, green, blue, alpha,  // Bottom-left
-        red, green, blue, alpha   // Bottom-right
-    };
+    GLuint vert = compileShader(GL_VERTEX_SHADER, vertShaderSrc);
+    GLuint frag = compileShader(GL_FRAGMENT_SHADER, fragShaderSrc);
+    program = glCreateProgram();
+    glAttachShader(program, vert);
+    glAttachShader(program, frag);
+    glLinkProgram(program);
+    glUseProgram(program);
+    glUniform1i(glGetUniformLocation(program, "u_texture"), 0);
 
-    // Create and bind a vertex buffer object (VBO) for vertices
-    GLuint vertexBuffer;
-    glGenBuffers(1, &vertexBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    MIRACASTLOG_TRACE("Exiting ...");
+}
 
-    // Create and bind a VBO for colors
-    GLuint colorBuffer;
-    glGenBuffers(1, &colorBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW);
+void EssosRenderThread::displayMessage(const std::string& headerText, const std::string& bodyText, const std::string& buttonText)
+{
+    int texWidth, texHeight;
+    MIRACASTLOG_TRACE("Entering ...");
+    MIRACASTLOG_VERBOSE("headerText[%s] bodyText[%s] buttonText[%s]", headerText.c_str(), bodyText.c_str(), buttonText.c_str());
+    if (!headerText.empty())
+    {
+        if (textTexture) glDeleteTextures(1, &textTexture);
+        QImage img1 = prepareQImageByText(QString::fromStdString(headerText), TITLE_WIDTH, TITLE_HEIGHT, false, 38, Qt::transparent, Qt::white);
+        textTexture = prepareTextureFromQImage(img1, texWidth, texHeight);
+        drawTexture(textTexture, texWidth, texHeight, TITLE_START_X, TITLE_START_Y);
+    }
 
-    // Enable vertex attributes
-    glEnableVertexAttribArray(0); // Position attribute
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    if (!bodyText.empty())
+    {
+        if (textTexture) glDeleteTextures(1, &textTexture);
+        QImage img2 = prepareQImageByText(QString::fromStdString(bodyText), DESCRIPTION_WIDTH, DESCRIPTION_HEIGHT, false, 24, Qt::transparent, Qt::white);
+        textTexture = prepareTextureFromQImage(img2, texWidth, texHeight);
+        drawTexture(textTexture, texWidth, texHeight, DESCRIPTION_START_X, DESCRIPTION_START_Y);
+    }
 
-    glEnableVertexAttribArray(1); // Color attribute
-    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
-
-    // Draw the rectangle as two triangles
-    GLushort indices[] = {0, 1, 2, 1, 2, 3};
-    GLuint indexBuffer;
-    glGenBuffers(1, &indexBuffer);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, nullptr);
-
-    // Cleanup
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
-    glDeleteBuffers(1, &vertexBuffer);
-    glDeleteBuffers(1, &colorBuffer);
-    glDeleteBuffers(1, &indexBuffer);
-
-    // Swap buffers to display the rectangle
-    if (eglSwapBuffers(mDisplay, mSurface) != EGL_TRUE) {
-        MIRACASTLOG_ERROR("eglSwapBuffers failed with error: 0x%x", eglGetError());
+    if (!buttonText.empty())
+    {
+        if (textTexture) glDeleteTextures(1, &textTexture);
+        QImage img3 = prepareQImageByText(QString::fromStdString(buttonText), BUTTON_WIDTH, BUTTON_HEIGHT, true, 24, Qt::white, Qt::black);
+        textTexture = prepareTextureFromQImage(img3, texWidth, texHeight);
+        drawTexture(textTexture, texWidth, texHeight, BUTTON_START_X, BUTTON_START_Y);
     }
 
     MIRACASTLOG_TRACE("Exiting ...");
 }
 
-void MiracastGraphicsDelegate::preFrameHook() 
+MiracastGraphicsDelegate::MiracastGraphicsDelegate()
 {
+    const char *language = getenv("LANG");
+    const char *friendlyName = getenv("DEVICE_FRIENDLYNAME");
 
+    MIRACASTLOG_TRACE("Entering ...");
+
+    mCurrentAppScreenState = APPSCREEN_STATE_DEFAULT;
+	if (pthread_mutex_init(&_mRenderMutex, NULL) != 0) {
+    	MIRACASTLOG_ERROR("<com.miracastapp.graphics> mutex init failed\n");
+	}
+
+    _mRDKTextToSpeech = RDKTextToSpeech::getInstance();
+    if (!_mRDKTextToSpeech)
+    {
+        MIRACASTLOG_ERROR("Failed to create RDKTextToSpeech instance");
+    }
+
+    mLanguageCode = "en_US";
+    if (language)
+    {
+        MIRACASTLOG_INFO("Current language is %s", language);
+        setLanguageCode(language);
+    }
+
+    if (friendlyName)
+    {
+        MIRACASTLOG_INFO("Current friendly name is %s", friendlyName);
+        setFriendlyName(friendlyName);
+    }
+
+    mButtonText = localizedStrings[mLanguageCode]["ok"];
+    
+    MIRACASTLOG_TRACE("Exiting ...");
+}
+MiracastGraphicsDelegate::~MiracastGraphicsDelegate() {
+    MIRACASTLOG_TRACE("Entering ...");
+    if ( _mRDKTextToSpeech )
+    {
+        RDKTextToSpeech::destroyInstance();
+        _mRDKTextToSpeech = nullptr;
+    }
+    MIRACASTLOG_TRACE("Exiting ...");
 }
 
-void MiracastGraphicsDelegate::postFrameHook(bool flush) {
-    if(flush)
+MiracastGraphicsDelegate* MiracastGraphicsDelegate::getInstance()
+{
+    if(!mInstance) {
+		mInstance = new MiracastGraphicsDelegate;
+	}
+    return mInstance;
+}
+
+void MiracastGraphicsDelegate::destroyInstance()
+{
+    MIRACASTLOG_TRACE("Entering ...");
+    if(mInstance != NULL){
+		delete mInstance;
+		mInstance = NULL;
+	}
+    MIRACASTLOG_TRACE("Exiting ...");
+}
+
+void MiracastGraphicsDelegate::updateTTSVoiceCommand(const std::string &voiceMsg)
+{
+    MIRACASTLOG_TRACE("Entering ...");
+    if (_mRDKTextToSpeech)
     {
-        eglSwapBuffers(mDisplay, mSurface);
+        _mRDKTextToSpeech->speak(voiceMsg);
     }
+    MIRACASTLOG_TRACE("Exiting ...");
+}
+
+void MiracastGraphicsDelegate::setAppScreenState(MiracastAppScreenState state, const std::string &deviceName, const std::string &errorCode)
+{
+    std::string result = "";
+    switch (state)
+    {
+        case APPSCREEN_STATE_WELCOME:
+        case APPSCREEN_STATE_STOPPED:
+        {
+            result = localizedStrings[mLanguageCode]["description"];
+            size_t pos = result.find("%s");
+            if (pos != std::string::npos) {
+                result.replace(pos, 2, mFriendlyName);
+            }
+            mWelcomePageHeader = localizedStrings[mLanguageCode]["title"];
+            mWelcomePageDescription = result;
+        }
+        break;
+        case APPSCREEN_STATE_CONNECTING:
+        {
+            mConnectingPageHeader = localizedStrings[mLanguageCode]["connecting"] + deviceName + "...";
+        }
+        break;
+        case APPSCREEN_STATE_MIRRORING:
+        {
+            mMirroringPageHeader = localizedStrings[mLanguageCode]["mirroring"] + deviceName + "...";
+        }
+        break;
+        case APPSCREEN_STATE_ERROR:
+        {
+            result = localizedStrings[mLanguageCode]["error_description"];
+            // Replace the first %s with FriendlyName
+            size_t pos = result.find("%s");
+            if (pos != std::string::npos) {
+                result.replace(pos, 2, mFriendlyName);
+            }
+            // Replace the second %s with ErrorCode
+            pos = result.find("%s");
+            if (pos != std::string::npos) {
+                result.replace(pos, 2, errorCode);
+            }
+            mErrorPageHeader = localizedStrings[mLanguageCode]["error_info"];
+            mErrorPageDescription = result;
+            mButtonText = localizedStrings[mLanguageCode]["ok"];
+        }
+        break;
+        case APPSCREEN_STATE_CONNECTED:
+        {
+
+        }
+        break;
+        default:
+            break;
+    }
+    MIRACASTLOG_INFO("App screen state changed [%d] -> [%d]", mCurrentAppScreenState, state);
+    mCurrentAppScreenState = state;
+}
+
+bool MiracastGraphicsDelegate::initialize() 
+{
+    bool error = false;
+    MIRACASTLOG_TRACE("Entering ...");
+    pthread_mutex_lock(&_mRenderMutex);
+    if ( !_mRenderThread )
+    {
+        _mRenderThread = new EssosRenderThread();
+    }
+	pthread_mutex_unlock(&_mRenderMutex);
+	MIRACASTLOG_TRACE("Exiting ...");
+    return !error;
 }
 
 void MiracastGraphicsDelegate::teardown() {
     MIRACASTLOG_TRACE("Entering ...");
-    eglMakeCurrent(mDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-    eglDestroyContext(mDisplay, mContext);
-    mContext = 0;
-    eglDestroySurface(mDisplay, mSurface);
-	DestroyNativeWindow();
-	stopDispatching();
+    pthread_mutex_lock(&_mRenderMutex);
+    if(_mRenderThread)
+    {
+        _mRenderThread->setRunning(false);
+        pthread_join(_mRenderThread->EssRenderT_Id, nullptr);
+    }
+	pthread_mutex_unlock(&_mRenderMutex);
+	pthread_mutex_destroy(&_mRenderMutex);
 	MIRACASTLOG_VERBOSE("<com.miracastapp.graphics> teardown() completed\n");
     MIRACASTLOG_TRACE("Exiting ...");
 }
 
-bool MiracastGraphicsDelegate::startDispatching()
-{
-    MIRACASTLOG_TRACE("Entering ...");
-    pthread_mutex_lock(&mDispatchMutex);
-    if ( !mDispatchThread )
-    {
-        MIRACASTLOG_TRACE("Before creating EssosDispatchThread");
-        mDispatchThread = new EssosDispatchThread();
-        MIRACASTLOG_TRACE("After creating EssosDispatchThread");
-    }
-	pthread_mutex_unlock(&mDispatchMutex);
-	MIRACASTLOG_VERBOSE("<com.miracastapp.graphics>: startDispatching()\n");
-    MIRACASTLOG_TRACE("Exiting ...");
-    return true;
-}
-
-void MiracastGraphicsDelegate::stopDispatching()
-{
-    MIRACASTLOG_TRACE("Entering ...");
-    pthread_mutex_lock(&mDispatchMutex);
-    if(mDispatchThread)
-    {
-        mDispatchThread->setRunning(false);
-        pthread_join(mDispatchThread->EssDispatchT_Id, nullptr); 
-        EssContextStop(mEssCtx);
-    }
-	pthread_mutex_unlock(&mDispatchMutex);
-	pthread_mutex_destroy(&mDispatchMutex);
-	MIRACASTLOG_VERBOSE("<com.miracastapp.graphics>: stopDispatching()\n");
-    MIRACASTLOG_TRACE("Exiting ...");
-}
-
-void MiracastGraphicsDelegate::fillColor(float alpha, float red, float green, float blue, bool swapBuffers )
+void EssosRenderThread::fillColor(float alpha, float red, float green, float blue, bool swapBuffers )
 {
     MIRACASTLOG_TRACE("Entering ...");
 
