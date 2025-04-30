@@ -126,6 +126,157 @@ static std::map<std::string, std::map<std::string, std::string>> localizedString
     }}
 };
 
+#if 0
+static GLuint spinner_loadTexture(const char* filename)
+{
+    int width, height, channels;
+    unsigned char* image = stbi_load(filename, &width, &height, &channels, 4); // Load PNG with 4 channels (RGBA)
+    if (!image) {
+        std::cerr << "Failed to load texture: " << filename << std::endl;
+        return 0;
+    }
+
+    GLuint texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    stbi_image_free(image);
+    return texture;
+}
+
+static void spinner_drawSpinner(GLuint texture, float angle)
+{
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    glPushMatrix();
+    glTranslatef(0.5f, 0.5f, 0.0f); // Move to the center of the screen
+    glRotatef(angle, 0.0f, 0.0f, 1.0f); // Rotate around the Z-axis
+    glTranslatef(-0.5f, -0.5f, 0.0f); // Move back to the original position
+
+    glBegin(GL_QUADS);
+    glTexCoord2f(0.0f, 0.0f); glVertex2f(-0.5f, -0.5f);
+    glTexCoord2f(1.0f, 0.0f); glVertex2f( 0.5f, -0.5f);
+    glTexCoord2f(1.0f, 1.0f); glVertex2f( 0.5f,  0.5f);
+    glTexCoord2f(0.0f, 1.0f); glVertex2f(-0.5f,  0.5f);
+    glEnd();
+
+    glPopMatrix();
+
+    glDisable(GL_TEXTURE_2D);
+}
+
+statin int spinner_main()
+{
+    if (!glfwInit()) {
+        std::cerr << "Failed to initialize GLFW" << std::endl;
+        return -1;
+    }
+
+    GLFWwindow* window = glfwCreateWindow(800, 600, "Spinner Example", nullptr, nullptr);
+    if (!window) {
+        std::cerr << "Failed to create GLFW window" << std::endl;
+        glfwTerminate();
+        return -1;
+    }
+
+    glfwMakeContextCurrent(window);
+
+    // Load the spinner texture
+    GLuint spinnerTexture = loadTexture("spinner.png");
+    if (spinnerTexture == 0) {
+        glfwTerminate();
+        return -1;
+    }
+
+    float angle = 0.0f;
+
+    while (!glfwWindowShouldClose(window)) {
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        // Update the spinner angle
+        angle += 2.0f; // Rotate by 2 degrees per frame
+        if (angle >= 360.0f) {
+            angle -= 360.0f;
+        }
+
+        // Draw the spinner
+        drawSpinner(spinnerTexture, angle);
+
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+
+    glDeleteTextures(1, &spinnerTexture);
+    glfwDestroyWindow(window);
+    glfwTerminate();
+
+    return 0;
+}
+#endif
+
+static void drawSpinnerWheel(void)
+{
+    static float spinnerAngle = 0.0f;
+    auto now = std::chrono::steady_clock::now();
+
+    MIRACASTLOG_TRACE("Entering ...");
+    //if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastSpinnerUpdate).count() > 50) //20fps {
+    //if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastSpinnerUpdate).count() > 100) //10fps {
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastSpinnerUpdate).count() > 20) { // 50fps
+        //spinnerAngle += 10.0f; // Rotate 10 degrees every frame
+        spinnerAngle += 20.0f; // Rotate 10 degrees every frame
+        if (spinnerAngle >= 360.0f) spinnerAngle -= 360.0f;
+        lastSpinnerUpdate = now;
+    }
+
+    if (!spinnerTexture) return;
+
+    glBindTexture(GL_TEXTURE_2D, spinnerTexture);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    int size = 128;
+    float cx = windowWidth / 2;
+    float cy = windowHeight / 2 + 150;
+
+    float radians = spinnerAngle * 3.14159f / 180.0f;
+    float cosA = cos(radians);
+    float sinA = sin(radians);
+
+    GLfloat vertices[] = {
+        cx + (-size/2)*cosA - (-size/2)*sinA, cy + (-size/2)*sinA + (-size/2)*cosA,
+        cx + ( size/2)*cosA - (-size/2)*sinA, cy + ( size/2)*sinA + (-size/2)*cosA,
+        cx + (-size/2)*cosA - ( size/2)*sinA, cy + (-size/2)*sinA + ( size/2)*cosA,
+        cx + ( size/2)*cosA - ( size/2)*sinA, cy + ( size/2)*sinA + ( size/2)*cosA
+    };
+
+    GLfloat texCoords[] = {
+        0.0f, 1.0f, 1.0f, 1.0f,
+        0.0f, 0.0f, 1.0f, 0.0f
+    };
+
+    GLint posAttr = glGetAttribLocation(program, "a_position");
+    GLint texAttr = glGetAttribLocation(program, "a_texCoord");
+
+    glEnableVertexAttribArray(posAttr);
+    glVertexAttribPointer(posAttr, 2, GL_FLOAT, GL_FALSE, 0, vertices);
+
+    glEnableVertexAttribArray(texAttr);
+    glVertexAttribPointer(texAttr, 2, GL_FLOAT, GL_FALSE, 0, texCoords);
+
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    glDisableVertexAttribArray(posAttr);
+    glDisableVertexAttribArray(texAttr);
+    glDisable(GL_BLEND);
+    MIRACASTLOG_TRACE("Exiting ...");
+}
+
 static QImage prepareQImageByText(const QString& text, int w, int h, bool isButton, uint8_t fontSize, Qt::GlobalColor bgcolor, Qt::GlobalColor penColor)
 {
     MIRACASTLOG_TRACE("Entering ...");
@@ -210,6 +361,21 @@ static void loadBackgroundTexture()
     bg = bg.scaled(windowWidth, windowHeight, Qt::IgnoreAspectRatio);
     bgTexture = prepareTextureFromQImage(bg, bgW, bgH);
     MIRACASTLOG_VERBOSE("bgTexture=%d bgW=%d bgH=%d", bgTexture, bgW, bgH);
+    MIRACASTLOG_TRACE("Exiting ...");
+}
+
+static void loadSpinnerTexture()
+{
+    MIRACASTLOG_TRACE("Entering ...");
+    QImage spinner = loadImage(SPINNER_IMAGE_PATH);
+    if (spinner.isNull())
+    {
+        MIRACASTLOG_ERROR("Failed to load spinner image");
+        return;
+    }
+    //spinner = spinner.scaled(128, 128, Qt::IgnoreAspectRatio);
+    spinnerTexture = prepareTextureFromQImage(spinner, bgW, bgH);
+    MIRACASTLOG_VERBOSE("spinnerTexture=%d bgW=%d bgH=%d", spinnerTexture, bgW, bgH);
     MIRACASTLOG_TRACE("Exiting ...");
 }
 
@@ -338,7 +504,8 @@ void* EssosRenderThread::run(void *arg)
     {
         currentAppScreenState = MiracastGraphicsDelegate::getInstance()->getAppScreenState();
 
-        if (LastAppScreenState != currentAppScreenState)
+        if ((LastAppScreenState != currentAppScreenState) ||
+            (APPSCREEN_STATE_CONNECTING == currentAppScreenState))
         {
             ttsVoiceMsg.clear();
             MIRACASTLOG_VERBOSE(">>>> MiracastAppScreenState changed from %d to %d", LastAppScreenState, currentAppScreenState);
@@ -364,6 +531,8 @@ void* EssosRenderThread::run(void *arg)
                     drawBackground();
                     _mEssRenderTh->displayMessage(  connectingPageHeader , "", "");
                     ttsVoiceMsg = connectingPageHeader;
+
+                    drawSpinnerWheel();
                 }
                 break;
                 case APPSCREEN_STATE_MIRRORING:
