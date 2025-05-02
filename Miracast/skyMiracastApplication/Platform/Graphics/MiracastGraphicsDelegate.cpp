@@ -285,7 +285,18 @@ static QImage prepareQImageByText(const QString& text, int w, int h, bool isButt
     QImage img(w, h, QImage::Format_ARGB32);
     img.fill(Qt::transparent);
     
-    QFontDatabase::addApplicationFont("/usr/share/fonts/ttf/LiberationSans-Regular.ttf");
+    int fontId = QFontDatabase::addApplicationFont("/usr/share/fonts/ttf/LiberationSans-Regular.ttf");
+    if (fontId != -1) {
+        MIRACASTLOG_VERBOSE("Font LiberationSans loaded.fontId=%d\n", fontId);
+    }
+    else if ((fontId = QFontDatabase::addApplicationFont("/usr/share/fonts/Cinecav_Mono.ttf")) != -1)
+    {
+        MIRACASTLOG_VERBOSE("Font load failed, using fallback.fontId=%d\n", fontId);
+    }
+    else
+    {
+        MIRACASTLOG_VERBOSE("Fonts LiberationSans and Cinecav_Mono load failed.fontId =%d\n", fontId);
+    }
     QString family = QFontDatabase::applicationFontFamilies(0).at(0);
     QFont font(family, fontSize);
 
