@@ -599,8 +599,6 @@ namespace WPEFramework
 				}
 			}
 
-            std::string waylandDisplayOverrideName = MiracastCommon::parse_opt_flag("/opt/miracast_custom_westeros_name");
-
             if (waylandDisplayName.empty())
             {
                 MiracastCommon::execute_PopenCommand( "cat /tmp/rdk/dobby/bundles/com.sky.as.apps_MiracastApp.*/config.json | grep -i \"westeros-\" | cut -d'\"' -f4 | cut -d\"/\" -f3 | xargs echo -n" , nullptr , 5 , waylandDisplayName , 1000000 );
@@ -613,10 +611,16 @@ namespace WPEFramework
                     MIRACASTLOG_INFO("Wayland Display Name from config.json: [%s]", waylandDisplayName.c_str());
                 }
             }
-            else if (!waylandDisplayOverrideName.empty())
+            else
             {
-                waylandDisplayOverrideName = waylandDisplayName;
                 MIRACASTLOG_INFO("Wayland Display Name from App: [%s]", waylandDisplayName.c_str());
+            }
+
+            std::string waylandDisplayOverrideName = MiracastCommon::parse_opt_flag("/opt/miracast_custom_westeros_name");
+            if (!waylandDisplayOverrideName.empty())
+            {
+                MIRACASTLOG_INFO("Wayland Display Name from Overrides: [%s]", waylandDisplayOverrideName.c_str());
+                waylandDisplayName = waylandDisplayOverrideName;
             }
 
             if (!waylandDisplayName.empty())
@@ -624,14 +628,19 @@ namespace WPEFramework
                 if (0 == setenv("WAYLAND_DISPLAY", waylandDisplayName.c_str(), 1))
                 {
                     MIRACASTLOG_INFO("Success, setenv for WAYLAND_DISPLAY: [%s] - strerrorno[%s]", waylandDisplayName.c_str(), strerror(errno));
+                    success = true;
                 }
                 else
                 {
                     MIRACASTLOG_ERROR("Failed, setenv for WAYLAND_DISPLAY: [%s] - strerrorno[%s]", waylandDisplayName.c_str(), strerror(errno));
                 }
             }
+            else
+            {
+                MIRACASTLOG_ERROR("Failed to get Wayland Display Name");
+                success = false;
+            }
 
-			success = true;
 			MIRACASTLOG_TRACE("Exiting..!!!");
 			returnResponse(success);
 		}
