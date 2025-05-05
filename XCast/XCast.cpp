@@ -181,7 +181,7 @@ void XCast::InitializePowerManager(PluginHost::IShell* service)
 
 void XCast::InitializeIARM()
 {
-    uint32_t retStatus = Core::ERROR_GENERAL;
+    Core::hresult retStatus = Core::ERROR_GENERAL;
     PowerState pwrStateCur = WPEFramework::Exchange::IPowerManager::POWER_STATE_UNKNOWN;
     PowerState pwrStatePrev = WPEFramework::Exchange::IPowerManager::POWER_STATE_UNKNOWN;
     bool nwStandby = false;
@@ -233,7 +233,7 @@ bool XCast::setPowerState(std::string powerState)
 {
     PowerState cur_powerState = m_powerState,
                new_powerState = WPEFramework::Exchange::IPowerManager::POWER_STATE_OFF;
-    uint32_t status = Core::ERROR_GENERAL;
+    Core::hresult status = Core::ERROR_GENERAL;
     bool ret = true;
     if ("ON" == powerState)
     {
@@ -271,7 +271,7 @@ bool XCast::setPowerState(std::string powerState)
     return ret;
 }
 
-void XCast::onPowerModeChanged(const PowerState &currentState, const PowerState &newState)
+void XCast::onPowerModeChanged(const PowerState currentState, const PowerState newState)
 {
     LOGINFO("onPowerModeChanged: State Changed %d -- > %d\r",
         currentState, newState);
@@ -281,7 +281,7 @@ void XCast::onPowerModeChanged(const PowerState &currentState, const PowerState 
     powerModeChangeThread.detach();
 }
 
-void XCast::onNetworkStandbyModeChanged(const bool &enabled)
+void XCast::onNetworkStandbyModeChanged(const bool enabled)
 {
     m_networkStandbyMode = enabled;
     LOGWARN("creating worker thread for threadNetworkStandbyModeChangeEvent Mode :%u",m_networkStandbyMode);

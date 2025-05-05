@@ -247,7 +247,6 @@ jobs:
           network/wifiSrvMgrIarmIf.h
           network/netsrvmgrIarm.h
           libudev.h
-          libusb.h
           rfcapi.h
           rbus.h
           motionDetector.h
@@ -279,6 +278,8 @@ jobs:
           -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/usr"
           -DCMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
           -DCMAKE_CXX_FLAGS="
+          -fprofile-arcs
+          -ftest-coverage
           -DEXCEPTIONS_ENABLE=ON
           -DUSE_THUNDER_R4=ON
           -DTHUNDER_VERSION=4
@@ -297,7 +298,6 @@ jobs:
           -I $GITHUB_WORKSPACE/Thunder/Source/core
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/devicesettings.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Iarm.h
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/libusb.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Rfc.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/RBus.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Telemetry.h
@@ -348,6 +348,8 @@ jobs:
           -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/usr"
           -DCMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
           -DCMAKE_CXX_FLAGS="
+          -fprofile-arcs
+          -ftest-coverage
           -DEXCEPTIONS_ENABLE=ON
           -DUSE_THUNDER_R4=ON
           -DTHUNDER_VERSION=4
@@ -367,7 +369,6 @@ jobs:
           -I $GITHUB_WORKSPACE/Thunder/Source/core
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/devicesettings.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Iarm.h
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/libusb.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Rfc.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/RBus.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Telemetry.h
@@ -499,17 +500,17 @@ jobs:
         run: >
           PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
           LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
-          GTEST_OUTPUT="json:$(pwd)/entservices-testframeworkL1TestResults.json"
+          GTEST_OUTPUT="json:$(pwd)/rdkL1TestResults.json"
           RdkServicesL1Test &&
-          cp -rf $(pwd)/entservices-testframeworkL1TestResults.json $GITHUB_WORKSPACE/entservices-testframeworkL1TestResultsWithoutValgrind.json &&
-          rm -rf $(pwd)/entservices-testframeworkL1TestResults.json
+          cp -rf $(pwd)/rdkL1TestResults.json $GITHUB_WORKSPACE/rdkL1TestResultsWithoutValgrind.json &&
+          rm -rf $(pwd)/rdkL1TestResults.json
 
       - name: Run unit tests with valgrind
         if: ${{ !env.ACT }}
         run: >
           PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
           LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
-          GTEST_OUTPUT="json:$(pwd)/entservices-testframeworkL1TestResults.json"
+          GTEST_OUTPUT="json:$(pwd)/rdkL1TestResults.json"
           valgrind
           --tool=memcheck
           --log-file=valgrind_log
@@ -518,8 +519,8 @@ jobs:
           --track-fds=yes
           --fair-sched=try
           RdkServicesL1Test &&
-          cp -rf $(pwd)/entservices-testframeworkL1TestResults.json $GITHUB_WORKSPACE/entservices-testframeworkL1TestResultsWithValgrind.json &&
-          rm -rf $(pwd)/entservices-testframeworkL1TestResults.json
+          cp -rf $(pwd)/rdkL1TestResults.json $GITHUB_WORKSPACE/rdkL1TestResultsWithValgrind.json &&
+          rm -rf $(pwd)/rdkL1TestResults.json
 
       - name: Generate coverage
         if: ${{ matrix.coverage == 'with-coverage' && !env.ACT }}
@@ -528,21 +529,22 @@ jobs:
           &&
           lcov -c
           -o coverage.info
-          -d build/entservices-testframework
+          -d build/entservices-casting
           &&
           lcov
           -r coverage.info
           '/usr/include/*'
-          '*/build/entservices-testframework/_deps/*'
+          '*/build/entservices-casting/_deps/*'
           '*/install/usr/include/*'
           '*/Tests/headers/*'
           '*/Tests/mocks/*'
           '*/Tests/L1Tests/tests/*'
+          '*/Thunder/*'
           -o filtered_coverage.info
           &&
           genhtml
           -o coverage
-          -t "entservices-testframework coverage"
+          -t "entservices-casting coverage"
           filtered_coverage.info
 
       - name: Upload artifacts
@@ -553,12 +555,7 @@ jobs:
           path: |
             coverage/
             valgrind_log
-            entservices-testframeworkL1TestResultsWithoutValgrind.json
-            entservices-testframeworkL1TestResultsWithValgrind.json
+            rdkL1TestResultsWithoutValgrind.json
+            rdkL1TestResultsWithValgrind.json
           if-no-files-found: warn
 
-      - name: Coping results to /tmp/Gtest_Report/
-        if: ${{ !env.ACT }}
-        run: >
-          mkdir -p /tmp/Gtest_Report/ &&
-          cp -r valgrind_log entservices-testframeworkL1TestResultsWithoutValgrind.json entservices-testframeworkL1TestResultsWithValgrind.json coverage /tmp/Gtest_Report/
