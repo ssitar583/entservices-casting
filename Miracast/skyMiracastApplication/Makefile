@@ -27,8 +27,6 @@ skyAppPlugin_SRCS = \
 				 ./MiracastApp.cpp \
 				 ./MiracastAppMgr.cpp \
 				 ../common/MiracastCommon.cpp \
-				 ../MiracastPlayer/RTSP/MiracastRTSPMsg.cpp \
-				 ../MiracastPlayer/Generic/MiracastGstPlayer.cpp \
 				 $(NULL)
 
 skyAppPlugin_INCLUDES = \
@@ -43,10 +41,7 @@ skyAppPlugin_INCLUDES = \
 		   -I$(LOCAL_PATH)/Platform/Graphics/ \
 		   -I$(LOCAL_PATH)/ \
 		   -I$(LOCAL_PATH)/../MiracastService/ \
-		   -I$(LOCAL_PATH)/../MiracastService/P2P \
 		   -I$(LOCAL_PATH)/../MiracastPlayer/ \
-		   -I$(LOCAL_PATH)/../MiracastPlayer/RTSP \
-		   -I$(LOCAL_PATH)/../MiracastPlayer/Generic \
 		   -I$(LOCAL_PATH)/../common \
 		   $(NULL)
 
@@ -67,9 +62,7 @@ skyAppPlugin_LIBS = -L$(STAGING_DIR)/usr/lib/ \
 								 -lwayland-client \
 								 -lwayland_skyq_client \
 								 -lsoup-2.4 \
-								 -lEGL \
-								 -lwpa_client \
-								 -lMiracastPlayerHal
+								 -lEGL
 
 WPEFRAMEWORK_LIBS = -L$(STAGING_DIR)/usr/lib -lWPEFrameworkCore -lWPEFrameworkPlugins -lWPEFrameworkSecurityUtil -lWPEFrameworkCOM -lWPEFrameworkWebSocket
 
