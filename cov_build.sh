@@ -1,6 +1,6 @@
-
 #!/bin/bash
 set -x
+set -e
 ##############################
 GITHUB_WORKSPACE="${PWD}"
 ls -la ${GITHUB_WORKSPACE}
@@ -21,14 +21,8 @@ cmake -G Ninja -S "$GITHUB_WORKSPACE" -B build/entservices-casting \
 -DRDK_SERVICES_COVERITY=ON \
 -DRDK_SERVICES_L1_TEST=ON \
 -DDS_FOUND=ON \
--DPLUGIN_POWERMANAGER=ON \
--DPLUGIN_DEVICEINFO=ON \
--DPLUGIN_SYSTEMMODE=ON \
--DPLUGIN_WAREHOUSE=ON \
--DPLUGIN_DISPLAYINFO=ON \
--DPLUGIN_USERPREFERENCES=ON \
--DPLUGIN_DEVICEDIAGNOSTICS=ON \
--DPLUGIN_FRAMERATE=ON \
+-DPLUGIN_XCAST=ON \
+-DPLUGIN_MIRACAST=ON \
 -DCMAKE_CXX_FLAGS="-DEXCEPTIONS_ENABLE=ON \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/audiocapturemgr \
