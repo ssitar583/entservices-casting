@@ -106,17 +106,16 @@ macro(add_plugin_test plugin_name test_files)
 endmacro()
 
 # PLUGIN_MIRACAST
-if(PLUGIN_MIRACAST)
 set (MIRACAST_INC ${CMAKE_SOURCE_DIR}/../entservices-casting/Miracast/MiracastPlayer ${CMAKE_SOURCE_DIR}/../entservices-casting/Miracast/MiracastPlayer/RTSP ${CMAKE_SOURCE_DIR}/../entservices-casting/Miracast/MiracastService ${CMAKE_SOURCE_DIR}/../entservices-casting/Miracast/MiracastService/P2P ${CMAKE_SOURCE_DIR}/../entservices-casting/Miracast/common ${CMAKE_SOURCE_DIR}/../entservices-casting/helpers)
 set (MIRACAST_LIBS ${NAMESPACE}MiracastPlayer ${NAMESPACE}MiracastService)
 set (MIRACAST_SRC tests/test_MiracastService.cpp tests/test_MiracastPlayer.cpp)
 add_plugin_test_ex(PLUGIN_MIRACAST "${MIRACAST_SRC}" "${MIRACAST_INC}" "${MIRACAST_LIBS}")
-endif()
 
 # PLUGIN_XCAST
-set (XCAST_LIBS ${NAMESPACE}XCast ${NAMESPACE}XCastImplementation)
-set (XCAST_INC ${CMAKE_SOURCE_DIR}/../entservices-casting/XCast ${CMAKE_SOURCE_DIR}/../entservices-casting/helpers)
-add_plugin_test_ex(PLUGIN_XCAST tests/test_XCast.cpp "${XCAST_INC}" "${XCAST_LIBS}")
+#set (XCAST_INC ${CMAKE_SOURCE_DIR}/../entservices-casting/XCast ${CMAKE_SOURCE_DIR}/../entservices-casting/helpers)
+#set (XCAST_LIBS ${NAMESPACE}XCast ${NAMESPACE}XCastImplementation)
+#add_plugin_test_ex(PLUGIN_XCAST tests/test_XCast.cpp "${XCAST_INC}" "${XCAST_LIBS}")
+add_plugin_test(XCast tests/test_XCast.cpp)
 
 add_library(${MODULE_NAME} SHARED ${TEST_SRC})
 
