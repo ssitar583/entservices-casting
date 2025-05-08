@@ -112,10 +112,9 @@ set (MIRACAST_SRC tests/test_MiracastService.cpp tests/test_MiracastPlayer.cpp)
 add_plugin_test_ex(PLUGIN_MIRACAST "${MIRACAST_SRC}" "${MIRACAST_INC}" "${MIRACAST_LIBS}")
 
 # PLUGIN_XCAST
-#set (XCAST_INC ${CMAKE_SOURCE_DIR}/../entservices-casting/XCast ${CMAKE_SOURCE_DIR}/../entservices-casting/helpers)
-#set (XCAST_LIBS ${NAMESPACE}XCast ${NAMESPACE}XCastImplementation)
-#add_plugin_test_ex(PLUGIN_XCAST tests/test_XCast.cpp "${XCAST_INC}" "${XCAST_LIBS}")
-add_plugin_test(XCast tests/test_XCast.cpp)
+set (XCAST_INC ${CMAKE_SOURCE_DIR}/../entservices-casting/XCast ${CMAKE_SOURCE_DIR}/../entservices-casting/helpers)
+set (XCAST_LIBS ${NAMESPACE}XCast ${NAMESPACE}XCastImplementation)
+add_plugin_test_ex(PLUGIN_XCAST tests/test_XCast.cpp "${XCAST_INC}" "${XCAST_LIBS}")
 
 add_library(${MODULE_NAME} SHARED ${TEST_SRC})
 
