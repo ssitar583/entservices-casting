@@ -26,6 +26,7 @@
 const short WPEFramework::Plugin::MiracastPlayer::API_VERSION_NUMBER_MAJOR = 1;
 const short WPEFramework::Plugin::MiracastPlayer::API_VERSION_NUMBER_MINOR = 0;
 const string WPEFramework::Plugin::MiracastPlayer::SERVICE_NAME = "org.rdk.MiracastPlayer";
+static std::vector<std::string> m_westerosEnvArgs;
 using namespace std;
 
 #define API_VERSION_NUMBER_MAJOR 1
@@ -176,8 +177,6 @@ namespace WPEFramework
 			bool success = false;
 			MIRACASTLOG_INFO("Entering..!!!");
 
-            LOGINFOMETHOD();
-
 			if(parameters.HasLabel("device_parameters")) {
 				JsonObject device_parameters;
 				std::string	source_dev_ip = "",
@@ -235,8 +234,7 @@ namespace WPEFramework
 				}
 			}
 
-			LOGTRACEMETHODFIN();
-            MIRACASTLOG_INFO("Exiting..!!!");
+			MIRACASTLOG_INFO("Exiting..!!!");
 			returnResponse(success);
 		}
 
@@ -248,8 +246,6 @@ namespace WPEFramework
 			bool success = true;
 
 			MIRACASTLOG_INFO("Entering..!!!");
-
-            LOGINFOMETHOD();
 
 			returnIfNumberParamNotFound(parameters, "reason_code");
 
@@ -277,8 +273,7 @@ namespace WPEFramework
 				m_miracast_rtsp_obj->send_msgto_rtsp_msg_hdler_thread(rtsp_hldr_msgq_data);
 			}
 
-			LOGTRACEMETHODFIN();
-            MIRACASTLOG_INFO("Exiting..!!!");
+			MIRACASTLOG_INFO("Exiting..!!!");
 			returnResponse(success);
 		}
 
@@ -460,88 +455,21 @@ namespace WPEFramework
 			returnResponse(success);
 		}
 
-		static std::vector<std::string> westerosEnvArgs;
-
 		uint32_t MiracastPlayer::setWesterosEnvironment(const JsonObject &parameters, JsonObject &response)
 		{
-            std::string waylandDisplayName = "";
+			std::string waylandDisplayName = "";
 			bool success = false;
-			MIRACASTLOG_TRACE("Entering..!!!");
-			LOGINFOMETHOD();
-
-            if (0 == access("/opt/miracast_westeros_env", F_OK))
-            {
-                if (0 != setenv("XDG_RUNTIME_DIR", "/tmp", 1))
-                {
-                    MIRACASTLOG_ERROR("Failed, setenv for XDG_RUNTIME_DIR: [%s]",strerror(errno));
-                }
-                if (0 != setenv("LD_PRELOAD", "libwesteros_gl.so.0.0.0", 1))
-                {
-                    MIRACASTLOG_ERROR("Failed, setenv for LD_PRELOAD: [%s]",strerror(errno));
-                }
-                if (0 != setenv("WESTEROS_GL_GRAPHICS_MAX_SIZE", "1920x1080", 1))
-                {
-                    MIRACASTLOG_ERROR("Failed, setenv for WESTEROS_GL_GRAPHICS_MAX_SIZE: [%s]",strerror(errno));
-                }
-                if (0 != setenv("WESTEROS_GL_MODE", "3840x2160x60", 1))
-                {
-                    MIRACASTLOG_ERROR("Failed, setenv for WESTEROS_GL_MODE: [%s]",strerror(errno));
-                }
-                if (0 != setenv("WESTEROS_GL_USE_REFRESH_LOCK", "1", 1))
-                {
-                    MIRACASTLOG_ERROR("Failed, setenv for WESTEROS_GL_USE_REFRESH_LOCK: [%s]",strerror(errno));
-                }
-                if (0 != setenv("WESTEROS_GL_USE_AMLOGIC_AVSYNC", "1", 1))
-                {
-                    MIRACASTLOG_ERROR("Failed, setenv for WESTEROS_GL_USE_AMLOGIC_AVSYNC: [%s]",strerror(errno));
-                }
-                if (0 != setenv("WAYLAND_DISPLAY", "main0", 1))
-                {
-                    MIRACASTLOG_ERROR("Failed, setenv for WAYLAND_DISPLAY: [%s]",strerror(errno));
-                }
-                if (0 != setenv("WESTEROS_SINK_AMLOGIC_USE_DMABUF", "1", 1))
-                {
-                    MIRACASTLOG_ERROR("Failed, setenv for WESTEROS_SINK_AMLOGIC_USE_DMABUF: [%s]",strerror(errno));
-                }
-                if (0 != setenv("WESTEROS_SINK_USE_FREERUN", "1", 1))
-                {
-                    MIRACASTLOG_ERROR("Failed, setenv for WESTEROS_SINK_USE_FREERUN: [%s]",strerror(errno));
-                }
-                if (0 != setenv("WESTEROS_SINK_USE_ESSRMGR", "1", 1))
-                {
-                    MIRACASTLOG_ERROR("Failed, setenv for WESTEROS_SINK_USE_ESSRMGR: [%s]",strerror(errno));
-                }
-
-                std::string waylandDisplayName = MiracastCommon::parse_opt_flag("/opt/miracast_custom_westeros_name");
-                if (waylandDisplayName.empty())
-                {
-                    MiracastCommon::execute_PopenCommand( "cat /tmp/rdk/dobby/bundles/com.sky.as.apps_MiracastApp.*/config.json | grep -i \"westeros-\" | cut -d'\"' -f4 | cut -d\"/\" -f3 | xargs echo -n" , nullptr , 5 , waylandDisplayName , 1000000 );
-                    if (waylandDisplayName.empty())
-                    {
-                        MIRACASTLOG_ERROR("Failed to get Wayland Display Name from config.json as well");
-                    }
-                }
-
-                if (!waylandDisplayName.empty())
-                {
-                    if (0 == setenv("WAYLAND_DISPLAY", waylandDisplayName.c_str(), 1))
-                    {
-                        MIRACASTLOG_INFO("Success, setenv for WAYLAND_DISPLAY: [%s] - strerrorno[%s]", waylandDisplayName.c_str(), strerror(errno));
-                    }
-                    else
-                    {
-                        MIRACASTLOG_ERROR("Failed, setenv for WAYLAND_DISPLAY: [%s] - strerrorno[%s]", waylandDisplayName.c_str(), strerror(errno));
-                    }
-                }
-                returnResponse(true);
-            }
 
 			if (!parameters.HasLabel("westerosArgs") ||
 				parameters["westerosArgs"].Content() != WPEFramework::Core::JSON::Variant::type::ARRAY)
 			{
-				MIRACASTLOG_ERROR("No consent strings array in cache");
-				MIRACASTLOG_TRACE("Exiting..!!!");
+				MIRACASTLOG_ERROR("No consent strings array in cache and Exiting..!!!");
 				returnResponse(success);
+			}
+
+			if (m_westerosEnvArgs.size() > 0)
+			{
+				unsetWesterosEnvironment();
 			}
 
 			JsonArray westerosArgs = parameters["westerosArgs"].Array();
@@ -566,14 +494,9 @@ namespace WPEFramework
 				std::string argName = envArg["argName"].String();
 				std::string argValue = envArg["argValue"].String();
 
-				westerosEnvArgs.push_back(argName);
+				m_westerosEnvArgs.push_back(argName);
 				MIRACASTLOG_INFO("Configuring environment variable: %s=%s", argName.c_str(), argValue.c_str());
-				if (0 == access("/opt/miracast_setenv_by_Thunder", F_OK))
-				{
-					Core::SystemInfo::SetEnvironment(argName.c_str(), argValue.c_str());
-					MIRACASTLOG_INFO("SetEnvironment: [%s]=[%s] - strerrorno[%s]", argName.c_str(), argValue.c_str(), strerror(errno));
-				}
-				else if (0 == setenv(argName.c_str(), argValue.c_str(), 1))
+				if (0 == setenv(argName.c_str(), argValue.c_str(), 1))
 				{
 					MIRACASTLOG_INFO("Success, setenv: [%s]=[%s] - strerrorno[%s]", argName.c_str(), argValue.c_str(), strerror(errno));
 				}
@@ -582,11 +505,11 @@ namespace WPEFramework
 					MIRACASTLOG_ERROR("Failed, setenv for %s: [%s]", argName.c_str(), strerror(errno));
 				}
 
-                if ( "WAYLAND_DISPLAY" == argName )
-                {
-                    waylandDisplayName = argValue;
-                    MIRACASTLOG_INFO("Wayland Display Name from App: [%s]", waylandDisplayName.c_str());
-                }
+				if ( "WAYLAND_DISPLAY" == argName )
+				{
+					waylandDisplayName = argValue;
+					MIRACASTLOG_INFO("Wayland Display Name from App: [%s]", waylandDisplayName.c_str());
+				}
 
 				char *value = getenv(argName.c_str());
 				if (value != NULL)
@@ -599,49 +522,37 @@ namespace WPEFramework
 				}
 			}
 
-            if (waylandDisplayName.empty())
-            {
-                MiracastCommon::execute_PopenCommand( "cat /tmp/rdk/dobby/bundles/com.sky.as.apps_MiracastApp.*/config.json | grep -i \"westeros-\" | cut -d'\"' -f4 | cut -d\"/\" -f3 | xargs echo -n" , nullptr , 5 , waylandDisplayName , 1000000 );
-                if (waylandDisplayName.empty())
-                {
-                    MIRACASTLOG_ERROR("Failed to get Wayland Display Name from config.json as well");
-                }
-                else
-                {
-                    MIRACASTLOG_INFO("Wayland Display Name from config.json: [%s]", waylandDisplayName.c_str());
-                }
-            }
-            else
-            {
-                MIRACASTLOG_INFO("Wayland Display Name from App: [%s]", waylandDisplayName.c_str());
-            }
+			if (!waylandDisplayName.empty())
+			{
+				MIRACASTLOG_INFO("Wayland Display Name from App: [%s]", waylandDisplayName.c_str());
+			}
 
-            std::string waylandDisplayOverrideName = MiracastCommon::parse_opt_flag("/opt/miracast_custom_westeros_name");
-            if (!waylandDisplayOverrideName.empty())
-            {
-                MIRACASTLOG_INFO("Wayland Display Name from Overrides: [%s]", waylandDisplayOverrideName.c_str());
-                waylandDisplayName = waylandDisplayOverrideName;
-            }
+			std::string waylandDisplayOverrideName = MiracastCommon::parse_opt_flag("/opt/miracast_custom_westeros_name");
+			if (!waylandDisplayOverrideName.empty())
+			{
+				MIRACASTLOG_INFO("Wayland Display Name from Overrides: [%s]", waylandDisplayOverrideName.c_str());
+				waylandDisplayName = waylandDisplayOverrideName;
+			}
 
-            if (!waylandDisplayName.empty())
-            {
-                if (0 == setenv("WAYLAND_DISPLAY", waylandDisplayName.c_str(), 1))
-                {
-                    MIRACASTLOG_INFO("Success, setenv for WAYLAND_DISPLAY: [%s] - strerrorno[%s]", waylandDisplayName.c_str(), strerror(errno));
-                    success = true;
-                }
-                else
-                {
-                    MIRACASTLOG_ERROR("Failed, setenv for WAYLAND_DISPLAY: [%s] - strerrorno[%s]", waylandDisplayName.c_str(), strerror(errno));
-                }
-            }
-            else
-            {
-                MIRACASTLOG_ERROR("Failed to get Wayland Display Name");
-                success = false;
-            }
+			if (!waylandDisplayName.empty())
+			{
+				if (0 == setenv("WAYLAND_DISPLAY", waylandDisplayName.c_str(), 1))
+				{
+					MIRACASTLOG_INFO("Success, setenv for WAYLAND_DISPLAY: [%s] - strerrorno[%s]", waylandDisplayName.c_str(), strerror(errno));
+					success = true;
+				}
+				else
+				{
+					MIRACASTLOG_ERROR("Failed, setenv for WAYLAND_DISPLAY: [%s] - strerrorno[%s]", waylandDisplayName.c_str(), strerror(errno));
+				}
+			}
+			else
+			{
+				MIRACASTLOG_ERROR("Failed to get Wayland Display Name");
+				success = false;
+				unsetWesterosEnvironment();
+			}
 
-			MIRACASTLOG_TRACE("Exiting..!!!");
 			returnResponse(success);
 		}
 
@@ -654,58 +565,9 @@ namespace WPEFramework
 		void MiracastPlayer::unsetWesterosEnvironment(void)
 		{
 			MIRACASTLOG_TRACE("Entering..!!!");
-            if (0 == access("/opt/miracast_westeros_env", F_OK))
-            {
-                if (0 != unsetenv("XDG_RUNTIME_DIR"))
-                {
-                    MIRACASTLOG_ERROR("Failed, unsetenv for XDG_RUNTIME_DIR: [%s]",strerror(errno));
-                }
-                if (0 != unsetenv("LD_PRELOAD"))
-                {
-                    MIRACASTLOG_ERROR("Failed, unsetenv for LD_PRELOAD: [%s]",strerror(errno));
-                }
-                if (0 != unsetenv("WESTEROS_GL_GRAPHICS_MAX_SIZE"))
-                {
-                    MIRACASTLOG_ERROR("Failed, unsetenv for WESTEROS_GL_GRAPHICS_MAX_SIZE: [%s]",strerror(errno));
-                }
-                if (0 != unsetenv("WESTEROS_GL_MODE"))
-                {
-                    MIRACASTLOG_ERROR("Failed, unsetenv for WESTEROS_GL_MODE: [%s]",strerror(errno));
-                }
-                if (0 != unsetenv("WESTEROS_GL_USE_REFRESH_LOCK"))
-                {
-                    MIRACASTLOG_ERROR("Failed, unsetenv for WESTEROS_GL_USE_REFRESH_LOCK: [%s]",strerror(errno));
-                }
-                if (0 != unsetenv("WESTEROS_GL_USE_AMLOGIC_AVSYNC"))
-                {
-                    MIRACASTLOG_ERROR("Failed, unsetenv for WESTEROS_GL_USE_AMLOGIC_AVSYNC: [%s]",strerror(errno));
-                }
-                if (0 != unsetenv("WAYLAND_DISPLAY"))
-                {
-                    MIRACASTLOG_ERROR("Failed, unsetenv for WAYLAND_DISPLAY: [%s]",strerror(errno));
-                }
-                if (0 != unsetenv("WESTEROS_SINK_AMLOGIC_USE_DMABUF"))
-                {
-                    MIRACASTLOG_ERROR("Failed, unsetenv for WESTEROS_SINK_AMLOGIC_USE_DMABUF: [%s]",strerror(errno));
-                }
-                if (0 != unsetenv("WESTEROS_SINK_USE_FREERUN"))
-                {
-                    MIRACASTLOG_ERROR("Failed, unsetenv for WESTEROS_SINK_USE_FREERUN: [%s]",strerror(errno));
-                }
-                if (0 != unsetenv("WESTEROS_SINK_USE_ESSRMGR"))
-                {
-                    MIRACASTLOG_ERROR("Failed, unsetenv for WESTEROS_SINK_USE_ESSRMGR: [%s]",strerror(errno));
-                }
-                return;
-            }
-			for (const auto& argName : westerosEnvArgs)
+			for (const auto& argName : m_westerosEnvArgs)
 			{
-				if (0 == access("/opt/miracast_setenv_by_Thunder", F_OK))
-				{
-					Core::SystemInfo::SetEnvironment(argName.c_str(), "");
-					MIRACASTLOG_INFO("Unset environment variable: [%s] - stderrotno: [%s]", argName.c_str(), strerror(errno));
-				}
-				else if (0 == unsetenv(argName.c_str()))
+				if (0 == unsetenv(argName.c_str()))
 				{
 					MIRACASTLOG_INFO("Success, unsetenv for [%s] - strerrorno[%s]", argName.c_str(), strerror(errno));
 				}
@@ -714,7 +576,7 @@ namespace WPEFramework
 					MIRACASTLOG_ERROR("Failed, unsetenv for [%s] - strerrorno[%s]", argName.c_str(), strerror(errno));
 				}
 			}
-			westerosEnvArgs.clear();
+			m_westerosEnvArgs.clear();
 			MIRACASTLOG_TRACE("Exiting..!!!");
 		}
 
