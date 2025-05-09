@@ -507,7 +507,7 @@ namespace WPEFramework
 
 				if ( "WAYLAND_DISPLAY" == argName )
 				{
-					waylandDisplayName = argValue;
+					waylandDisplayName = std::move(argValue);
 					MIRACASTLOG_INFO("Wayland Display Name from App: [%s]", waylandDisplayName.c_str());
 				}
 
@@ -531,7 +531,7 @@ namespace WPEFramework
 			if (!waylandDisplayOverrideName.empty())
 			{
 				MIRACASTLOG_INFO("Wayland Display Name from Overrides: [%s]", waylandDisplayOverrideName.c_str());
-				waylandDisplayName = waylandDisplayOverrideName;
+				waylandDisplayName = std::move(waylandDisplayOverrideName);
 			}
 
 			if (!waylandDisplayName.empty())
