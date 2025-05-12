@@ -119,6 +119,11 @@ namespace Plugin {
 
     void XCastImplementation::Deinitialize(void)
     {
+        if (m_ControllerObj)
+        {
+            m_ControllerObj->Unsubscribe(THUNDER_RPC_TIMEOUT, _T("statechange"), &XCastImplementation::eventHandler_pluginState, this);
+        }
+
         if(nullptr != m_xcast_manager)
         {
             stopTimer();
