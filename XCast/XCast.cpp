@@ -411,7 +411,7 @@ void XCast::Deinitialize(PluginHost::IShell* service)
     if (_powerManagerPlugin)
     {
         _powerManagerPlugin->Unregister(_pwrMgrNotification.baseInterface<Exchange::IPowerManager::INetworkStandbyModeChangedNotification>());
-        _powerManagerPlugin->Unregister(_pwrMgrNotification.baseInterface<Exchange::IPowerManager::IModeChangedNotification>())
+        _powerManagerPlugin->Unregister(_pwrMgrNotification.baseInterface<Exchange::IPowerManager::IModeChangedNotification>());
         _powerManagerPlugin.Reset();
     }
 
