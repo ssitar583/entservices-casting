@@ -26,6 +26,7 @@
 const short WPEFramework::Plugin::MiracastPlayer::API_VERSION_NUMBER_MAJOR = 1;
 const short WPEFramework::Plugin::MiracastPlayer::API_VERSION_NUMBER_MINOR = 0;
 const string WPEFramework::Plugin::MiracastPlayer::SERVICE_NAME = "org.rdk.MiracastPlayer";
+static std::vector<std::string> m_westerosEnvArgs;
 using namespace std;
 
 #define API_VERSION_NUMBER_MAJOR 1
@@ -47,6 +48,8 @@ const string WPEFramework::Plugin::MiracastPlayer::METHOD_MIRACAST_SET_VIDEO_FOR
 const string WPEFramework::Plugin::MiracastPlayer::METHOD_MIRACAST_SET_AUDIO_FORMATS = "setAudioFormats";
 const string WPEFramework::Plugin::MiracastPlayer::METHOD_MIRACAST_SET_RTSP_WAITTIMEOUT = "setRTSPWaitTimeOut";
 const string WPEFramework::Plugin::MiracastPlayer::METHOD_MIRACAST_PLAYER_SET_LOG_LEVEL = "setLogging";
+const string WPEFramework::Plugin::MiracastPlayer::METHOD_MIRACAST_PLAYER_SET_WESTEROS_ENVIRONMENT = "setWesterosEnvironment";
+const string WPEFramework::Plugin::MiracastPlayer::METHOD_MIRACAST_PLAYER_UNSET_WESTEROS_ENVIRONMENT = "unsetWesterosEnvironment";
 
 #ifdef ENABLE_MIRACAST_PLAYER_TEST_NOTIFIER
 const string WPEFramework::Plugin::MiracastPlayer::METHOD_MIRACAST_TEST_NOTIFIER = "testNotifier";
@@ -92,6 +95,8 @@ namespace WPEFramework
 			Register(METHOD_MIRACAST_SET_AUDIO_FORMATS, &MiracastPlayer::setAudioFormats, this);
 			Register(METHOD_MIRACAST_SET_RTSP_WAITTIMEOUT, &MiracastPlayer::setRTSPWaitTimeout, this);
 			Register(METHOD_MIRACAST_PLAYER_SET_LOG_LEVEL, &MiracastPlayer::setLogging, this);
+			Register(METHOD_MIRACAST_PLAYER_SET_WESTEROS_ENVIRONMENT, &MiracastPlayer::setWesterosEnvironment, this);
+			Register(METHOD_MIRACAST_PLAYER_UNSET_WESTEROS_ENVIRONMENT, &MiracastPlayer::unsetWesterosEnvironmentWrapper, this);
 
 #ifdef ENABLE_MIRACAST_PLAYER_TEST_NOTIFIER
 			Register(METHOD_MIRACAST_TEST_NOTIFIER, &MiracastPlayer::testNotifier, this);
@@ -222,49 +227,6 @@ namespace WPEFramework
 
 					rtsp_hldr_msgq_data.videorect = m_video_sink_rect;
 
-					if (0 == access("/opt/miracast_westeros_env", F_OK))
-					{
-						if (0 != setenv("XDG_RUNTIME_DIR", "/run", 1))
-						{
-							MIRACASTLOG_ERROR("Failed, setenv for XDG_RUNTIME_DIR: [%s]",strerror(errno));
-						}
-						if (0 != setenv("LD_PRELOAD", "libwesteros_gl.so.0.0.0", 1))
-						{
-							MIRACASTLOG_ERROR("Failed, setenv for LD_PRELOAD: [%s]",strerror(errno));
-						}
-						if (0 != setenv("WESTEROS_GL_GRAPHICS_MAX_SIZE", "1920x1080", 1))
-						{
-							MIRACASTLOG_ERROR("Failed, setenv for WESTEROS_GL_GRAPHICS_MAX_SIZE: [%s]",strerror(errno));
-						}
-						if (0 != setenv("WESTEROS_GL_MODE", "3840x2160x60", 1))
-						{
-							MIRACASTLOG_ERROR("Failed, setenv for WESTEROS_GL_MODE: [%s]",strerror(errno));
-						}
-						if (0 != setenv("WESTEROS_GL_USE_REFRESH_LOCK", "1", 1))
-						{
-							MIRACASTLOG_ERROR("Failed, setenv for WESTEROS_GL_USE_REFRESH_LOCK: [%s]",strerror(errno));
-						}
-						if (0 != setenv("WESTEROS_GL_USE_AMLOGIC_AVSYNC", "1", 1))
-						{
-							MIRACASTLOG_ERROR("Failed, setenv for WESTEROS_GL_USE_AMLOGIC_AVSYNC: [%s]",strerror(errno));
-						}
-						if (0 != setenv("WAYLAND_DISPLAY", "main0", 1))
-						{
-							MIRACASTLOG_ERROR("Failed, setenv for WAYLAND_DISPLAY: [%s]",strerror(errno));
-						}
-						if (0 != setenv("WESTEROS_SINK_AMLOGIC_USE_DMABUF", "1", 1))
-						{
-							MIRACASTLOG_ERROR("Failed, setenv for WESTEROS_SINK_AMLOGIC_USE_DMABUF: [%s]",strerror(errno));
-						}
-						if (0 != setenv("WESTEROS_SINK_USE_FREERUN", "1", 1))
-						{
-							MIRACASTLOG_ERROR("Failed, setenv for WESTEROS_SINK_USE_FREERUN: [%s]",strerror(errno));
-						}
-						if (0 != setenv("WESTEROS_SINK_USE_ESSRMGR", "1", 1))
-						{
-							MIRACASTLOG_ERROR("Failed, setenv for WESTEROS_SINK_USE_ESSRMGR: [%s]",strerror(errno));
-						}
-					}
 					m_miracast_rtsp_obj->send_msgto_rtsp_msg_hdler_thread(rtsp_hldr_msgq_data);
 				}
 				else{
@@ -491,6 +453,131 @@ namespace WPEFramework
 			}
 			MIRACASTLOG_INFO("Exiting..!!!");
 			returnResponse(success);
+		}
+
+		uint32_t MiracastPlayer::setWesterosEnvironment(const JsonObject &parameters, JsonObject &response)
+		{
+			std::string waylandDisplayName = "";
+			bool success = false;
+
+			if (!parameters.HasLabel("westerosArgs") ||
+				parameters["westerosArgs"].Content() != WPEFramework::Core::JSON::Variant::type::ARRAY)
+			{
+				MIRACASTLOG_ERROR("No consent strings array in cache and Exiting..!!!");
+				returnResponse(success);
+			}
+
+			if (m_westerosEnvArgs.size() > 0)
+			{
+				unsetWesterosEnvironment();
+			}
+
+			JsonArray westerosArgs = parameters["westerosArgs"].Array();
+			for (int i=0; i< westerosArgs.Length(); ++i)
+			{
+			    if (westerosArgs[i].Content() != WPEFramework::Core::JSON::Variant::type::OBJECT)
+				{
+					MIRACASTLOG_ERROR("Arg string is not an object");
+					continue;
+				}
+
+				JsonObject envArg = westerosArgs[i].Object();
+				if (!envArg.HasLabel("argName") || envArg["argName"].Content() != WPEFramework::Core::JSON::Variant::type::STRING ||
+				    !envArg.HasLabel("argValue") || envArg["argValue"].Content() != WPEFramework::Core::JSON::Variant::type::STRING)
+				{
+					std::string json;
+					envArg.ToString(json);
+					MIRACASTLOG_ERROR("Arguments are not valid [%s]", json.c_str());
+					continue;
+				}
+
+				std::string argName = envArg["argName"].String();
+				std::string argValue = envArg["argValue"].String();
+
+				m_westerosEnvArgs.push_back(argName);
+				MIRACASTLOG_INFO("Configuring environment variable: %s=%s", argName.c_str(), argValue.c_str());
+				if (0 == setenv(argName.c_str(), argValue.c_str(), 1))
+				{
+					MIRACASTLOG_INFO("Success, setenv: [%s]=[%s] - strerrorno[%s]", argName.c_str(), argValue.c_str(), strerror(errno));
+				}
+				else
+				{
+					MIRACASTLOG_ERROR("Failed, setenv for %s: [%s]", argName.c_str(), strerror(errno));
+				}
+
+				if ( "WAYLAND_DISPLAY" == argName )
+				{
+					waylandDisplayName = std::move(argValue);
+					MIRACASTLOG_INFO("Wayland Display Name from App: [%s]", waylandDisplayName.c_str());
+				}
+
+				char *value = getenv(argName.c_str());
+				if (value != NULL)
+				{
+					MIRACASTLOG_INFO("Success, getenv: [%s]=[%s]", argName.c_str(), value);
+				}
+				else
+				{
+					MIRACASTLOG_ERROR("Failed to getenv variable: %s - strerrorno[%s]", argName.c_str(),strerror(errno));
+				}
+			}
+
+			if (!waylandDisplayName.empty())
+			{
+				MIRACASTLOG_INFO("Wayland Display Name from App: [%s]", waylandDisplayName.c_str());
+			}
+
+			std::string waylandDisplayOverrideName = MiracastCommon::parse_opt_flag("/opt/miracast_custom_westeros_name");
+			if (!waylandDisplayOverrideName.empty())
+			{
+				MIRACASTLOG_INFO("Wayland Display Name from Overrides: [%s]", waylandDisplayOverrideName.c_str());
+				waylandDisplayName = std::move(waylandDisplayOverrideName);
+			}
+
+			if (!waylandDisplayName.empty())
+			{
+				if (0 == setenv("WAYLAND_DISPLAY", waylandDisplayName.c_str(), 1))
+				{
+					MIRACASTLOG_INFO("Success, setenv for WAYLAND_DISPLAY: [%s] - strerrorno[%s]", waylandDisplayName.c_str(), strerror(errno));
+					success = true;
+				}
+				else
+				{
+					MIRACASTLOG_ERROR("Failed, setenv for WAYLAND_DISPLAY: [%s] - strerrorno[%s]", waylandDisplayName.c_str(), strerror(errno));
+				}
+			}
+			else
+			{
+				MIRACASTLOG_ERROR("Failed to get Wayland Display Name");
+				success = false;
+				unsetWesterosEnvironment();
+			}
+
+			returnResponse(success);
+		}
+
+		uint32_t MiracastPlayer::unsetWesterosEnvironmentWrapper(const JsonObject &parameters, JsonObject &response)
+		{
+			unsetWesterosEnvironment();
+			returnResponse(true);
+		}
+
+		void MiracastPlayer::unsetWesterosEnvironment(void)
+		{
+			MIRACASTLOG_TRACE("Entering..!!!");
+			for (const auto& argName : m_westerosEnvArgs)
+			{
+				if (0 == unsetenv(argName.c_str()))
+				{
+					MIRACASTLOG_INFO("Success, unsetenv for [%s] - strerrorno[%s]", argName.c_str(), strerror(errno));
+				}
+				else
+				{
+					MIRACASTLOG_ERROR("Failed, unsetenv for [%s] - strerrorno[%s]", argName.c_str(), strerror(errno));
+				}
+			}
+			m_westerosEnvArgs.clear();
+			MIRACASTLOG_TRACE("Exiting..!!!");
 		}
 
 		/**
@@ -829,48 +916,9 @@ namespace WPEFramework
 				MIRACASTLOG_INFO("System Command [%s]",commandBuffer);
 				MiracastCommon::execute_SystemCommand( commandBuffer );
 
-				if (( MIRACAST_PLAYER_STATE_STOPPED == player_state ) && (0 == access("/opt/miracast_westeros_env", F_OK)))
+				if ( MIRACAST_PLAYER_STATE_STOPPED == player_state )
 				{
-					if (0 != unsetenv("XDG_RUNTIME_DIR"))
-					{
-						MIRACASTLOG_ERROR("Failed, unsetenv for XDG_RUNTIME_DIR: [%s]",strerror(errno));
-					}
-					if (0 != unsetenv("LD_PRELOAD"))
-					{
-						MIRACASTLOG_ERROR("Failed, unsetenv for LD_PRELOAD: [%s]",strerror(errno));
-					}
-					if (0 != unsetenv("WESTEROS_GL_GRAPHICS_MAX_SIZE"))
-					{
-						MIRACASTLOG_ERROR("Failed, unsetenv for WESTEROS_GL_GRAPHICS_MAX_SIZE: [%s]",strerror(errno));
-					}
-					if (0 != unsetenv("WESTEROS_GL_MODE"))
-					{
-						MIRACASTLOG_ERROR("Failed, unsetenv for WESTEROS_GL_MODE: [%s]",strerror(errno));
-					}
-					if (0 != unsetenv("WESTEROS_GL_USE_REFRESH_LOCK"))
-					{
-						MIRACASTLOG_ERROR("Failed, unsetenv for WESTEROS_GL_USE_REFRESH_LOCK: [%s]",strerror(errno));
-					}
-					if (0 != unsetenv("WESTEROS_GL_USE_AMLOGIC_AVSYNC"))
-					{
-						MIRACASTLOG_ERROR("Failed, unsetenv for WESTEROS_GL_USE_AMLOGIC_AVSYNC: [%s]",strerror(errno));
-					}
-					if (0 != unsetenv("WAYLAND_DISPLAY"))
-					{
-						MIRACASTLOG_ERROR("Failed, unsetenv for WAYLAND_DISPLAY: [%s]",strerror(errno));
-					}
-					if (0 != unsetenv("WESTEROS_SINK_AMLOGIC_USE_DMABUF"))
-					{
-						MIRACASTLOG_ERROR("Failed, unsetenv for WESTEROS_SINK_AMLOGIC_USE_DMABUF: [%s]",strerror(errno));
-					}
-					if (0 != unsetenv("WESTEROS_SINK_USE_FREERUN"))
-					{
-						MIRACASTLOG_ERROR("Failed, unsetenv for WESTEROS_SINK_USE_FREERUN: [%s]",strerror(errno));
-					}
-					if (0 != unsetenv("WESTEROS_SINK_USE_ESSRMGR"))
-					{
-						MIRACASTLOG_ERROR("Failed, unsetenv for WESTEROS_SINK_USE_ESSRMGR: [%s]",strerror(errno));
-					}
+					unsetWesterosEnvironment();
 				}
 			}
 			else
