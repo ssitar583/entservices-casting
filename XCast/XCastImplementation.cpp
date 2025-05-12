@@ -638,6 +638,13 @@ namespace Plugin {
         JsonObject result, params;
         params["callsign"] = callsign;
         int rpcRet = Core::ERROR_GENERAL;
+
+        if (m_NetworkPluginObj && (callsign == NETWORK_CALLSIGN_VER))
+        {
+            m_NetworkPluginObj->Unsubscribe<JsonObject>(THUNDER_RPC_TIMEOUT, _T("onDefaultInterfaceChanged"), &XCastImplementation::eventHandler_onDefaultInterfaceChanged,this);
+            m_NetworkPluginObj->Unsubscribe<JsonObject>(THUNDER_RPC_TIMEOUT, _T("onIPAddressStatusChanged"), &XCastImplementation::eventHandler_ipAddressChanged,this);
+        }
+
         if (nullptr != m_ControllerObj)
         {
             rpcRet =  m_ControllerObj->Invoke("deactivate", params, result);

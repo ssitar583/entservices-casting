@@ -361,7 +361,17 @@ namespace WPEFramework
             MIRACASTLOG_INFO("Entering..!!!");
 
             if (_powerManagerPlugin) {
+                _powerManagerPlugin->Unregister(_pwrMgrNotification.baseInterface<Exchange::IPowerManager::IModeChangedNotification>());
                 _powerManagerPlugin.Reset();
+            }
+            if (m_WiFiPluginObj)
+            {
+                m_WiFiPluginObj->Unsubscribe<JsonObject>(1000, "onWIFIStateChanged", &MiracastService::onWIFIStateChangedHandler, this);
+            }
+
+            if (m_SystemPluginObj)
+            {
+                m_SystemPluginObj->Unsubscribe<JsonObject>(1000, "onFriendlyNameChanged", &MiracastService::onFriendlyNameUpdateHandler, this);
             }
 
             LOGINFO("Disconnect from the COM-RPC socket\n");

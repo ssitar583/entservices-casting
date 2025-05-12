@@ -402,11 +402,31 @@ void XCast::Deinitialize(PluginHost::IShell* service)
     ASSERT(_service == service);
     ASSERT(_xcast != nullptr);
 
-    if (_powerManagerPlugin) {
+    getSystemPlugin();
+    if (m_SystemPluginObj)
+    {
+        m_SystemPluginObj->Unsubscribe<JsonObject>(1000, "onFriendlyNameChanged", &XCast::onFriendlyNameUpdateHandler, this);
+    }
+
+    if (_powerManagerPlugin)
+    {
+        _powerManagerPlugin->Unregister(_pwrMgrNotification.baseInterface<Exchange::IPowerManager::INetworkStandbyModeChangedNotification>());
+        _powerManagerPlugin->Unregister(_pwrMgrNotification.baseInterface<Exchange::IPowerManager::IModeChangedNotification>())
         _powerManagerPlugin.Reset();
     }
 
+    if (m_NetworkPluginObj)
+    {
+        m_NetworkPluginObj->Unsubscribe<JsonObject>(THUNDER_RPC_TIMEOUT, _T("onDefaultInterfaceChanged"), &XCastImplementation::eventHandler_onDefaultInterfaceChanged,this);
+        m_NetworkPluginObj->Unsubscribe<JsonObject>(THUNDER_RPC_TIMEOUT, _T("onIPAddressStatusChanged"), &XCastImplementation::eventHandler_ipAddressChanged,this);
+    }
+
     _registeredEventHandlers = false;
+
+    if (m_ControllerObj)
+    {
+        m_ControllerObj->Unsubscribe<JsonObject>(THUNDER_RPC_TIMEOUT, _T("statechange"), &XCastImplementation::eventHandler_pluginState, this);
+    }
 
     if(_xcast)
     {
