@@ -366,12 +366,12 @@ namespace WPEFramework
             }
             if (m_WiFiPluginObj)
             {
-                m_WiFiPluginObj->Unsubscribe<JsonObject>(1000, "onWIFIStateChanged", &MiracastService::onWIFIStateChangedHandler, this);
+                m_WiFiPluginObj->Unsubscribe(1000, "onWIFIStateChanged", &MiracastService::onWIFIStateChangedHandler, this);
             }
 
             if (m_SystemPluginObj)
             {
-                m_SystemPluginObj->Unsubscribe<JsonObject>(1000, "onFriendlyNameChanged", &MiracastService::onFriendlyNameUpdateHandler, this);
+                m_SystemPluginObj->Unsubscribe(1000, "onFriendlyNameChanged", &MiracastService::onFriendlyNameUpdateHandler, this);
             }
 
             LOGINFO("Disconnect from the COM-RPC socket\n");
