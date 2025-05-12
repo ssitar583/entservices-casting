@@ -415,12 +415,6 @@ void XCast::Deinitialize(PluginHost::IShell* service)
         _powerManagerPlugin.Reset();
     }
 
-    if (m_NetworkPluginObj)
-    {
-        m_NetworkPluginObj->Unsubscribe(THUNDER_RPC_TIMEOUT, _T("onDefaultInterfaceChanged"));
-        m_NetworkPluginObj->Unsubscribe(THUNDER_RPC_TIMEOUT, _T("onIPAddressStatusChanged"));
-    }
-
     _registeredEventHandlers = false;
 
     if(_xcast)
