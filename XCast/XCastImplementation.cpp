@@ -121,7 +121,7 @@ namespace Plugin {
     {
         if (m_ControllerObj)
         {
-            m_ControllerObj->Unsubscribe(THUNDER_RPC_TIMEOUT, _T("statechange"), &XCastImplementation::eventHandler_pluginState, this);
+            m_ControllerObj->Unsubscribe(THUNDER_RPC_TIMEOUT, _T("statechange"));
         }
 
         if(nullptr != m_xcast_manager)
@@ -646,8 +646,8 @@ namespace Plugin {
 
         if (m_NetworkPluginObj && (callsign == NETWORK_CALLSIGN_VER))
         {
-            m_NetworkPluginObj->Unsubscribe(THUNDER_RPC_TIMEOUT, _T("onDefaultInterfaceChanged"), &XCastImplementation::eventHandler_onDefaultInterfaceChanged, this);
-            m_NetworkPluginObj->Unsubscribe(THUNDER_RPC_TIMEOUT, _T("onIPAddressStatusChanged"), &XCastImplementation::eventHandler_ipAddressChanged, this);
+            m_NetworkPluginObj->Unsubscribe(THUNDER_RPC_TIMEOUT, _T("onDefaultInterfaceChanged"));
+            m_NetworkPluginObj->Unsubscribe(THUNDER_RPC_TIMEOUT, _T("onIPAddressStatusChanged"));
         }
 
         if (nullptr != m_ControllerObj)

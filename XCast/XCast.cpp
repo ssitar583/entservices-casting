@@ -405,7 +405,7 @@ void XCast::Deinitialize(PluginHost::IShell* service)
     getSystemPlugin();
     if (m_SystemPluginObj)
     {
-        m_SystemPluginObj->Unsubscribe(1000, "onFriendlyNameChanged", &XCast::onFriendlyNameUpdateHandler, this);
+        m_SystemPluginObj->Unsubscribe(THUNDER_RPC_TIMEOUT, "onFriendlyNameChanged");
     }
 
     if (_powerManagerPlugin)
@@ -417,8 +417,8 @@ void XCast::Deinitialize(PluginHost::IShell* service)
 
     if (m_NetworkPluginObj)
     {
-        m_NetworkPluginObj->Unsubscribe(THUNDER_RPC_TIMEOUT, _T("onDefaultInterfaceChanged"), &XCastImplementation::eventHandler_onDefaultInterfaceChanged,this);
-        m_NetworkPluginObj->Unsubscribe(THUNDER_RPC_TIMEOUT, _T("onIPAddressStatusChanged"), &XCastImplementation::eventHandler_ipAddressChanged,this);
+        m_NetworkPluginObj->Unsubscribe(THUNDER_RPC_TIMEOUT, _T("onDefaultInterfaceChanged"));
+        m_NetworkPluginObj->Unsubscribe(THUNDER_RPC_TIMEOUT, _T("onIPAddressStatusChanged"));
     }
 
     _registeredEventHandlers = false;
