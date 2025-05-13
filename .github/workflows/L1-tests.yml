@@ -2,7 +2,7 @@ name: L1-tests
 
 on:
   push:
-    branches: [ main, develop, 'sprint/**', 'release/**', feature/RDK* ]
+    branches: [ main, develop, 'sprint/**', 'release/**' ]
   pull_request:
     branches: [ main, develop, 'sprint/**', 'release/**' ]
 
@@ -113,7 +113,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: feature/L1-test
+          ref: develop
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-casting
