@@ -1,4 +1,4 @@
-#if 0
+#if 0 // will fix in RDK-55565
 /*#ifdef USE_THUNDER_R4*/
 /*
  * If not stated otherwise in this file or this component's LICENSE file the
