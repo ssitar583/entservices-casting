@@ -406,6 +406,8 @@ void XCast::Deinitialize(PluginHost::IShell* service)
     if (m_SystemPluginObj)
     {
         m_SystemPluginObj->Unsubscribe(THUNDER_RPC_TIMEOUT, "onFriendlyNameChanged");
+        delete m_SystemPluginObj;
+        m_SystemPluginObj = nullptr;
     }
 
     if (_powerManagerPlugin)

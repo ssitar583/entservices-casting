@@ -122,6 +122,7 @@ namespace Plugin {
         if (m_ControllerObj)
         {
             m_ControllerObj->Unsubscribe(THUNDER_RPC_TIMEOUT, _T("statechange"));
+            m_ControllerObj.Reset();
         }
 
         if(nullptr != m_xcast_manager)
@@ -648,6 +649,8 @@ namespace Plugin {
         {
             m_NetworkPluginObj->Unsubscribe(THUNDER_RPC_TIMEOUT, _T("onDefaultInterfaceChanged"));
             m_NetworkPluginObj->Unsubscribe(THUNDER_RPC_TIMEOUT, _T("onIPAddressStatusChanged"));
+            delete m_NetworkPluginObj;
+            m_NetworkPluginObj = nullptr;
         }
 
         if (nullptr != m_ControllerObj)
