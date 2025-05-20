@@ -367,11 +367,15 @@ namespace WPEFramework
             if (m_WiFiPluginObj)
             {
                 m_WiFiPluginObj->Unsubscribe(1000, _T("onWIFIStateChanged"));
+                delete m_WiFiPluginObj;
+                m_WiFiPluginObj = nullptr;
             }
 
             if (m_SystemPluginObj)
             {
                 m_SystemPluginObj->Unsubscribe(1000, _T("onFriendlyNameChanged"));
+                delete m_SystemPluginObj;
+                m_SystemPluginObj = nullptr;
             }
 
             LOGINFO("Disconnect from the COM-RPC socket\n");
