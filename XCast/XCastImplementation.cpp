@@ -122,7 +122,8 @@ namespace Plugin {
         if (m_ControllerObj)
         {
             m_ControllerObj->Unsubscribe(THUNDER_RPC_TIMEOUT, _T("statechange"));
-            m_ControllerObj.Reset();
+            delete m_ControllerObj;
+            m_ControllerObj = nullptr;
         }
 
         if(nullptr != m_xcast_manager)
