@@ -272,7 +272,7 @@ std::string MiracastController::start_DHCPClient(std::string interface, std::str
 
     sprintf(command, "/sbin/udhcpc -v -i ");
     sprintf(command + strlen(command), "%s" , interface.c_str());
-    sprintf(command + strlen(command), " -s /etc/netsrvmgr/p2p_udhcpc.script 2>&1");
+    sprintf(command + strlen(command), " -s /etc/wifi_p2p/udhcpc.script 2>&1");
     MIRACASTLOG_VERBOSE("command : [%s]", command);
 
     while ( retry_count-- )
@@ -1125,7 +1125,10 @@ void MiracastController::Controller_Thread(void *args)
                                 m_notify_handler->onMiracastServiceClientConnectionError( mac_address , device_name , error_code );
                             }
                             MIRACASTLOG_INFO("!!! Restarting Session !!!");
-                            restart_session(m_start_discovering_enabled);
+                            restart_session(false);
+                            if (m_start_discovering_enabled){
+                                discover_devices();
+                            }
                             session_restart_required = false;
                         }
                     }
@@ -1227,7 +1230,10 @@ void MiracastController::Controller_Thread(void *args)
                                 reset_NewSourceName();
                                 MIRACASTLOG_INFO("[%s] Cached Device info removed...",cached_mac_address.c_str());
                             }
-                            restart_session(m_start_discovering_enabled);
+                            restart_session(false);
+                            if (m_start_discovering_enabled){
+                                discover_devices();
+                            }
                         }
                         new_thunder_req_client_connection_sent = false;
                         another_thunder_req_client_connection_sent = false;
@@ -1344,15 +1350,15 @@ void MiracastController::set_enable(bool is_enabled)
     if ( true == is_enabled)
     {
         MIRACASTLOG_INFO("MIRACAST_SERVICE_WFD_START Received");
+        m_start_discovering_enabled = true;
         set_WFDParameters();
         discover_devices();
-        m_start_discovering_enabled = true;
     }
     else
     {
         MIRACASTLOG_INFO("MIRACAST_SERVICE_WFD_STOP Received");
-        stop_session(true);
         m_start_discovering_enabled = false;
+        stop_session(true);
     }
     MIRACASTLOG_TRACE("Exiting...");
 }
