@@ -432,6 +432,7 @@ namespace WPEFramework
 					if (!m_isServiceEnabled)
 					{
 						lock_guard<recursive_mutex> lock(m_EventMutex);
+						m_isServiceEnabled = true;
 						if (m_IsTransitionFromDeepSleep)
 						{
 							LOGINFO("#### MCAST-TRIAGE-OK Enable Miracast discovery Async");
@@ -442,7 +443,6 @@ namespace WPEFramework
 						{
 							setEnable(true);
 						}
-						m_isServiceEnabled = true;
 						response["message"] = "Successfully enabled the WFD Discovery";
 						success = true;
 					}
@@ -460,6 +460,7 @@ namespace WPEFramework
 					else if (m_isServiceEnabled)
 					{
 						lock_guard<recursive_mutex> lock(m_EventMutex);
+						m_isServiceEnabled = false;
 						if (!m_IsTransitionFromDeepSleep)
 						{
 							if ( MIRACAST_SERVICE_STATE_RESTARTING_SESSION == current_state )
@@ -475,7 +476,6 @@ namespace WPEFramework
 						{
 							LOGINFO("#### MCAST-TRIAGE-OK Skipping Disable discovery as done by PwrMgr");
 						}
-						m_isServiceEnabled = false;
 						remove_wifi_connection_state_timer();
 						remove_miracast_connection_timer();
 						response["message"] = "Successfully disabled the WFD Discovery";
@@ -1499,7 +1499,15 @@ namespace WPEFramework
 				case MIRACAST_SERVICE_STATE_IDLE:
 				case MIRACAST_SERVICE_STATE_DISCOVERABLE:
 				{
-					changeServiceState(state);
+					if ((!m_isServiceEnabled) && (MIRACAST_SERVICE_STATE_DISCOVERABLE == state))
+					{
+						/*User already disabled the discovery, so should not enable again.*/
+						m_miracast_ctrler_obj->stop_discoveryAsync();
+					}
+					else
+					{
+						changeServiceState(state);
+					}
 				}
 				break;
 				default:
