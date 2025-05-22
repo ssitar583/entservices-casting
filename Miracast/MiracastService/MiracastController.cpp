@@ -272,7 +272,7 @@ std::string MiracastController::start_DHCPClient(std::string interface, std::str
 
     sprintf(command, "/sbin/udhcpc -v -i ");
     sprintf(command + strlen(command), "%s" , interface.c_str());
-    sprintf(command + strlen(command), " -s /etc/netsrvmgr/p2p_udhcpc.script 2>&1");
+    sprintf(command + strlen(command), " -s /etc/wifi_p2p/udhcpc.script 2>&1");
     MIRACASTLOG_VERBOSE("command : [%s]", command);
 
     while ( retry_count-- )
