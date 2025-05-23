@@ -124,6 +124,7 @@ class MiracastServiceTest : public ::testing::Test {
 			.WillByDefault(::testing::Invoke([&](struct wpa_ctrl *ctrl) { return false; }));
 		ON_CALL(*p_wrapsImplMock, system(::testing::_))
 			.WillByDefault(::testing::Invoke([&](const char* command) {return 0;}));
+#if 0 // will fix in RDK-55557
 		ON_CALL(*p_iarmBusImplMock, IARM_Bus_RegisterEventHandler(::testing::_, ::testing::_, ::testing::_))
 			.WillByDefault(::testing::Invoke([&](const char* ownerName, IARM_EventId_t eventId, IARM_EventHandler_t handler){
 				if ((string(IARM_BUS_PWRMGR_NAME) == string(ownerName)) && (eventId == IARM_BUS_PWRMGR_EVENT_MODECHANGED)) {
@@ -139,6 +140,7 @@ class MiracastServiceTest : public ::testing::Test {
 				}
 				return IARM_RESULT_SUCCESS;
 			});
+#endif
 	}
 	virtual ~MiracastServiceTest() override
 	{
@@ -1968,7 +1970,7 @@ TEST_F(MiracastServiceEventTest, P2P_GOMode_AutoConnect)
 	removeFile("/var/run/wpa_supplicant/p2p0");
 	removeFile("/opt/miracast_autoconnect");
 }
-#if 0
+#if 0 // will fix in RDK-55557
 TEST_F(MiracastServiceEventTest, powerStateChange)
 {
 	IARM_Bus_PWRMgr_EventData_t param;
