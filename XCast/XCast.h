@@ -38,7 +38,6 @@
 #include "tptimer.h"
 #include "libIBus.h"
 #include "libIBusDaemon.h"
-#include "pwrMgr.h"
 #include "XCastCommon.h"
 #include <mutex>
 #include <map>
