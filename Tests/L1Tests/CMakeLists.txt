@@ -22,6 +22,7 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 set(CMAKE_CXX_STANDARD 11)
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(GLIB REQUIRED)
 
 include(FetchContent)
 FetchContent_Declare(
@@ -138,6 +139,7 @@ include_directories(${TEST_INC})
 target_link_directories(${MODULE_NAME} PUBLIC ${CMAKE_INSTALL_PREFIX}/lib/wpeframework/plugins)
 
 target_link_libraries(${MODULE_NAME} ${TEST_LIB})
+target_link_libraries(${MODULE_NAME} PRIVATE ${GLIB_LIBRARIES})
 
 target_include_directories(${MODULE_NAME}
         PUBLIC
@@ -148,6 +150,6 @@ target_include_directories(${MODULE_NAME}
         ${CMAKE_SOURCE_DIR}/../entservices-testframework/Tests/mocks/thunder
         ${CMAKE_SOURCE_DIR}/../Thunder/Source/plugins
         )
-
+target_include_directories(${MODULE_NAME} PRIVATE ${GLIB_INCLUDE_DIRS})
 install(TARGETS ${MODULE_NAME} DESTINATION lib)
 write_config(${PLUGIN_NAME})
