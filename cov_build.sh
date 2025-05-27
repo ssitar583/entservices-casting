@@ -7,9 +7,6 @@ ls -la ${GITHUB_WORKSPACE}
 ############################
 # Build entservices-casting
 echo "buliding entservices-casting"
-cd entservices-casting
-git branch
-cd -
 
 cd ${GITHUB_WORKSPACE}
 cmake -G Ninja -S "$GITHUB_WORKSPACE" -B build/entservices-casting \
