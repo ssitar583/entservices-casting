@@ -40,16 +40,16 @@ if(ENABLE_COMMUNITY_DEVICE_TYPE)
    add_definitions(-DENABLE_COMMUNITY_DEVICE_TYPE)
 endif()
 
+if(RDK_SERVICES_L1_TEST)
+    add_subdirectory(Tests/L1Tests)
+endif()
+
 if(PLUGIN_XCAST)
     add_subdirectory(XCast)
 endif()
 
 if(PLUGIN_MIRACAST)
 	add_subdirectory(Miracast)
-endif()
-
-if(RDK_SERVICES_L1_TEST)
-    add_subdirectory(Tests/L1Tests)
 endif()
 
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
