@@ -17,7 +17,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          ref: topic/RDKEMW-3705_testcoverity
+          ref: 25Q2
 
       - name: native build
         run: |
