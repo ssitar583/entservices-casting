@@ -113,7 +113,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: develop
+          ref: feature/RDK-yml-cleanup-TF
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-casting
@@ -463,7 +463,6 @@ jobs:
           -DCMAKE_DISABLE_FIND_PACKAGE_RBus=ON
           -DCMAKE_BUILD_TYPE=Debug
           -DDS_FOUND=ON
-          -DPLUGIN_MIRACAST=ON
           -DRDK_SERVICES_L1_TEST=ON
           -DUSE_THUNDER_R4=ON
           -DHIDE_NON_EXTERNAL_SYMBOLS=OFF
