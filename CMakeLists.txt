@@ -48,6 +48,10 @@ if(PLUGIN_MIRACAST)
 	add_subdirectory(Miracast)
 endif()
 
+if(RDK_SERVICES_L1_TEST)
+    add_subdirectory(Tests/L1Tests)
+endif()
+
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
     set(CPACK_GENERATOR "DEB")
     set(CPACK_DEB_COMPONENT_INSTALL ON)
