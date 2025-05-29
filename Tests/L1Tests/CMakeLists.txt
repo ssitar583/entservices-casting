@@ -22,6 +22,11 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 set(CMAKE_CXX_STANDARD 11)
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(GLIB REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GSTREAMERBASE REQUIRED gstreamer-app-1.0)
+
+find_package(GStreamer REQUIRED)
 
 include(FetchContent)
 FetchContent_Declare(
@@ -137,7 +142,12 @@ include_directories(${TEST_INC})
 
 target_link_directories(${MODULE_NAME} PUBLIC ${CMAKE_INSTALL_PREFIX}/lib/wpeframework/plugins)
 
-target_link_libraries(${MODULE_NAME} ${TEST_LIB})
+target_link_libraries(${MODULE_NAME}
+        ${TEST_LIB}
+        ${GLIB_LIBRARIES}
+        ${GSTREAMER_LIBRARIES}
+        ${GSTREAMERBASE_LIBRARIES}
+)
 
 target_include_directories(${MODULE_NAME}
         PUBLIC
@@ -147,6 +157,9 @@ target_include_directories(${MODULE_NAME}
         ${CMAKE_SOURCE_DIR}/../entservices-testframework/Tests/mocks/devicesettings
         ${CMAKE_SOURCE_DIR}/../entservices-testframework/Tests/mocks/thunder
         ${CMAKE_SOURCE_DIR}/../Thunder/Source/plugins
+        ${GLIB_INCLUDE_DIRS}
+        ${GSTREAMER_INCLUDES}
+        ${GSTREAMERBASE_INCLUDE_DIRS}
         )
 
 install(TARGETS ${MODULE_NAME} DESTINATION lib)
