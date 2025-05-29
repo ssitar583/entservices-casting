@@ -122,7 +122,7 @@ add_plugin_test_ex(PLUGIN_MIRACAST "${MIRACAST_SRC}" "${MIRACAST_INC}" "${MIRACA
 
 # PLUGIN_XCAST
 set (XCAST_INC ${CMAKE_SOURCE_DIR}/../entservices-casting/XCast ${CMAKE_SOURCE_DIR}/../entservices-casting/helpers)
-set (XCAST_LIBS ${NAMESPACE}XCast ${NAMESPACE}XCastImplementation)
+set (XCAST_LIBS ${NAMESPACE}XCast)
 add_plugin_test_ex(PLUGIN_XCAST tests/test_XCast.cpp "${XCAST_INC}" "${XCAST_LIBS}")
 
 add_library(${MODULE_NAME} SHARED ${TEST_SRC})
