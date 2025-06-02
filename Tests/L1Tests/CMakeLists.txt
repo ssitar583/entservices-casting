@@ -23,6 +23,11 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(GLIB REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GSTREAMERBASE REQUIRED gstreamer-app-1.0)
+
+find_package(GStreamer REQUIRED)
 
 set (TEST_SRC
     tests/test_UtilsFile.cpp
@@ -109,7 +114,7 @@ add_plugin_test_ex(PLUGIN_MIRACAST "${MIRACAST_SRC}" "${MIRACAST_INC}" "${MIRACA
 
 # PLUGIN_XCAST
 set (XCAST_INC ${CMAKE_SOURCE_DIR}/../entservices-casting/XCast ${CMAKE_SOURCE_DIR}/../entservices-casting/helpers)
-set (XCAST_LIBS ${NAMESPACE}XCast ${NAMESPACE}XCastImplementation)
+set (XCAST_LIBS ${NAMESPACE}XCast)
 add_plugin_test_ex(PLUGIN_XCAST tests/test_XCast.cpp "${XCAST_INC}" "${XCAST_LIBS}")
 
 add_library(${MODULE_NAME} SHARED ${TEST_SRC})
@@ -129,7 +134,12 @@ include_directories(${TEST_INC})
 
 target_link_directories(${MODULE_NAME} PUBLIC ${CMAKE_INSTALL_PREFIX}/lib ${CMAKE_INSTALL_PREFIX}/lib/wpeframework/plugins)
 
-target_link_libraries(${MODULE_NAME} ${TEST_LIB})
+target_link_libraries(${MODULE_NAME}
+        ${TEST_LIB}
+        ${GLIB_LIBRARIES}
+        ${GSTREAMER_LIBRARIES}
+        ${GSTREAMERBASE_LIBRARIES}
+)
 
 target_include_directories(${MODULE_NAME}
         PUBLIC
@@ -139,6 +149,9 @@ target_include_directories(${MODULE_NAME}
         ${CMAKE_SOURCE_DIR}/../entservices-testframework/Tests/mocks/devicesettings
         ${CMAKE_SOURCE_DIR}/../entservices-testframework/Tests/mocks/thunder
         ${CMAKE_SOURCE_DIR}/../Thunder/Source/plugins
+        ${GLIB_INCLUDE_DIRS}
+        ${GSTREAMER_INCLUDES}
+        ${GSTREAMERBASE_INCLUDE_DIRS}
         )
 
 install(TARGETS ${MODULE_NAME} DESTINATION lib)
