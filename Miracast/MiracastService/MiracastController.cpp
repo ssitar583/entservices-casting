@@ -430,6 +430,11 @@ void MiracastController::restart_session(bool start_discovering_enabled)
 {
     MIRACASTLOG_TRACE("Entering...");
 
+    if (nullptr == m_groupInfo)
+    {
+        cancel_negotiation();
+    }
+
     reset_WFDSourceMACAddress();
     reset_WFDSourceName();
     stop_session();
@@ -595,6 +600,17 @@ MiracastError MiracastController::connect_device(std::string device_mac , std::s
                 m_notify_handler->onMiracastServiceClientConnectionError( device_mac , device_name , MIRACAST_SERVICE_ERR_CODE_P2P_CONNECT_ERROR );
             }
         }
+    }
+    MIRACASTLOG_TRACE("Exiting...");
+    return ret;
+}
+
+MiracastError MiracastController::cancel_negotiation(void)
+{
+    MIRACASTLOG_TRACE("Entering...");
+    MiracastError ret = MIRACAST_FAIL;
+    if (nullptr != m_p2p_ctrl_obj){
+        ret = m_p2p_ctrl_obj->cancel_negotiation();
     }
     MIRACASTLOG_TRACE("Exiting...");
     return ret;
