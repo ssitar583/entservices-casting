@@ -94,6 +94,7 @@ public:
     MiracastError discover_devices(void);
     MiracastError stop_discover_devices(void);
     MiracastError connect_device(std::string MAC,std::string authType = "pbc");
+    MiracastError cancel_negotiation(void);
 
     MiracastError set_FriendlyName(std::string friendly_name , bool apply=false );
     std::string get_FriendlyName(void);

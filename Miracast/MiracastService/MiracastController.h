@@ -54,6 +54,7 @@ public:
 
     MiracastError discover_devices(bool isNotificationRequired = true);
     MiracastError connect_device(std::string device_mac , std::string device_name );
+    MiracastError cancel_negotiation(void);
 
     std::string get_localIp();
     std::string get_wfd_streaming_port_number();

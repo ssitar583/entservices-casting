@@ -532,6 +532,24 @@ MiracastError MiracastP2P::connect_device(std::string MAC,std::string authType )
     return ret;
 }
 
+MiracastError MiracastP2P::cancel_negotiation(void)
+{
+    MiracastError ret = MIRACAST_FAIL;
+    std::string command, retBuffer;
+    MIRACASTLOG_TRACE("Entering...");
+
+    /*Stop P2P Negotiation*/
+    command = "P2P_CANCEL";
+    ret = executeCommand(command, NON_GLOBAL_INTERFACE, retBuffer);
+    if (ret != MIRACAST_OK)
+    {
+        MIRACASTLOG_ERROR("Failed to cancel P2P Negotiation");
+    }
+
+    MIRACASTLOG_TRACE("Exiting...");
+    return ret;
+}
+
 MiracastError MiracastP2P::set_FriendlyName(std::string friendly_name , bool apply )
 {
     MiracastError ret = MIRACAST_OK;
