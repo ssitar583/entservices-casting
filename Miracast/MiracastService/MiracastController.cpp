@@ -1386,7 +1386,7 @@ void MiracastController::setP2PBackendDiscovery(bool is_enabled)
     MIRACASTLOG_TRACE("Exiting...");
 }
 
-void MiracastController::restart_session_discovery(std::string& mac_address)
+void MiracastController::restart_session_discovery(const std::string& mac_address)
 {
     CONTROLLER_MSGQ_STRUCT controller_msgq_data = {0};
     MIRACASTLOG_TRACE("Entering...");

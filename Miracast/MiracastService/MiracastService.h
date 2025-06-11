@@ -1,206 +1,130 @@
 /**
- * If not stated otherwise in this file or this component's LICENSE
- * file the following copyright and licenses apply:
- *
- * Copyright 2023 RDK Management
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- **/
+* If not stated otherwise in this file or this component's LICENSE
+* file the following copyright and licenses apply:
+*
+* Copyright 2019 RDK Management
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+**/
 
 #pragma once
 
-#include <mutex>
-#include <vector>
-
 #include "Module.h"
-#include <MiracastController.h>
-#include "libIARM.h"
-#include <interfaces/IPowerManager.h>
-#include "PowerManagerInterface.h"
+#include <interfaces/json/JsonData_MiracastService.h>
+#include <interfaces/json/JMiracastService.h>
+#include <interfaces/IMiracastService.h>
+#include "UtilsLogging.h"
+#include "tracing/Logging.h"
+#include <mutex>
 
-
-using namespace WPEFramework;
-using PowerState = WPEFramework::Exchange::IPowerManager::PowerState;
-using ThermalTemperature = WPEFramework::Exchange::IPowerManager::ThermalTemperature;
-
-typedef enum DeviceWiFiStates{
-	DEVICE_WIFI_STATE_UNINSTALLED = 0,
-	DEVICE_WIFI_STATE_DISABLED = 1,
-	DEVICE_WIFI_STATE_DISCONNECTED = 2,
-	DEVICE_WIFI_STATE_PAIRING = 3,
-	DEVICE_WIFI_STATE_CONNECTING = 4,
-	DEVICE_WIFI_STATE_CONNECTED = 5,
-	DEVICE_WIFI_STATE_FAILED = 6
-}DEVICE_WIFI_STATES;
-
-using std::vector;
 namespace WPEFramework
 {
-    namespace Plugin
-    {
-        // This is a server for a JSONRPC communication channel.
-        // For a plugin to be capable to handle JSONRPC, inherit from PluginHost::JSONRPC.
-        // By inheriting from this class, the plugin realizes the interface PluginHost::IDispatcher.
-        // This realization of this interface implements, by default, the following methods on this plugin
-        // - exists
-        // - register
-        // - unregister
-        // Any other methood to be handled by this plugin  can be added can be added by using the
-        // templated methods Register on the PluginHost::JSONRPC class.
-        // As the registration/unregistration of notifications is realized by the class PluginHost::JSONRPC,
-        // this class exposes a public method called, Notify(), using this methods, all subscribed clients
-        // will receive a JSONRPC message as a notification, in case this method is called.
-        class MiracastService : public PluginHost::IPlugin, public PluginHost::JSONRPC, public MiracastServiceNotifier
-        {
-        public:
-            // constants
-            static const short API_VERSION_NUMBER_MAJOR;
-            static const short API_VERSION_NUMBER_MINOR;
-            static const string SERVICE_NAME;
+	namespace Plugin
+	{
+		class MiracastService : public PluginHost::IPlugin, public PluginHost::JSONRPC
+		{
+			private:
+				class Notification : public RPC::IRemoteConnection::INotification,
+									public Exchange::IMiracastService::INotification
+				{
+					private:
+						Notification() = delete;
+						Notification(const Notification&) = delete;
+						Notification& operator=(const Notification&) = delete;
 
-            // methods
-            static const string METHOD_MIRACAST_SET_ENABLE;
-            static const string METHOD_MIRACAST_GET_ENABLE;
-            static const string METHOD_MIRACAST_SET_P2P_BACKEND_DISCOVERY;
-            static const string METHOD_MIRACAST_CLIENT_CONNECT;
-            static const string METHOD_MIRACAST_STOP_CLIENT_CONNECT;
-            static const string METHOD_MIRACAST_SET_UPDATE_PLAYER_STATE;
-            static const string METHOD_MIRACAST_SET_LOG_LEVEL;
-        #ifdef UNIT_TESTING
-            static const string METHOD_MIRACAST_GET_STATUS;
-            static const string METHOD_MIRACAST_SET_POWERSTATE;
-            static const string METHOD_MIRACAST_SET_WIFISTATE;
-        #endif /*UNIT_TESTING*/
+					public:
+					explicit Notification(MiracastService* parent)
+						: _parent(*parent)
+						{
+							ASSERT(parent != nullptr);
+						}
 
-#ifdef ENABLE_MIRACAST_SERVICE_TEST_NOTIFIER
-            static const string METHOD_MIRACAST_TEST_NOTIFIER;
-            uint32_t testNotifier(const JsonObject &parameters, JsonObject &response);
-            bool m_isTestNotifierEnabled;
-#endif /* ENABLE_MIRACAST_SERVICE_TEST_NOTIFIER */
+						virtual ~Notification()
+						{
+						}
 
-            MiracastService();
-            virtual ~MiracastService();
-            virtual const string Initialize(PluginHost::IShell *shell) override;
-            virtual void Deinitialize(PluginHost::IShell *service) override;
-            virtual string Information() const override;
+						BEGIN_INTERFACE_MAP(Notification)
+						INTERFACE_ENTRY(Exchange::IMiracastService::INotification)
+						INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
+						END_INTERFACE_MAP
 
-            virtual void onMiracastServiceClientConnectionRequest(string client_mac, string client_name) override;
-            virtual void onMiracastServiceClientConnectionError(string client_mac, string client_name , eMIRACAST_SERVICE_ERR_CODE error_code ) override;
-            virtual void onMiracastServiceLaunchRequest(string src_dev_ip, string src_dev_mac, string src_dev_name, string sink_dev_ip, bool is_connect_req_reported ) override;
-            virtual void onStateChange(eMIRA_SERVICE_STATES state ) override;
-            void onPowerModeChanged(const PowerState currentState, const PowerState newState);
-            void registerEventHandlers();
+						void Activated(RPC::IRemoteConnection*) override
+						{
+						}
 
-            BEGIN_INTERFACE_MAP(MiracastService)
-            INTERFACE_ENTRY(PluginHost::IPlugin)
-            INTERFACE_ENTRY(PluginHost::IDispatcher)
-            END_INTERFACE_MAP
+						void Deactivated(RPC::IRemoteConnection *connection) override
+						{
+						_parent.Deactivated(connection);
+						}
 
-            PluginHost::IShell *m_CurrentService;
-            static MiracastService *_instance;
-            static MiracastController *m_miracast_ctrler_obj;
+						void OnClientConnectionRequest(const string &clientMac , const string &clientName ) override
+						{
+							LOGINFO("OnClientConnectionRequest -> clientMac:[%s], clientName:[%s]", clientMac.c_str(), clientName.c_str());
+							Exchange::JMiracastService::Event::OnClientConnectionRequest(_parent, clientMac, clientName);
+						}
 
-        private:
-            class PowerManagerNotification : public Exchange::IPowerManager::IModeChangedNotification {
-            private:
-                PowerManagerNotification(const PowerManagerNotification&) = delete;
-                PowerManagerNotification& operator=(const PowerManagerNotification&) = delete;
-            
-            public:
-                explicit PowerManagerNotification(MiracastService& parent)
-                    : _parent(parent)
-                {
-                }
-                ~PowerManagerNotification() override = default;
-            
-            public:
-                void OnPowerModeChanged(const PowerState currentState, const PowerState newState) override
-                {
-                    _parent.onPowerModeChanged(currentState, newState);
-                }
+						void OnClientConnectionError(const string &clientMac , const string &clientName , const string &errorCode , const string &reason ) override
+						{
+							LOGINFO("OnClientConnectionError -> clientMac:[%s], clientName:[%s], errorCode:[%s], reason:[%s]", clientMac.c_str(), clientName.c_str(), errorCode.c_str(), reason.c_str());
+							Exchange::JMiracastService::Event::OnClientConnectionError(_parent, clientMac, clientName, errorCode, reason);
+						}
 
-                template <typename T>
-                T* baseInterface()
-                {
-                    static_assert(std::is_base_of<T, PowerManagerNotification>(), "base type mismatch");
-                    return static_cast<T*>(this);
-                }
+						void OnLaunchRequest(const Exchange::IMiracastService::DeviceParameters deviceParameters) override
+						{
+							LOGINFO("OnLaunchRequest -> SrcDevIP[%s] SrcDevMac[%s] SrcDevName[%s] SinkDevIP[%s]",
+									deviceParameters.sourceDeviceIP.c_str(),
+									deviceParameters.sourceDeviceMac.c_str(),
+									deviceParameters.sourceDeviceName.c_str(),
+									deviceParameters.sinkDeviceIP.c_str());
+							Exchange::JMiracastService::Event::OnLaunchRequest(_parent, deviceParameters);
+						}
 
-                BEGIN_INTERFACE_MAP(PowerManagerNotification)
-                INTERFACE_ENTRY(Exchange::IPowerManager::IModeChangedNotification)
-                END_INTERFACE_MAP
-            
-            private:
-                MiracastService& _parent;
-            };
-            bool m_isServiceInitialized;
-            bool m_isServiceEnabled;
-            std::mutex m_DiscoveryStateMutex;
-            std::recursive_mutex m_EventMutex;
-            guint m_FriendlyNameMonitorTimerID{0};
-            guint m_WiFiConnectedStateMonitorTimerID{0};
-            guint m_MiracastConnectionMonitorTimerID{0};
-            eMIRA_SERVICE_STATES m_eService_state;
-            std::string m_src_dev_ip;
-            std::string m_src_dev_mac;
-            std::string m_src_dev_name;
-            std::string m_sink_dev_ip;
-            Core::ProxyType<RPC::InvokeServerType<1, 0, 4> > _engine;
-            Core::ProxyType<RPC::CommunicatorClient> _communicatorClient;
-            PowerManagerInterfaceRef _powerManagerPlugin;
-            Core::Sink<PowerManagerNotification> _pwrMgrNotification;
-            bool _registeredEventHandlers;
-            WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement> *m_SystemPluginObj = NULL;
-            WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement> *m_WiFiPluginObj = NULL;
-            uint32_t setEnableWrapper(const JsonObject &parameters, JsonObject &response);
-            uint32_t getEnable(const JsonObject &parameters, JsonObject &response);
-            uint32_t setP2PBackendDiscovery(const JsonObject &parameters, JsonObject &response);
-            uint32_t acceptClientConnection(const JsonObject &parameters, JsonObject &response);
-            uint32_t stopClientConnection(const JsonObject &parameters, JsonObject &response);
-            uint32_t updatePlayerState(const JsonObject &parameters, JsonObject &response);
-            uint32_t setLogging(const JsonObject &parameters, JsonObject &response);
-        #ifdef UNIT_TESTING
-            uint32_t getStatus(const JsonObject &parameters, JsonObject &response);
-            uint32_t setPowerStateWrapper(const JsonObject &parameters, JsonObject &response);
-            uint32_t setWiFiStateWrapper(const JsonObject &parameters, JsonObject &response);
-        #endif /*UNIT_TESTING*/
+					private:
+						MiracastService& _parent;
+				}; // class Notification
 
-            std::string reasonDescription(eMIRACAST_SERVICE_ERR_CODE e);
-            void getThunderPlugins();
-            bool updateSystemFriendlyName();
-            void onFriendlyNameUpdateHandler(const JsonObject &parameters);
-            static gboolean monitor_friendly_name_timercallback(gpointer userdata);
-            void setWiFiState(DEVICE_WIFI_STATES wifiState);
-            void onWIFIStateChangedHandler(const JsonObject &parameters);
-            static gboolean monitor_wifi_connection_state_timercallback(gpointer userdata);
-            void remove_wifi_connection_state_timer(void);
-            static gboolean monitor_miracast_connection_timercallback(gpointer userdata);
-            void remove_miracast_connection_timer(void);
-            bool envGetValue(const char *key, std::string &value);
-            eMIRA_SERVICE_STATES getCurrentServiceState(void);
-            void changeServiceState(eMIRA_SERVICE_STATES eService_state);
-            PowerState getCurrentPowerState(void);
-            void setPowerState(PowerState pwrState);
-            std::string getPowerStateString(PowerState pwrState);
-            PowerState getPowerManagerPluginPowerState(uint32_t powerState);
-            void setEnable(bool isEnabled);
-            void InitializePowerManager(PluginHost::IShell *service);
-            const void InitializePowerState();
-            void DeinitializeIARM();
+			public:
+				MiracastService(const MiracastService&) = delete;
+				MiracastService& operator=(const MiracastService&) = delete;
 
-            // We do not allow this plugin to be copied !!
-            MiracastService(const MiracastService &) = delete;
-            MiracastService &operator=(const MiracastService &) = delete;
-        };
-    } // namespace Plugin
+				MiracastService();
+				virtual ~MiracastService();
+
+				BEGIN_INTERFACE_MAP(MiracastService)
+				INTERFACE_ENTRY(PluginHost::IPlugin)
+				INTERFACE_ENTRY(PluginHost::IDispatcher)
+				INTERFACE_AGGREGATE(Exchange::IMiracastService, mMiracastServiceImpl)
+				END_INTERFACE_MAP
+
+				/* IPlugin methods  */
+				const string Initialize(PluginHost::IShell* service) override;
+				void Deinitialize(PluginHost::IShell* service) override;
+				string Information() const override;
+
+			private:
+				void Deactivated(RPC::IRemoteConnection* connection);
+
+			private: /* members */
+				PluginHost::IShell* mCurrentService{};
+				uint32_t mConnectionId{};
+				Exchange::IMiracastService* mMiracastServiceImpl{};
+				Core::Sink<Notification> mMiracastServiceNotification;
+
+			public /* constants */:
+				static const string SERVICE_NAME;
+
+			public /* members */:
+				static MiracastService* _instance;
+		}; // class MiracastService
+	} // namespace Plugin
 } // namespace WPEFramework

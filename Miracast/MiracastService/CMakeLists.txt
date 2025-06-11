@@ -17,47 +17,91 @@
 
 set(PLUGIN_NAME MiracastService)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+set(PLUGIN_IMPLEMENTATION ${MODULE_NAME}Implementation)
 
-set(PLUGIN_MIRACAST_STARTUPORDER "" CACHE STRING "To configure startup order of MiracastService plugin")
+set(PLUGIN_MIRACASTSERVICE_STARTUPORDER "" CACHE STRING "To configure startup order of MiracastService plugin")
+set(PLUGIN_MIRACASTSERVICE_AUTOSTART "false" CACHE STRING "Automatically start MiracastService plugin")
+
+add_definitions(-DMIRACAST_SERVICE_API_VERSION_NUMBER_MAJOR=2)
+add_definitions(-DMIRACAST_SERVICE_API_VERSION_NUMBER_MINOR=0)
+add_definitions(-DMIRACAST_SERVICE_API_VERSION_NUMBER_PATCH=0)
+
+set(MIRACAST_SERVICE_IMPLEMENTATION ${PLUGIN_NAME}Implementation)
+add_definitions(-DPLUGIN_MIRACAST_SERVICE_IMPLEMENTATION_NAME="${MIRACAST_SERVICE_IMPLEMENTATION}")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(IARMBus)
 find_package(GLIB REQUIRED)
-
 find_package(WPEFrameworkSecurityUtil)
-if(NOT WPEFRAMEWORK_SECURITYUTIL_FOUND)
-    add_definitions(-DSECURITY_TOKEN_ENABLED=0)
-endif()
 
 find_library(GLIB_LIBRARY NAMES glib-2.0 )
 
-add_library(${MODULE_NAME} SHARED Module.cpp MiracastService.cpp ../common/MiracastCommon.cpp ../common/MiracastLogger.cpp MiracastController.cpp P2P/MiracastP2P.cpp)
+if (USE_THUNDER_R4)
+    find_package(${NAMESPACE}COM REQUIRED)
+else ()
+    find_package(${NAMESPACE}Protocols REQUIRED)
+endif (USE_THUNDER_R4)
+
+#add_library(${MODULE_NAME} SHARED MiracastService.cpp Module.cpp)
+
+add_executable(${MODULE_NAME}
+		MiracastService.cpp
+		Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
-set_source_files_properties(MiracastService.cpp PROPERTIES COMPILE_FLAGS "-fexceptions")
 
-target_include_directories(${MODULE_NAME} PRIVATE ./)
-target_include_directories(${MODULE_NAME} PRIVATE ../common)
-target_include_directories(${MODULE_NAME} PRIVATE P2P)
-target_include_directories(${MODULE_NAME} PRIVATE ../../helpers)
-target_include_directories(${MODULE_NAME} PRIVATE ${IARMBUS_INCLUDE_DIRS})
-target_include_directories(${MODULE_NAME} PRIVATE ${GLIB_INCLUDE_DIRS})
+target_compile_definitions(${MODULE_NAME} PRIVATE MODULE_NAME=Plugin_${PLUGIN_NAME})
 
-#target_compile_options(${MODULE_NAME} PRIVATE -Wno-error -fpermissive -Os -pipe -g -feliminate-unused-debug-types -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed)
-#target_compile_options(${MODULE_NAME} PRIVATE -DENABLE_MIRACAST_SERVICE_TEST_NOTIFIER)
+include_directories(../../helpers)
 
 target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
-target_link_libraries(${MODULE_NAME} PRIVATE ${IARMBUS_LIBRARIES})
-target_link_libraries(${MODULE_NAME} PRIVATE ${GLIB_LIBRARIES})
-target_link_libraries(${MODULE_NAME} PRIVATE -lpthread)
-
-if(NOT RDK_SERVICES_L1_TEST)
-    target_link_libraries(${MODULE_NAME} PRIVATE -lwpa_client)
-endif()
 
 install(TARGETS ${MODULE_NAME}
         DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+
+#add_library(${PLUGIN_IMPLEMENTATION} SHARED MiracastServiceImplementation.cpp Module.cpp ../common/MiracastCommon.cpp ../common/MiracastLogger.cpp MiracastController.cpp P2P/MiracastP2P.cpp)
+
+add_executable(${PLUGIN_IMPLEMENTATION} 
+				MiracastServiceImplementation.cpp
+				Module.cpp
+				../common/MiracastCommon.cpp
+				../common/MiracastLogger.cpp
+				MiracastController.cpp
+				P2P/MiracastP2P.cpp)
+
+target_link_libraries(${PLUGIN_IMPLEMENTATION}
+        PRIVATE
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES)
+set_source_files_properties(MiracastService.cpp PROPERTIES COMPILE_FLAGS "-fexceptions")
+
+if (USE_THUNDER_R4)
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}COM::${NAMESPACE}COM)
+else ()
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}Protocols::${NAMESPACE}Protocols)
+endif (USE_THUNDER_R4)
+
+target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ./)
+target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ../common)
+target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE P2P)
+target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ../../helpers)
+target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ${IARMBUS_INCLUDE_DIRS})
+target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ${GLIB_INCLUDE_DIRS})
+
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${IARMBUS_LIBRARIES})
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${GLIB_LIBRARIES})
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE -lpthread)
+
+if(NOT RDK_SERVICES_L1_TEST)
+    target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE -lwpa_client)
+endif()
+
+install(TARGETS ${PLUGIN_IMPLEMENTATION}
+		DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
 write_config(${PLUGIN_NAME})
