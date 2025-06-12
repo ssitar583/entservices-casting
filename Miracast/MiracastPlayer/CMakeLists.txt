@@ -17,71 +17,104 @@
 
 set(PLUGIN_NAME MiracastPlayer)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+set(PLUGIN_IMPLEMENTATION ${MODULE_NAME}Implementation)
 
-set(PLUGIN_MIRACAST_STARTUPORDER "" CACHE STRING "To configure startup order of MiracastPlayer plugin")
+set(PLUGIN_MIRACASTPLAYER_STARTUPORDER "" CACHE STRING "To configure startup order of MiracastPlayer plugin")
+set(PLUGIN_MIRACASTPLAYER_AUTOSTART "false" CACHE STRING "Automatically start MiracastPlayer plugin")
+
+add_definitions(-DMIRACAST_PLAYER_API_VERSION_NUMBER_MAJOR=2)
+add_definitions(-DMIRACAST_PLAYER_API_VERSION_NUMBER_MINOR=0)
+add_definitions(-DMIRACAST_PLAYER_API_VERSION_NUMBER_PATCH=0)
+
+set(MIRACAST_PLAYER_IMPLEMENTATION ${PLUGIN_NAME}Implementation)
+add_definitions(-DPLUGIN_MIRACAST_PLAYER_IMPLEMENTATION_NAME="${MIRACAST_PLAYER_IMPLEMENTATION}")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(IARMBus)
 find_package(GLIB REQUIRED)
-
-find_package(WPEFrameworkSecurityUtil)
-if(NOT WPEFRAMEWORK_SECURITYUTIL_FOUND)
-	add_definitions(-DSECURITY_TOKEN_ENABLED=0)
-endif()
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GSTREAMERBASE REQUIRED gstreamer-app-1.0)
 
 find_package(GStreamer REQUIRED)
 
-find_library(GLIB_LIBRARY NAMES glib-2.0)
+find_library(GLIB_LIBRARY NAMES glib-2.0 )
 
-add_library(${MODULE_NAME} SHARED Module.cpp MiracastPlayer.cpp ../common/MiracastLogger.cpp ../common/MiracastCommon.cpp RTSP/MiracastRTSPMsg.cpp)
+if (USE_THUNDER_R4)
+    find_package(${NAMESPACE}COM REQUIRED)
+else ()
+    find_package(${NAMESPACE}Protocols REQUIRED)
+endif (USE_THUNDER_R4)
+
+add_library(${MODULE_NAME} SHARED MiracastPlayer.cpp Module.cpp)
+#add_executable(${MODULE_NAME} MiracastPlayer.cpp Module.cpp)
+
+set_target_properties(${MODULE_NAME} PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES)
+
+target_compile_definitions(${MODULE_NAME} PRIVATE MODULE_NAME=Plugin_${PLUGIN_NAME})
+
+include_directories(../../helpers)
+
+target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+
+install(TARGETS ${MODULE_NAME}
+        DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+
+add_library(${PLUGIN_IMPLEMENTATION} SHARED Module.cpp MiracastPlayerImplementation.cpp ../common/MiracastLogger.cpp ../common/MiracastCommon.cpp RTSP/MiracastRTSPMsg.cpp)
+#add_executable(${PLUGIN_IMPLEMENTATION} Module.cpp MiracastPlayerImplementation.cpp ../common/MiracastLogger.cpp ../common/MiracastCommon.cpp RTSP/MiracastRTSPMsg.cpp)
+
+target_link_libraries(${PLUGIN_IMPLEMENTATION}
+        PRIVATE
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES)
+set_source_files_properties(MiracastPlayer.cpp PROPERTIES COMPILE_FLAGS "-fexceptions")
+
+if (USE_THUNDER_R4)
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}COM::${NAMESPACE}COM)
+else ()
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}Protocols::${NAMESPACE}Protocols)
+endif (USE_THUNDER_R4)
 
 if (RDK_SERVICES_L1_TEST)
-	target_sources(${MODULE_NAME}
+	target_sources(${PLUGIN_IMPLEMENTATION}
 		PRIVATE
 		Test/MiracastGstPlayer.cpp
 		)
 else()
-	target_sources(${MODULE_NAME}
+	target_sources(${PLUGIN_IMPLEMENTATION}
 		PRIVATE
 		Generic/MiracastGstPlayer.cpp
 		)
 endif()
 
-set_target_properties(${MODULE_NAME} PROPERTIES
-	CXX_STANDARD 11
-	CXX_STANDARD_REQUIRED YES)
-set_source_files_properties(MiracastPlayer.cpp PROPERTIES COMPILE_FLAGS "-fexceptions")
+target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ./)
+target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ../common)
+target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE RTSP)
+target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ../../helpers)
+target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ${IARMBUS_INCLUDE_DIRS})
+target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ${GLIB_INCLUDE_DIRS})
+target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ${GSTREAMER_INCLUDES})
+target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ${GSTREAMERBASE_INCLUDE_DIRS})
 
-target_include_directories(${MODULE_NAME} PRIVATE ./)
-target_include_directories(${MODULE_NAME} PRIVATE ../common)
-target_include_directories(${MODULE_NAME} PRIVATE RTSP)
-target_include_directories(${MODULE_NAME} PRIVATE ../../helpers)
-target_include_directories(${MODULE_NAME} PRIVATE ${IARMBUS_INCLUDE_DIRS})
-target_include_directories(${MODULE_NAME} PRIVATE ${GLIB_INCLUDE_DIRS})
-target_include_directories(${MODULE_NAME} PRIVATE ${GSTREAMER_INCLUDES})
-target_include_directories(${MODULE_NAME} PRIVATE ${GSTREAMERBASE_INCLUDE_DIRS})
-
-#target_compile_options(${MODULE_NAME} PRIVATE -Wno-error -fpermissive -Os -pipe -g -feliminate-unused-debug-types -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed)
-#target_compile_options(${MODULE_NAME} PRIVATE -DENABLE_MIRACAST_PLAYER_TEST_NOTIFIER)
-
-target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
-target_link_libraries(${MODULE_NAME} PRIVATE ${GLIB_LIBRARIES})
-target_link_libraries(${MODULE_NAME} PRIVATE ${GSTREAMER_LIBRARIES})
-target_link_libraries(${MODULE_NAME} PRIVATE ${GSTREAMERBASE_LIBRARIES})
-target_link_libraries(${MODULE_NAME} PRIVATE -lpthread)
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${GLIB_LIBRARIES})
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${GSTREAMER_LIBRARIES})
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${GSTREAMERBASE_LIBRARIES})
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE -lpthread)
 
 if(WPEFRAMEWORK_SECURITYUTIL_FOUND)
-	target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}SecurityUtil)
+	target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}SecurityUtil)
 endif()
 
 if(NOT RDK_SERVICES_L1_TEST AND NOT RDK_SERVICE_L2_TEST)
-	target_link_libraries(${MODULE_NAME} PRIVATE MiracastPlayerHal)
+	target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE MiracastPlayerHal)
 endif()
 
-install(TARGETS ${MODULE_NAME}
-	DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+install(TARGETS ${PLUGIN_IMPLEMENTATION}
+		DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
 write_config(${PLUGIN_NAME})

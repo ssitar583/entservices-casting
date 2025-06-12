@@ -1,4 +1,12 @@
 precondition = ["Platform"]
 callsign = "org.rdk.MiracastPlayer"
-autostart = "false"
+autostart = "@PLUGIN_MIRACASTPLAYER_AUTOSTART@"
 startuporder = "@PLUGIN_MIRACASTPLAYER_STARTUPORDER@"
+
+configuration = JSON()
+rootobject = JSON()
+
+rootobject.add("mode", "@PLUGIN_MIRACASTPLAYER_MODE@")
+rootobject.add("locator", "lib@PLUGIN_IMPLEMENTATION@.so")
+
+configuration.add("root", rootobject)
