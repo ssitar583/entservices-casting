@@ -122,6 +122,6 @@
 		Core::hresult XCastImplementation::GetFriendlyName(string &friendlyname , bool &success ) { return 0; }
 		Core::hresult XCastImplementation::GetApiVersionNumber(uint32_t &version , bool &success) { return 0; }
 
-	    Core::hresult XCastImplementation::RegisterApplications(const std::string& appInfoList) { return 0; }
+	    Core::hresult XCastImplementation::RegisterApplications(IApplicationInfoIterator* const appInfoList) { return 0; }
      } // namespace Plugin
  } // namespace WPEFramework
