@@ -20,9 +20,6 @@
 #include "MiracastController.h"
 
 void ControllerThreadCallback(void *args);
-#ifdef ENABLE_MIRACAST_SERVICE_TEST_NOTIFIER
-void MiracastServiceTestNotifierThreadCallback(void *args);
-#endif
 
 MiracastController *MiracastController::m_miracast_ctrl_obj{nullptr};
 
@@ -121,9 +118,6 @@ MiracastError MiracastController::destroy_ControllerFramework(void)
 {
     MIRACASTLOG_TRACE("Entering...");
 
-#ifdef ENABLE_MIRACAST_SERVICE_TEST_NOTIFIER
-    destroy_TestNotifier();
-#endif
     CONTROLLER_MSGQ_STRUCT controller_msgq_data = {0};
     MIRACASTLOG_INFO("[MIRACAST_SERVICE_SHUTDOWN]");
     controller_msgq_data.state = CONTROLLER_SELF_ABORT;
@@ -597,7 +591,7 @@ MiracastError MiracastController::connect_device(std::string device_mac , std::s
             MIRACASTLOG_ERROR("#### MCAST-TRIAGE-NOK P2P CONNECT FAILURE FOR DEVICE[%s - %s] ####",device_name.c_str(),device_mac.c_str());
             if ( nullptr != m_notify_handler )
             {
-                m_notify_handler->onMiracastServiceClientConnectionError( device_mac , device_name , MIRACAST_SERVICE_ERR_CODE_P2P_CONNECT_ERROR );
+                m_notify_handler->onMiracastServiceClientConnectionError( device_mac , device_name , WPEFramework::Exchange::IMiracastService::ERROR_CODE_P2P_CONNECT_FAILURE );
             }
         }
     }
@@ -944,7 +938,7 @@ void MiracastController::Controller_Thread(void *args)
                     case CONTROLLER_GO_NEG_FAILURE:
                     case CONTROLLER_GO_GROUP_FORMATION_FAILURE:
                     {
-                        eMIRACAST_SERVICE_ERR_CODE error_code = MIRACAST_SERVICE_ERR_CODE_GENERIC_FAILURE;
+                        eMIRACAST_SERVICE_ERR_CODE error_code = WPEFramework::Exchange::IMiracastService::ERROR_CODE_GENERIC_FAILURE;
 
                         if ( CONTROLLER_GO_GROUP_STARTED == controller_msgq_data.state )
                         {
@@ -1061,7 +1055,7 @@ void MiracastController::Controller_Thread(void *args)
                                     {
                                         remove_ARPEntry(remote_address);
                                         remote_address.clear();
-                                        MIRACASTLOG_ERROR("#### ARPING failed so clearing remote_address to report [MIRACAST_SERVICE_ERR_CODE_GENERIC_FAILURE] ####");
+                                        MIRACASTLOG_ERROR("#### ARPING failed so clearing remote_address to report [WPEFramework::Exchange::IMiracastService::ERROR_CODE_GENERIC_FAILURE] ####");
                                     }
                                 }
                             }
@@ -1104,7 +1098,7 @@ void MiracastController::Controller_Thread(void *args)
                             }
                             else
                             {
-                                error_code = MIRACAST_SERVICE_ERR_CODE_GENERIC_FAILURE;
+                                error_code = WPEFramework::Exchange::IMiracastService::ERROR_CODE_GENERIC_FAILURE;
                                 session_restart_required = true;
                                 MIRACASTLOG_ERROR("!!!! Unable to get the Source Device IP and Terminating Group Here !!!!");
                                 remove_P2PGroupInstance();
@@ -1114,12 +1108,12 @@ void MiracastController::Controller_Thread(void *args)
                         {
                             if ( CONTROLLER_GO_GROUP_FORMATION_FAILURE == controller_msgq_data.state )
                             {
-                                error_code = MIRACAST_SERVICE_ERR_CODE_P2P_GROUP_FORMATION_ERROR;
+                                error_code = WPEFramework::Exchange::IMiracastService::ERROR_CODE_P2P_GROUP_FORMATION_FAILURE;
                                 MIRACASTLOG_ERROR("#### MCAST-TRIAGE-NOK CONTROLLER_GO_GROUP_FORMATION_FAILURE ####");
                             }
                             else if ( CONTROLLER_GO_NEG_FAILURE == controller_msgq_data.state )
                             {
-                                error_code = MIRACAST_SERVICE_ERR_CODE_P2P_GROUP_NEGO_ERROR;
+                                error_code = WPEFramework::Exchange::IMiracastService::ERROR_CODE_P2P_GROUP_NEGOTIATION_FAILURE;
                                 MIRACASTLOG_ERROR("#### MCAST-TRIAGE-NOK CONTROLLER_GO_NEG_FAILURE ####");
                             }
 
@@ -1618,137 +1612,3 @@ void ControllerThreadCallback(void *args)
     }
     MIRACASTLOG_TRACE("Exiting...");
 }
-
-#ifdef ENABLE_MIRACAST_SERVICE_TEST_NOTIFIER
-
-MiracastError MiracastController::create_TestNotifier(void)
-{
-    MiracastError error_code = MIRACAST_OK;
-
-    m_test_notifier_thread = nullptr;
-    MIRACASTLOG_TRACE("Entering...");
-    m_test_notifier_thread = new MiracastThread( MIRACAST_SERVICE_TEST_NOTIFIER_THREAD_NAME,
-                                                 MIRACAST_SERVICE_TEST_NOTIFIER_THREAD_STACK,
-                                                 MIRACAST_SERVICE_TEST_NOTIFIER_MSG_COUNT,
-                                                 MIRACAST_SERVICE_TEST_NOTIFIER_MSGQ_SIZE,
-                                                 reinterpret_cast<void (*)(void *)>(&MiracastServiceTestNotifierThreadCallback),
-                                                 this );
-    if ((nullptr == m_test_notifier_thread)||
-        ( MIRACAST_OK != m_test_notifier_thread->start()))
-    {
-        if ( nullptr != m_test_notifier_thread )
-        {
-            delete m_test_notifier_thread;
-            m_test_notifier_thread = nullptr;
-        }
-        error_code = MIRACAST_FAIL;
-    }
-    MIRACASTLOG_TRACE("Exiting...");
-    return error_code;
-}
-
-void MiracastController::destroy_TestNotifier()
-{
-    MIRACASTLOG_TRACE("Entering...");
-    MIRACAST_SERVICE_TEST_NOTIFIER_MSGQ_ST stMsgQ = {0};
-    stMsgQ.state = MIRACAST_SERVICE_TEST_NOTIFIER_SHUTDOWN;
-    send_msgto_test_notifier_thread(stMsgQ);
-    if (nullptr != m_test_notifier_thread)
-    {
-        delete m_test_notifier_thread;
-        m_test_notifier_thread = nullptr;
-    }
-    MIRACASTLOG_TRACE("Exiting...");
-}
-
-void MiracastController::TestNotifier_Thread(void *args)
-{
-    MIRACAST_SERVICE_TEST_NOTIFIER_MSGQ_ST stMsgQ = {0};
-    std::string device_name = "",
-                mac_address = "",
-                source_dev_ip = "",
-                sink_dev_ip = "";
-
-    MIRACASTLOG_TRACE("Entering...");
-
-    while ( nullptr != m_test_notifier_thread )
-    {
-        memset( &stMsgQ , 0x00 , MIRACAST_SERVICE_TEST_NOTIFIER_MSGQ_SIZE );
-
-        MIRACASTLOG_TRACE("!!! WAITING FOR NEW ACTION !!!\n");
-
-        m_test_notifier_thread->receive_message(&stMsgQ, MIRACAST_SERVICE_TEST_NOTIFIER_MSGQ_SIZE , THREAD_RECV_MSG_INDEFINITE_WAIT);
-
-        MIRACASTLOG_TRACE("!!! Received Action[%#08X] !!!\n", stMsgQ.state);
-
-        device_name = stMsgQ.src_dev_name;
-        mac_address = stMsgQ.src_dev_mac_addr;
-
-        switch (stMsgQ.state)
-        {
-            case MIRACAST_SERVICE_TEST_NOTIFIER_CLIENT_CONNECTION_REQUESTED:
-            {
-                MIRACASTLOG_TRACE("[MIRACAST_SERVICE_TEST_NOTIFIER_CLIENT_CONNECTION_REQUESTED]...");
-                m_notify_handler->onMiracastServiceClientConnectionRequest(mac_address, device_name);
-            }
-            break;
-            case MIRACAST_SERVICE_TEST_NOTIFIER_SHUTDOWN:
-            {
-                MIRACASTLOG_TRACE("[MIRACAST_SERVICE_TEST_NOTIFIER_SHUTDOWN]...");
-            }
-            break;
-            case MIRACAST_SERVICE_TEST_NOTIFIER_LAUNCH_REQUESTED:
-            {
-                MIRACASTLOG_TRACE("[MIRACAST_SERVICE_TEST_NOTIFIER_LAUNCH_REQUESTED]...");
-                source_dev_ip = stMsgQ.src_dev_ip_addr;
-                sink_dev_ip = stMsgQ.sink_ip_addr;
-                m_notify_handler->onMiracastServiceLaunchRequest( source_dev_ip,
-                                                                  mac_address,
-                                                                  device_name,
-                                                                  sink_dev_ip );
-            }
-            break;
-            case MIRACAST_SERVICE_TEST_NOTIFIER_CLIENT_CONNECTION_ERROR:
-            {
-                MIRACASTLOG_TRACE("[MIRACAST_SERVICE_TEST_NOTIFIER_CLIENT_CONNECTION_ERROR]...");
-                m_notify_handler->onMiracastServiceClientConnectionError( mac_address,
-                                                                          device_name ,
-                                                                          stMsgQ.error_code );
-            }
-            break;
-            default:
-            {
-                MIRACASTLOG_ERROR("[UNKNOWN STATE]...");
-            }
-            break;
-        }
-
-        if (MIRACAST_SERVICE_TEST_NOTIFIER_SHUTDOWN == stMsgQ.state)
-        {
-            break;
-        }
-    }
-    MIRACASTLOG_TRACE("Exiting...");
-}
-
-void MiracastServiceTestNotifierThreadCallback(void *args)
-{
-    MiracastController *miracast_ctlr_obj = (MiracastController *)args;
-    MIRACASTLOG_TRACE("Entering [%#04X]...",miracast_ctlr_obj);
-    if ( nullptr != miracast_ctlr_obj )
-    {
-        miracast_ctlr_obj->TestNotifier_Thread(nullptr);
-    }
-    MIRACASTLOG_TRACE("Exiting...");
-}
-
-void MiracastController::send_msgto_test_notifier_thread(MIRACAST_SERVICE_TEST_NOTIFIER_MSGQ_ST stMsgQ)
-{
-    MIRACASTLOG_TRACE("Entering...");
-    if (nullptr != m_test_notifier_thread)
-    {
-        m_test_notifier_thread->send_message(&stMsgQ, MIRACAST_SERVICE_TEST_NOTIFIER_MSGQ_SIZE);
-    }
-    MIRACASTLOG_TRACE("Exiting...");
-}
-#endif /* ENABLE_MIRACAST_SERVICE_TEST_NOTIFIER */

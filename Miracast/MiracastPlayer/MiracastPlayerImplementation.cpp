@@ -137,43 +137,42 @@ namespace WPEFramework
 		{
 			switch (e)
 			{
-				case MIRACAST_PLAYER_STATE_IDLE:
+				case WPEFramework::Exchange::IMiracastPlayer::STATE_IDLE:
 					return "IDLE";
-				case MIRACAST_PLAYER_STATE_INITIATED:
+				case WPEFramework::Exchange::IMiracastPlayer::STATE_INITIATED:
 					return "INITIATED";
-				case MIRACAST_PLAYER_STATE_INPROGRESS:
+				case WPEFramework::Exchange::IMiracastPlayer::STATE_INPROGRESS:
 					return "INPROGRESS";
-				case MIRACAST_PLAYER_STATE_PLAYING:
+				case WPEFramework::Exchange::IMiracastPlayer::STATE_PLAYING:
 					return "PLAYING";
-				case MIRACAST_PLAYER_STATE_STOPPED:
-				case MIRACAST_PLAYER_STATE_SELF_ABORT:
+				case WPEFramework::Exchange::IMiracastPlayer::STATE_STOPPED:
 					return "STOPPED";
 				default:
 					return "Unimplemented state";
 			}
 		}
 
-		std::string MiracastPlayerImplementation::reasonDescription(eM_PLAYER_REASON_CODE e)
+		std::string MiracastPlayerImplementation::reasonDescription(MiracastPlayerErrorCode e)
 		{
 			switch (e)
 			{
-				case MIRACAST_PLAYER_REASON_CODE_SUCCESS:
+				case WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_SUCCESS:
 					return "SUCCESS";
-				case MIRACAST_PLAYER_REASON_CODE_APP_REQ_TO_STOP:
+				case WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_APP_REQ_TO_STOP:
 					return "APP REQUESTED TO STOP.";
-				case MIRACAST_PLAYER_REASON_CODE_SRC_DEV_REQ_TO_STOP:
+				case WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_SRC_DEV_REQ_TO_STOP:
 					return "SRC DEVICE REQUESTED TO STOP.";
-				case MIRACAST_PLAYER_REASON_CODE_RTSP_ERROR:
+				case WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_RTSP_ERROR:
 					return "RTSP Failure.";
-				case MIRACAST_PLAYER_REASON_CODE_RTSP_TIMEOUT:
+				case WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_RTSP_TIMEOUT:
 					return "RTSP Timeout.";
-				case MIRACAST_PLAYER_REASON_CODE_RTSP_METHOD_NOT_SUPPORTED:
+				case WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_RTSP_METHOD_NOT_SUPPORTED:
 					return "RTSP Method Not Supported.";
-				case MIRACAST_PLAYER_REASON_CODE_GST_ERROR:
+				case WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_GST_ERROR:
 					return "GStreamer Failure.";
-				case MIRACAST_PLAYER_REASON_CODE_INT_FAILURE:
+				case WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_INT_FAILURE:
 					return "Internal Failure.";
-				case MIRACAST_PLAYER_REASON_CODE_NEW_SRC_DEV_CONNECT_REQ:
+				case WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_NEW_SRC_DEV_CONNECT_REQ:
 					return "APP REQ TO STOP FOR NEW CONNECTION.";
 				default:
 					return "Unimplemented item.";
@@ -182,12 +181,12 @@ namespace WPEFramework
 		/*  Helper and Internal methods End */
 		/* ------------------------------------------------------------------------------------------------------- */
 
-		void MiracastPlayerImplementation::dispatchEvent(Event event, const JsonObject &params)
+		void MiracastPlayerImplementation::dispatchEvent(Event event, const ParamsType &params)
 		{
 			Core::IWorkerPool::Instance().Submit(Job::Create(this, event, params));
 		}
 
-		void MiracastPlayerImplementation::Dispatch(Event event,const JsonObject& params)
+		void MiracastPlayerImplementation::Dispatch(Event event,const ParamsType& params)
 		{
 			_adminLock.Lock();
 
@@ -197,15 +196,25 @@ namespace WPEFramework
 			{
 				case MIRACASTPLAYER_EVENT_ON_STATE_CHANGE:
 				{
+					string clientName;
+					string clientMac;
+					MiracastPlayerState playerState;
+					MiracastPlayerErrorCode erroCode;
+					string errorCodeStr;
+					auto tupleParam = std::make_tuple(client_mac,client_name,player_state,reason_code);
+
+					if (const auto* tupleValue = boost::get<std::string, std::string, MiracastPlayerState,MiracastPlayerErrorCode>>(&params))
+					{
+						clientMac = std::get<0>(*tupleValue);
+						clientName = std::get<1>(*tupleValue);
+						playerState = std::get<2>(*tupleValue);
+						erroCode = std::get<3>(*tupleValue);
+						errorCodeStr = std::to_string(errorCode)
+					}
+
 					while (index != _miracastPlayerNotification.end())
 					{
-						string clientName = params["name"].String();
-						string clientMac = params["mac"].String();
-						string playerState = params["state"].String();
-						string reason = params["reason"].String();
-						PlayerReasonCode reasonCode = static_cast<PlayerReasonCode>(params["reason_code"].Number());
-
-						(*index)->OnStateChange(clientName , clientMac , playerState , reasonCode , reason );
+						(*index)->OnStateChange(clientName , clientMac , playerState , errorCodeStr , erroCode );
 						++index;
 					}
 				}
@@ -321,39 +330,34 @@ namespace WPEFramework
 			return Core::ERROR_NONE;
 		}
 
-		Core::hresult MiracastPlayerImplementation::StopRequest(const string &clientMac , const string &clientName , const PlayerStopReasonCode &reasonCode , Result &returnPayload )
+		Core::hresult MiracastPlayerImplementation::StopRequest(const string &clientMac , const string &clientName , const MiracastPlayerStopReasonCode &reasonCode , Result &returnPayload )
 		{
 			RTSP_HLDR_MSGQ_STRUCT rtsp_hldr_msgq_data = {0};
-			//eM_PLAYER_STOP_REASON_CODE	stop_reason_code;
-			PlayerStopReasonCode stop_reason_code = reasonCode;
 			bool isSuccessOrFailure = true;
 
 			MIRACASTLOG_INFO("Entering..!!!");
 
-			//stop_reason_code = static_cast<eM_PLAYER_STOP_REASON_CODE>(reasonCode);
+			switch (reasonCode)
+			{
+				case WPEFramework::Exchange::IMiracastPlayer::STOP_REASON_APP_REQ_FOR_EXIT:
+				case WPEFramework::Exchange::IMiracastPlayer::STOP_REASON_APP_REQ_FOR_NEW_CONNECTION:
+				{
+					rtsp_hldr_msgq_data.stop_reason_code = reasonCode;
 
-			if ( MIRACAST_PLAYER_APP_REQ_TO_STOP_ON_EXIT == stop_reason_code )
-			{
-				//rtsp_hldr_msgq_data.stop_reason_code = MIRACAST_PLAYER_APP_REQ_TO_STOP_ON_EXIT;
-				rtsp_hldr_msgq_data.stop_reason_code = static_cast<eM_PLAYER_STOP_REASON_CODE>(300);
-			}
-			else if ( MIRACAST_PLAYER_APP_REQ_TO_STOP_ON_NEW_CONNECTION == stop_reason_code )
-			{
-				//rtsp_hldr_msgq_data.stop_reason_code = MIRACAST_PLAYER_APP_REQ_TO_STOP_ON_NEW_CONNECTION;
-				rtsp_hldr_msgq_data.stop_reason_code = static_cast<eM_PLAYER_STOP_REASON_CODE>(301);
-			}
-			else
-			{
-				isSuccessOrFailure = false;
-				MIRACASTLOG_ERROR("!!! UNKNOWN STOP REASON CODE RECEIVED[%#04X] !!!",stop_reason_code);
-				returnPayload.message = "UNKNOWN STOP REASON CODE RECEIVED";
+					rtsp_hldr_msgq_data.state = RTSP_TEARDOWN_FROM_SINK2SRC;
+					m_miracast_rtsp_obj->send_msgto_rtsp_msg_hdler_thread(rtsp_hldr_msgq_data);
+					isSuccessOrFailure = true;
+				}
+				break;
+				default:
+				{
+					isSuccessOrFailure = false;
+					MIRACASTLOG_ERROR("!!! UNKNOWN STOP REASON CODE RECEIVED[%#04X] !!!",reasonCode);
+					returnPayload.message = "UNKNOWN STOP REASON CODE RECEIVED";
+				}
+				break;
 			}
 
-			if ( isSuccessOrFailure )
-			{
-				rtsp_hldr_msgq_data.state = RTSP_TEARDOWN_FROM_SINK2SRC;
-				m_miracast_rtsp_obj->send_msgto_rtsp_msg_hdler_thread(rtsp_hldr_msgq_data);
-			}
 			returnPayload.success = isSuccessOrFailure;
 
 			MIRACASTLOG_INFO("Exiting..!!!");
@@ -472,7 +476,7 @@ namespace WPEFramework
 			return Core::ERROR_NONE;
 		}
 
-		Core::hresult MiracastPlayerImplementation::SetLogging(const string &logLevel , const SeparateLogger &separateLogger , Result &returnPayload)
+		Core::hresult MiracastServiceImplementation::SetLogging(const MiracastLogLevel &logLevel , const SeparateLogger &separateLogger , Result &returnPayload)
 		{
 			bool isSuccessOrFailure = false;
 
@@ -503,44 +507,49 @@ namespace WPEFramework
 				}
 			}
 
-			if (!logLevel.empty())
+			switch (logLevel)
 			{
-				LogLevel level = FATAL_LEVEL;
-				isSuccessOrFailure = true;
-				if ("FATAL" == logLevel || "fatal" == logLevel)
+				case WPEFramework::Exchange::IMiracastPlayer::LOG_LEVEL_FATAL:
 				{
 					level = FATAL_LEVEL;
 				}
-				else if ("ERROR" == logLevel || "error" == logLevel)
+				break;
+				case WPEFramework::Exchange::IMiracastPlayer::LOG_LEVEL_ERROR:
 				{
 					level = ERROR_LEVEL;
 				}
-				else if ("WARNING" == logLevel || "warning" == logLevel)
+				break;
+				case WPEFramework::Exchange::IMiracastPlayer::LOG_LEVEL_WARNING:
 				{
 					level = WARNING_LEVEL;
 				}
-				else if ("INFO" == logLevel || "info" == logLevel)
+				break;
+				case WPEFramework::Exchange::IMiracastPlayer::LOG_LEVEL_INFO:
 				{
 					level = INFO_LEVEL;
 				}
-				else if ("VERBOSE" == logLevel || "verbose" == logLevel)
+				break;
+				case WPEFramework::Exchange::IMiracastPlayer::LOG_LEVEL_VERBOSE:
 				{
 					level = VERBOSE_LEVEL;
 				}
-				else if ("TRACE" == logLevel || "trace" == logLevel)
+				break;
+				case WPEFramework::Exchange::IMiracastPlayer::LOG_LEVEL_TRACE:
 				{
 					level = TRACE_LEVEL;
 				}
-				else
+				break;
+				default:
 				{
 					returnPayload.message = "Supported 'level' parameter values are FATAL, ERROR, WARNING, INFO, VERBOSE or TRACE";
 					isSuccessOrFailure = false;
 				}
+				break;
+			}
 
-				if (isSuccessOrFailure)
-				{
-					set_loglevel(level);
-				}
+			if (isSuccessOrFailure)
+			{
+				set_loglevel(level);
 			}
 			returnPayload.success = isSuccessOrFailure;
 			MIRACASTLOG_INFO("Exiting..!!!");
@@ -551,16 +560,12 @@ namespace WPEFramework
 
 		/*  Events Start */
 		/* ------------------------------------------------------------------------------------------------------- */
-		void MiracastPlayerImplementation::onStateChange(const std::string& client_mac, const std::string& client_name, eMIRA_PLAYER_STATES player_state, eM_PLAYER_REASON_CODE reason_code)
+		void MiracastPlayerImplementation::onStateChange(const std::string& client_mac, const std::string& client_name, MiracastPlayerState player_state, MiracastPlayerErrorCode reason_code)
 		{
 			MIRACASTLOG_INFO("Entering..!!!");
 
-			JsonObject params;
-			params["mac"] = client_mac;
-			params["name"] = client_name;
-			params["state"] = stateDescription(player_state);
-			params["reason_code"] = static_cast<uint32_t>(reason_code);
-			params["reason"] = reasonDescription(reason_code);
+			auto tupleParam = std::make_tuple(client_mac,client_name,player_state,reason_code);
+
 			if (0 == access("/opt/miracast_autoconnect", F_OK))
 			{
 				char commandBuffer[768] = {0};
@@ -575,10 +580,10 @@ namespace WPEFramework
 			}
 			else
 			{
-				dispatchEvent(MIRACASTPLAYER_EVENT_ON_STATE_CHANGE, params);
+				dispatchEvent(MIRACASTPLAYER_EVENT_ON_STATE_CHANGE, tupleParam);
 			}
 
-			if ( MIRACAST_PLAYER_STATE_STOPPED == player_state )
+			if ( WPEFramework::Exchange::IMiracastPlayer::STATE_STOPPED == player_state )
 			{
 				unsetWesterosEnvironmentInternal();
 			}

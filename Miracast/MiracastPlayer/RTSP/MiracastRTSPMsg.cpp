@@ -25,10 +25,6 @@ static std::string empty_string = "";
 
 void RTSPMsgHandlerCallback(void *args);
 
-#ifdef ENABLE_MIRACAST_PLAYER_TEST_NOTIFIER
-void MiracastPlayerTestNotifierThreadCallback(void *args);
-#endif
-
 RTSP_MSG_FMT_TEMPLATE MiracastRTSPMsg::rtsp_msg_fmt_template[] = {
     {RTSP_MSG_FMT_M1_RESPONSE, "RTSP/1.0 200 OK\r\nPublic: \"%s, GET_PARAMETER, SET_PARAMETER\"\r\nCSeq: %s\r\n\r\n"},
     {RTSP_MSG_FMT_M2_REQUEST, "OPTIONS * RTSP/1.0\r\nRequire: %s\r\nCSeq: %s\r\n\r\n"},
@@ -276,10 +272,6 @@ MiracastRTSPMsg::~MiracastRTSPMsg()
         delete m_rtsp_msg_handler_thread;
         m_rtsp_msg_handler_thread = nullptr;
     }
-
-#ifdef ENABLE_MIRACAST_PLAYER_TEST_NOTIFIER
-    destroy_TestNotifier();
-#endif
 
     Release_SocketAndEpollDescriptor();
 }
@@ -800,12 +792,13 @@ bool MiracastRTSPMsg::IsValidSequenceNumber(std::string& received_seq_num)
     return ret;
 }
 
-void MiracastRTSPMsg::set_state( eMIRA_PLAYER_STATES state , bool send_notification , eM_PLAYER_REASON_CODE reason_code )
+void MiracastRTSPMsg::set_state( MiracastPlayerState state , bool send_notification , MiracastPlayerErrorCode reason_code )
 {
     MIRACASTLOG_INFO("Entering [%d]notify[%u]reason[%u]...",state,send_notification,reason_code);
     m_current_state = state;
 
-    if (( MIRACAST_PLAYER_STATE_STOPPED == state )||( MIRACAST_PLAYER_STATE_SELF_ABORT == state )){
+    if ( WPEFramework::Exchange::IMiracastPlayer::STATE_STOPPED == state )
+	{
         stop_streaming(state);
     }
 
@@ -1600,7 +1593,7 @@ RTSP_STATUS MiracastRTSPMsg::validate_rtsp_trigger_request_ack(std::string rtsp_
     }
     else
     {
-        if ( MIRACAST_PLAYER_STATE_INPROGRESS == get_state())
+        if ( WPEFramework::Exchange::IMiracastPlayer::STATE_INPROGRESS == get_state())
         {
             // It denotes response for M7 has received.
             status_code = RTSP_M1_M7_MSG_EXCHANGE_RECEIVED;
@@ -1643,7 +1636,7 @@ RTSP_STATUS MiracastRTSPMsg::validate_rtsp_trigger_method_request(std::string rt
         else if (rtsp_msg_buffer.find(play_tag) != std::string::npos)
         {
             MIRACASTLOG_INFO("PLAY request from Source received");
-            if ( MIRACAST_PLAYER_STATE_PLAYING == get_state())
+            if ( WPEFramework::Exchange::IMiracastPlayer::STATE_PLAYING == get_state())
             {
                 error_code = RTSP_ERRORCODE_METHOD_NOT_VALID;
             }
@@ -1651,7 +1644,7 @@ RTSP_STATUS MiracastRTSPMsg::validate_rtsp_trigger_method_request(std::string rt
         else if (rtsp_msg_buffer.find(pause_tag) != std::string::npos)
         {
             MIRACASTLOG_INFO("PAUSE request from Source received");
-            if ( MIRACAST_PLAYER_STATE_PAUSED == get_state()){
+            if ( WPEFramework::Exchange::IMiracastPlayer::STATE_PAUSED == get_state()){
                 error_code = RTSP_ERRORCODE_METHOD_NOT_VALID;
             }
         }
@@ -1912,7 +1905,7 @@ MiracastError MiracastRTSPMsg::start_streaming( VIDEO_RECT_STRUCT video_rect )
     if (!opt_flag_buffer.empty())
     {
         MIRACASTLOG_INFO("#### updating state as PLAYING ####");
-        set_state(MIRACAST_PLAYER_STATE_PLAYING , true );
+        set_state(WPEFramework::Exchange::IMiracastPlayer::STATE_PLAYING , true );
     }
 
     if (mcgstfile.is_open())
@@ -1958,12 +1951,11 @@ MiracastError MiracastRTSPMsg::stop_streaming( eMIRA_PLAYER_STATES state )
 {
     MIRACASTLOG_TRACE("Entering...");
 
-    if ((MIRACAST_PLAYER_STATE_STOPPED == state)||
-        (MIRACAST_PLAYER_STATE_SELF_ABORT == state))
+    if ( WPEFramework::Exchange::IMiracastPlayer::STATE_STOPPED == state )
     {
         if (m_streaming_started)
         {
-            if (MIRACAST_PLAYER_STATE_SELF_ABORT == state)
+            if (false == m_rtsp_msg_hldr_running_state)
             {
                 MiracastGstPlayer::destroyInstance();
                 MIRACASTLOG_INFO("MiracastGstPlayer instance destroyed...");
@@ -1998,18 +1990,19 @@ void MiracastRTSPMsg::RTSPMessageHandler_Thread(void *args)
     RTSP_HLDR_MSGQ_STRUCT rtsp_message_data = {};
     VIDEO_RECT_STRUCT     video_rect_st = {0};
     RTSP_STATUS status_code = RTSP_TIMEDOUT;
-    eM_PLAYER_REASON_CODE reason = MIRACAST_PLAYER_REASON_CODE_RTSP_ERROR;
+    eM_PLAYER_REASON_CODE reason = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_RTSP_ERROR;
     std::string rtsp_msg_buffer;
     std::string client_mac = "",
                 client_name = "",
                 go_ip_addr = "";
-    bool    start_monitor_keep_alive_msg = false,
-            rtsp_msg_hldr_running_state = true;
+    bool    start_monitor_keep_alive_msg = false;
+
+	m_rtsp_msg_hldr_running_state = true;
 
     MIRACASTLOG_TRACE("Entering...");
-    while ((nullptr != m_rtsp_msg_handler_thread)&&(true == rtsp_msg_hldr_running_state))
+    while ((nullptr != m_rtsp_msg_handler_thread)&&(true == m_rtsp_msg_hldr_running_state))
     {
-        set_state( MIRACAST_PLAYER_STATE_IDLE );
+        set_state( WPEFramework::Exchange::IMiracastPlayer::STATE_IDLE );
         MIRACASTLOG_TRACE("Waiting for Event .....");
         m_rtsp_msg_handler_thread->receive_message(&rtsp_message_data, sizeof(rtsp_message_data), THREAD_RECV_MSG_INDEFINITE_WAIT);
 
@@ -2018,8 +2011,8 @@ void MiracastRTSPMsg::RTSPMessageHandler_Thread(void *args)
         if (RTSP_SELF_ABORT == rtsp_message_data.state)
         {
             MIRACASTLOG_INFO("RTSP_SELF_ABORT ACTION Received");
-            rtsp_msg_hldr_running_state = false;
-            set_state(MIRACAST_PLAYER_STATE_STOPPED);
+            m_rtsp_msg_hldr_running_state = false;
+            set_state(WPEFramework::Exchange::IMiracastPlayer::STATE_STOPPED);
             continue;
         }
 
@@ -2047,21 +2040,21 @@ void MiracastRTSPMsg::RTSPMessageHandler_Thread(void *args)
             video_rect_st.width = rtsp_message_data.videorect.width;
             video_rect_st.height = rtsp_message_data.videorect.height;
 
-            set_state( MIRACAST_PLAYER_STATE_INITIATED , true );
+            set_state( WPEFramework::Exchange::IMiracastPlayer::STATE_INITIATED , true );
 
             if (MIRACAST_OK != initiate_TCP(rtsp_message_data.source_dev_ip))
             {
-                set_state( MIRACAST_PLAYER_STATE_STOPPED , true , MIRACAST_PLAYER_REASON_CODE_RTSP_ERROR );
+                set_state( WPEFramework::Exchange::IMiracastPlayer::STATE_STOPPED , true , WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_RTSP_ERROR );
                 continue;
             }
         }
         else
         {
-            set_state( MIRACAST_PLAYER_STATE_STOPPED , true , MIRACAST_PLAYER_REASON_CODE_INT_FAILURE );
+            set_state( WPEFramework::Exchange::IMiracastPlayer::STATE_STOPPED , true , WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_INT_FAILURE );
             MIRACASTLOG_ERROR("[%#04X] action received and not yet handled\n", rtsp_message_data.state);
             continue;
         }
-        set_state( MIRACAST_PLAYER_STATE_INPROGRESS , true );
+        set_state( WPEFramework::Exchange::IMiracastPlayer::STATE_INPROGRESS , true );
 
         set_wait_timeout(m_wfd_src_req_timeout);
 
@@ -2097,7 +2090,7 @@ void MiracastRTSPMsg::RTSPMessageHandler_Thread(void *args)
                     status_code = RTSP_MSG_TEARDOWN_REQUEST;
                     if ( RTSP_SELF_ABORT == rtsp_message_data.state )
                     {
-                        rtsp_msg_hldr_running_state = false;
+                        m_rtsp_msg_hldr_running_state = false;
                     }
                     rtsp_sink2src_request_msg_handling(RTSP_TEARDOWN_FROM_SINK2SRC);
                     break;
@@ -2122,45 +2115,45 @@ void MiracastRTSPMsg::RTSPMessageHandler_Thread(void *args)
         {
             if (RTSP_INVALID_MSG_RECEIVED == status_code)
             {
-                reason = MIRACAST_PLAYER_REASON_CODE_RTSP_ERROR;
+                reason = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_RTSP_ERROR;
                 MIRACASTLOG_ERROR("#### MCAST-TRIAGE-NOK INVALID RTSP MSG RECEIVED ####");
             }
             else if (RTSP_MSG_FAILURE == status_code)
             {
-                reason = MIRACAST_PLAYER_REASON_CODE_RTSP_ERROR;
+                reason = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_RTSP_ERROR;
                 MIRACASTLOG_ERROR("#### MCAST-TRIAGE-NOK RTSP SENT/RECV FAILED ####");
             }
             else if ( RTSP_MSG_TEARDOWN_REQUEST == status_code )
             {
-                if ( MIRACAST_PLAYER_APP_REQ_TO_STOP_ON_EXIT == rtsp_message_data.stop_reason_code )
+                if ( Exchange::IMiracastPlayer::STOP_REASON_APP_REQ_FOR_EXIT == rtsp_message_data.stop_reason_code )
                 {
-                    reason = MIRACAST_PLAYER_REASON_CODE_APP_REQ_TO_STOP;
+                    reason = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_APP_REQ_TO_STOP;
                     MIRACASTLOG_INFO("#### MCAST-TRIAGE-OK-APP-EXIT APP REQUESTED TO STOP ON EXIT ####");
                 }
-                else if ( MIRACAST_PLAYER_APP_REQ_TO_STOP_ON_NEW_CONNECTION == rtsp_message_data.stop_reason_code )
+                else if ( Exchange::IMiracastPlayer::MIRACAST_PLAYER_APP_REQ_TO_STOP_ON_NEW_CONNECTION == rtsp_message_data.stop_reason_code )
                 {
-                    reason = MIRACAST_PLAYER_REASON_CODE_NEW_SRC_DEV_CONNECT_REQ;
+                    reason = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_NEW_SRC_DEV_CONNECT_REQ;
                     MIRACASTLOG_INFO("#### MCAST-TRIAGE-OK-APP-STOP-ON-NEW-CONNECT APP REQUESTED TO STOP ON NEW CONNECTION ####");
                 }
             }
             else if ( RTSP_METHOD_NOT_SUPPORTED == status_code )
             {
-                reason = MIRACAST_PLAYER_REASON_CODE_RTSP_METHOD_NOT_SUPPORTED;
+                reason = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_RTSP_METHOD_NOT_SUPPORTED;
                 MIRACASTLOG_ERROR("#### MCAST-TRIAGE-NOK RTSP METHOD NOT SUPPORTED ####");
             }
             else
             {
-                reason = MIRACAST_PLAYER_REASON_CODE_RTSP_TIMEOUT;
+                reason = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_RTSP_TIMEOUT;
                 MIRACASTLOG_INFO("#### MCAST-TRIAGE-NOK RTSP RECV TIMEOUT ####");
             }
-            set_state(MIRACAST_PLAYER_STATE_STOPPED , true , reason );
+            set_state(WPEFramework::Exchange::IMiracastPlayer::STATE_STOPPED , true , reason );
         }
 
         RTSP_STATUS socket_state;
         struct timespec start_time, current_time;
         int elapsed_seconds = 0;
 
-        reason = MIRACAST_PLAYER_REASON_CODE_SRC_DEV_REQ_TO_STOP;
+        reason = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_SRC_DEV_REQ_TO_STOP;
 
         clock_gettime(CLOCK_REALTIME, &start_time);
 
@@ -2172,7 +2165,7 @@ void MiracastRTSPMsg::RTSPMessageHandler_Thread(void *args)
             if (elapsed_seconds > m_wfd_src_session_timeout)
             {
                 MIRACASTLOG_INFO("#### MCAST-TRIAGE-NOK RTSP M16 TIMEOUT[%d] ELAPSED[%d] ####",m_wfd_src_session_timeout,elapsed_seconds);
-                set_state(MIRACAST_PLAYER_STATE_STOPPED , true , reason );
+                set_state(WPEFramework::Exchange::IMiracastPlayer::STATE_STOPPED , true , reason );
                 break;
             }
 
@@ -2213,13 +2206,13 @@ void MiracastRTSPMsg::RTSPMessageHandler_Thread(void *args)
                     {
                         MIRACASTLOG_ERROR("#### MCAST-TRIAGE-NOK RTSP SENT/RECV FAILED ####");
                     }
-                    set_state(MIRACAST_PLAYER_STATE_STOPPED , true , reason );
+                    set_state(WPEFramework::Exchange::IMiracastPlayer::STATE_STOPPED , true , reason );
                     break;
                 }
             }
             else if (RTSP_MSG_FAILURE == socket_state)
             {
-                set_state(MIRACAST_PLAYER_STATE_STOPPED , true , reason );
+                set_state(WPEFramework::Exchange::IMiracastPlayer::STATE_STOPPED , true , reason );
                 MIRACASTLOG_ERROR("#### MCAST-TRIAGE-NOK RTSP SEND/RECV FAILED ####");
                 break;
             }
@@ -2244,19 +2237,19 @@ void MiracastRTSPMsg::RTSPMessageHandler_Thread(void *args)
                         if (RTSP_SELF_ABORT == rtsp_message_data.state)
                         {
                             MIRACASTLOG_INFO("[RTSP_SELF_ABORT] Received");
-                            rtsp_msg_hldr_running_state = false;
-                            set_state(MIRACAST_PLAYER_STATE_SELF_ABORT , true );
+                            m_rtsp_msg_hldr_running_state = false;
+                            set_state(WPEFramework::Exchange::IMiracastPlayer::STATE_STOPPED , true );
                         }
                         else
                         {
                             if ( RTSP_PLAY_FROM_SINK2SRC == rtsp_message_data.state )
                             {
-                                set_state(MIRACAST_PLAYER_STATE_PLAYING );
+                                set_state(WPEFramework::Exchange::IMiracastPlayer::STATE_PLAYING );
                                 MIRACASTLOG_INFO("[RTSP_PLAY] ACTION Received");
                             }
                             else if ( RTSP_PAUSE_FROM_SINK2SRC == rtsp_message_data.state )
                             {
-                                set_state(MIRACAST_PLAYER_STATE_PAUSED );
+                                set_state(WPEFramework::Exchange::IMiracastPlayer::STATE_PAUSED );
                                 MIRACASTLOG_INFO("[RTSP_PAUSE] ACTION Received");
                             }
                             else if ( RTSP_TEARDOWN_FROM_SINK2SRC == rtsp_message_data.state )
@@ -2267,19 +2260,19 @@ void MiracastRTSPMsg::RTSPMessageHandler_Thread(void *args)
                         if ((RTSP_MSG_FAILURE == rtsp_sink2src_request_msg_handling(rtsp_message_data.state)) ||
                             (RTSP_TEARDOWN_FROM_SINK2SRC == rtsp_message_data.state))
                         {
-                            reason = MIRACAST_PLAYER_REASON_CODE_SUCCESS;
+                            reason = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_SUCCESS;
                             start_monitor_keep_alive_msg = false;
 
                             if (RTSP_TEARDOWN_FROM_SINK2SRC == rtsp_message_data.state)
                             {
-                                if ( MIRACAST_PLAYER_APP_REQ_TO_STOP_ON_EXIT == rtsp_message_data.stop_reason_code )
+                                if ( WPEFramework::Exchange::IMiracastPlayer::STOP_REASON_APP_REQ_FOR_EXIT == rtsp_message_data.stop_reason_code )
                                 {
-                                    reason = MIRACAST_PLAYER_REASON_CODE_APP_REQ_TO_STOP;
+                                    reason = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_APP_REQ_TO_STOP;
                                     MIRACASTLOG_INFO("#### MCAST-TRIAGE-OK-APP-EXIT APP REQUESTED TO STOP ON EXIT ####");
                                 }
-                                else if ( MIRACAST_PLAYER_APP_REQ_TO_STOP_ON_NEW_CONNECTION == rtsp_message_data.stop_reason_code )
+                                else if ( WPEFramework::Exchange::IMiracastPlayer::STOP_REASON_APP_REQ_FOR_NEW_CONNECTION == rtsp_message_data.stop_reason_code )
                                 {
-                                    reason = MIRACAST_PLAYER_REASON_CODE_NEW_SRC_DEV_CONNECT_REQ;
+                                    reason = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_NEW_SRC_DEV_CONNECT_REQ;
                                     MIRACASTLOG_INFO("#### MCAST-TRIAGE-OK-APP-STOP-ON-NEW-CONNECT APP REQUESTED TO STOP ON NEW CONNECTION ####");
                                 }
                                 else
@@ -2291,7 +2284,7 @@ void MiracastRTSPMsg::RTSPMessageHandler_Thread(void *args)
                             {
                                 MIRACASTLOG_ERROR("!!! INVALID ACTION RECEIVED [%#04X] !!!",rtsp_message_data.state);
                             }
-                            set_state(MIRACAST_PLAYER_STATE_STOPPED , true , reason );
+                            set_state(WPEFramework::Exchange::IMiracastPlayer::STATE_STOPPED , true , reason );
                         }
                     }
                     break;
@@ -2313,8 +2306,8 @@ void MiracastRTSPMsg::RTSPMessageHandler_Thread(void *args)
                     break;
                     case RTSP_NOTIFY_GSTPLAYER_STATE:
                     {
-                        eMIRA_PLAYER_STATES state = MIRACAST_PLAYER_STATE_IDLE;
-                        eM_PLAYER_REASON_CODE reason_code = MIRACAST_PLAYER_REASON_CODE_SUCCESS;
+                        eMIRA_PLAYER_STATES state = WPEFramework::Exchange::IMiracastPlayer::STATE_IDLE;
+                        eM_PLAYER_REASON_CODE reason_code = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_SUCCESS;
                         bool notifyGstPlayer = true;
                         MIRACASTLOG_INFO("!!! RTSP_NOTIFY_GSTPLAYER_STATE[%#08X] !!!",rtsp_message_data.gst_player_state);
 
@@ -2322,7 +2315,7 @@ void MiracastRTSPMsg::RTSPMessageHandler_Thread(void *args)
                         {
                             case MIRACAST_GSTPLAYER_STATE_FIRST_VIDEO_FRAME_RECEIVED:
                             {
-                                state = MIRACAST_PLAYER_STATE_PLAYING;
+                                state = WPEFramework::Exchange::IMiracastPlayer::STATE_PLAYING;
                                 MIRACASTLOG_INFO("#### MCAST-TRIAGE-OK-GST-PLAYING updating state as PLAYING ####");
                                 std::string opt_flag_buffer = MiracastCommon::parse_opt_flag("/opt/miracast_skip_firstframe_callback");
                                 if (!opt_flag_buffer.empty())
@@ -2333,7 +2326,7 @@ void MiracastRTSPMsg::RTSPMessageHandler_Thread(void *args)
                             break;
                             case MIRACAST_GSTPLAYER_STATE_STOPPED:
                             {
-                                state = MIRACAST_PLAYER_STATE_STOPPED;
+                                state = WPEFramework::Exchange::IMiracastPlayer::STATE_STOPPED;
                                 reason_code = rtsp_message_data.state_reason_code;
                                 rtsp_sink2src_request_msg_handling(RTSP_TEARDOWN_FROM_SINK2SRC);
                                 start_monitor_keep_alive_msg = false;
@@ -2384,120 +2377,3 @@ void RTSPMsgHandlerCallback(void *args)
     }
     MIRACASTLOG_TRACE("Exiting...");
 }
-
-#ifdef ENABLE_MIRACAST_PLAYER_TEST_NOTIFIER
-MiracastError MiracastRTSPMsg::create_TestNotifier(void)
-{
-    MiracastError error_code = MIRACAST_OK;
-
-    m_test_notifier_thread = nullptr;
-    m_test_notifier_thread = new MiracastThread( MIRACAST_PLAYER_TEST_NOTIFIER_THREAD_NAME,
-                                                MIRACAST_PLAYER_TEST_NOTIFIER_THREAD_STACK,
-                                                MIRACAST_PLAYER_TEST_NOTIFIER_MSG_COUNT,
-                                                MIRACAST_PLAYER_TEST_NOTIFIER_MSGQ_SIZE,
-                                                reinterpret_cast<void (*)(void *)>(&MiracastPlayerTestNotifierThreadCallback),
-                                                this);
-    if ((nullptr == m_test_notifier_thread)||
-        ( MIRACAST_OK != m_test_notifier_thread->start()))
-    {
-        if ( nullptr != m_test_notifier_thread )
-        {
-            delete m_test_notifier_thread;
-            m_test_notifier_thread = nullptr;
-        }
-        error_code = MIRACAST_FAIL;
-    }
-    MIRACASTLOG_TRACE("Exiting...");
-    return error_code;
-}
-
-void MiracastRTSPMsg::destroy_TestNotifier()
-{
-    MIRACAST_PLAYER_TEST_NOTIFIER_MSGQ_ST stMsgQ = {0};
-
-    MIRACASTLOG_TRACE("Entering...");
-    stMsgQ.state = MIRACAST_PLAYER_TEST_NOTIFIER_SHUTDOWN;
-    m_rtsp_msg_obj->send_msgto_test_notifier_thread(stMsgQ);
-    if (nullptr != m_test_notifier_thread)
-    {
-        delete m_test_notifier_thread;
-        m_test_notifier_thread = nullptr;
-    }
-    MIRACASTLOG_TRACE("Exiting...");
-}
-
-void MiracastRTSPMsg::TestNotifier_Thread(void *args)
-{
-    MIRACAST_PLAYER_TEST_NOTIFIER_MSGQ_ST stMsgQ = {0};
-    std::string device_name = "",
-                mac_address = "",
-                source_dev_ip = "",
-                sink_dev_ip = "";
-
-    MIRACASTLOG_TRACE("Entering...");
-
-    while ( nullptr != m_test_notifier_thread )
-    {
-        memset( &stMsgQ , 0x00 , MIRACAST_PLAYER_TEST_NOTIFIER_MSGQ_SIZE );
-
-        MIRACASTLOG_TRACE("!!! WAITING FOR NEW ACTION !!!");
-
-        m_test_notifier_thread->receive_message(&stMsgQ, MIRACAST_PLAYER_TEST_NOTIFIER_MSGQ_SIZE , THREAD_RECV_MSG_INDEFINITE_WAIT);
-
-        MIRACASTLOG_TRACE("!!! Received Action[%#08X] !!!", stMsgQ.state);
-
-        device_name = stMsgQ.src_dev_name;
-        mac_address = stMsgQ.src_dev_mac_addr;
-
-        switch (stMsgQ.state)
-        {
-            case MIRACAST_PLAYER_TEST_NOTIFIER_STATE_CHANGED:
-            {
-                MIRACASTLOG_TRACE("[MIRACAST_PLAYER_TEST_NOTIFIER_STATE_CHANGED]...");
-                m_player_notify_handler->onStateChange( mac_address ,
-                                                        device_name ,
-                                                        stMsgQ.player_state,
-                                                        stMsgQ.reason_code );
-            }
-            break;
-            case MIRACAST_PLAYER_TEST_NOTIFIER_SHUTDOWN:
-            {
-                MIRACASTLOG_TRACE("[MIRACAST_PLAYER_TEST_NOTIFIER_SHUTDOWN]...");
-            }
-            break;
-            default:
-            {
-                MIRACASTLOG_ERROR("[UNKNOWN STATE]...");
-            }
-            break;
-        }
-
-        if (MIRACAST_PLAYER_TEST_NOTIFIER_SHUTDOWN == stMsgQ.state)
-        {
-            break;
-        }
-    }
-    MIRACASTLOG_TRACE("Exiting...");
-}
-
-void MiracastPlayerTestNotifierThreadCallback(void *args)
-{
-    MiracastRTSPMsg *miracast_rtsp_obj = (MiracastRTSPMsg *)args;
-    MIRACASTLOG_TRACE("Entering...");
-    if ( nullptr != miracast_rtsp_obj )
-    {
-        miracast_rtsp_obj->TestNotifier_Thread(nullptr);
-    }
-    MIRACASTLOG_TRACE("Exiting...");
-}
-
-void MiracastRTSPMsg::send_msgto_test_notifier_thread(MIRACAST_PLAYER_TEST_NOTIFIER_MSGQ_ST stMsgQ)
-{
-    MIRACASTLOG_TRACE("Entering...");
-    if (nullptr != m_test_notifier_thread)
-    {
-        m_test_notifier_thread->send_message(&stMsgQ, MIRACAST_PLAYER_TEST_NOTIFIER_MSGQ_SIZE);
-    }
-    MIRACASTLOG_TRACE("Exiting...");
-}
-#endif /* ENABLE_MIRACAST_PLAYER_TEST_NOTIFIER */

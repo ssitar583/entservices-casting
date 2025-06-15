@@ -20,7 +20,11 @@
 #pragma once
 
 #include "Module.h"
+
+#include <boost/variant.hpp>
+
 #include <interfaces/Ids.h>
+#include <interfaces/IMiracastPlayer.h>
 #include <interfaces/IMiracastService.h>
 #include <interfaces/IPowerManager.h>
 
@@ -38,6 +42,13 @@
 
 using namespace WPEFramework;
 using PowerState = WPEFramework::Exchange::IPowerManager::PowerState;
+using MiracastLogLevel = WPEFramework::Exchange::IMiracastPlayer::LogLevel;
+using MiracastPlayerState = WPEFramework::Exchange::IMiracastPlayer::State;
+using MiracastPlayerErrorCode = WPEFramework::Exchange::IMiracastPlayer::ErrorCode;
+using MiracastServiceErrorCode = WPEFramework::Exchange::IMiracastService::ErrorCode;
+using ParamsType = boost::variant<std::tuple<std::string, std::string, WPEFramework::Exchange::IMiracastService::ErrorCode>,
+	std::tuple<std::string, std::string, std::string, std::string>,
+	std::pair<std::string, std::string>>;
 
 typedef enum DeviceWiFiStates
 {
@@ -88,7 +99,7 @@ namespace WPEFramework
 				class EXTERNAL Job : public Core::IDispatch
 				{
 					protected:
-						Job(MiracastServiceImplementation *MiracastServiceImplementation, Event event, JsonObject &params)
+						Job(MiracastServiceImplementation *MiracastServiceImplementation, Event event, ParamsType &params)
 							: _miracastServiceImplementation(MiracastServiceImplementation), _event(event), _params(params)
 						{
 							if (_miracastServiceImplementation != nullptr)
@@ -110,7 +121,7 @@ namespace WPEFramework
 						}
 
 					public:
-						static Core::ProxyType<Core::IDispatch> Create(MiracastServiceImplementation *miracastServiceImplementation, Event event, JsonObject params)
+						static Core::ProxyType<Core::IDispatch> Create(MiracastServiceImplementation *miracastServiceImplementation, Event event, ParamsType params)
 						{
 		#ifndef USE_THUNDER_R4
 							return (Core::proxy_cast<Core::IDispatch>(Core::ProxyType<Job>::Create(miracastServiceImplementation, event, params)));
@@ -127,7 +138,7 @@ namespace WPEFramework
 					private:
 						MiracastServiceImplementation *_miracastServiceImplementation;
 						const Event _event;
-						JsonObject _params;
+						ParamsType _params;
 				}; // class Job
 
 			public:
@@ -135,12 +146,13 @@ namespace WPEFramework
 				Core::hresult Deinitialize(PluginHost::IShell* service) override;
 				Core::hresult Register(Exchange::IMiracastService::INotification *notification) override;
 				Core::hresult Unregister(Exchange::IMiracastService::INotification *notification) override;
+
 				Core::hresult SetEnabled(const bool &enabled , Result &returnPayload ) override;
 				Core::hresult GetEnabled(bool &enabled , bool &success ) override;
 				Core::hresult AcceptClientConnection(const string &requestStatus , Result &returnPayload ) override;
-				Core::hresult StopClientConnection(const string &clienMac , const string &clienName, Result &returnPayload ) override;
-				Core::hresult UpdatePlayerState(const string &clientMac , const string &playerState , const PlayerReasonCode &reasonCode , Result &returnPayload ) override;
-				Core::hresult SetLogging(const string &logLevel , const SeparateLogger &separateLogger , Result &returnPayload ) override;
+				Core::hresult StopClientConnection(const string &clientMac , const string &clientName, Result &returnPayload ) override;
+				Core::hresult UpdatePlayerState(const string &clientMac , const MiracastPlayerState &playerState , const PlayerReasonCode &reasonCode , Result &returnPayload ) override;
+				Core::hresult SetLogging(const MiracastLogLevel &logLevel , const SeparateLogger &separateLogger , Result &returnPayload) override;
 				Core::hresult SetP2PBackendDiscovery(const bool &enabled , Result &returnPayload ) override;
 
 			private:
@@ -196,8 +208,8 @@ namespace WPEFramework
 				PluginHost::IShell *mShell;
 				std::list<Exchange::IMiracastService::INotification *> _miracastServiceNotification; // List of registered notifications
 				PluginHost::IShell *m_CurrentService;
-				void dispatchEvent(Event, const JsonObject &params);
-				void Dispatch(Event event, const JsonObject &params);
+				void dispatchEvent(Event, const ParamsType &params);
+				void Dispatch(Event event, const ParamsType &params);
 
 				eMIRA_SERVICE_STATES getCurrentServiceState(void);
 				void changeServiceState(eMIRA_SERVICE_STATES eService_state);

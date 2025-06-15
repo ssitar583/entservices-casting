@@ -32,6 +32,7 @@
 #include <vector>
 
 using namespace WPEFramework;
+using ParamsType = boost::variant<std::tuple<std::string, std::string, WPEFramework::Exchange::IMiracastPlayer::State,WPEFramework::Exchange::IMiracastPlayer::ErrorCode>>;
 
 namespace WPEFramework
 {
@@ -66,7 +67,7 @@ namespace WPEFramework
 				class EXTERNAL Job : public Core::IDispatch
 				{
 					protected:
-						Job(MiracastPlayerImplementation *MiracastPlayerImplementation, Event event, JsonObject &params)
+						Job(MiracastPlayerImplementation *MiracastPlayerImplementation, Event event, ParamsType &params)
 							: _miracastPlayerImplementation(MiracastPlayerImplementation), _event(event), _params(params)
 						{
 							if (_miracastPlayerImplementation != nullptr)
@@ -88,7 +89,7 @@ namespace WPEFramework
 						}
 
 					public:
-						static Core::ProxyType<Core::IDispatch> Create(MiracastPlayerImplementation *miracastPlayerImplementation, Event event, JsonObject params)
+						static Core::ProxyType<Core::IDispatch> Create(MiracastPlayerImplementation *miracastPlayerImplementation, Event event, ParamsType params)
 						{
 		#ifndef USE_THUNDER_R4
 							return (Core::proxy_cast<Core::IDispatch>(Core::ProxyType<Job>::Create(miracastPlayerImplementation, event, params)));
@@ -105,7 +106,7 @@ namespace WPEFramework
 					private:
 						MiracastPlayerImplementation *_miracastPlayerImplementation;
 						const Event _event;
-						JsonObject _params;
+						ParamsType _params;
 				}; // class Job
 
 			public:
@@ -114,11 +115,11 @@ namespace WPEFramework
 				Core::hresult Register(Exchange::IMiracastPlayer::INotification *notification) override;
 				Core::hresult Unregister(Exchange::IMiracastPlayer::INotification *notification) override;
 				Core::hresult PlayRequest(const DeviceParameters &deviceParam , const VideoRectangle &videoRect , Result &returnPayload ) override;
-				Core::hresult StopRequest(const string &clientMac , const string &clientName , const PlayerStopReasonCode &reasonCode , Result &returnPayload ) override;
+				Core::hresult StopRequest(const string &clientMac , const string &clientName , const MiracastPlayerStopReasonCode &reasonCode , Result &returnPayload ) override;
 				Core::hresult SetVideoRectangle(const int32_t &startX , const int32_t &startY , const int32_t &width , const int32_t &height , Result &returnPayload ) override;
 				Core::hresult SetWesterosEnvironment( IWesterosEnvArgumentsIterator * const westerosArgs , Result &returnPayload ) override;
 				Core::hresult UnsetWesterosEnvironment(Result &returnPayload ) override;
-				Core::hresult SetLogging(const std::string &logLevel, const SeparateLogger &separateLogger, Result &returnPayload) override;
+				Core::hresult SetLogging(const MiracastLogLevel &logLevel , const SeparateLogger &separateLogger , Result &returnPayload) override;
 
 			private:
 				MiracastGstPlayer *m_GstPlayer;
@@ -128,8 +129,8 @@ namespace WPEFramework
 				mutable Core::CriticalSection _adminLock;
 				std::list<Exchange::IMiracastPlayer::INotification *> _miracastPlayerNotification; // List of registered notifications
 				PluginHost::IShell *m_CurrentService;
-				void dispatchEvent(Event, const JsonObject &params);
-				void Dispatch(Event event, const JsonObject &params);
+				void dispatchEvent(Event, const ParamsType &params);
+				void Dispatch(Event event, const ParamsType &params);
 
 				void unsetWesterosEnvironmentInternal(void);
 				std::string stateDescription(eMIRA_PLAYER_STATES e);

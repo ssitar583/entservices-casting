@@ -108,7 +108,7 @@ private:
     bool createPipeline();
     bool updateVideoSinkRectangle(void);
     static void onFirstVideoFrameCallback(GstElement* object, guint arg0, gpointer arg1,gpointer userdata);
-    void notifyPlaybackState(eMIRA_GSTPLAYER_STATES gst_player_state, eM_PLAYER_REASON_CODE state_reason_code = MIRACAST_PLAYER_REASON_CODE_SUCCESS );
+    void notifyPlaybackState(eMIRA_GSTPLAYER_STATES gst_player_state, MiracastPlayerErrorCode state_reason_code = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_SUCCESS );
     bool changePipelineState(GstElement* pipeline, GstState state) const;
 
     static void *playbackThread(void *ctx);

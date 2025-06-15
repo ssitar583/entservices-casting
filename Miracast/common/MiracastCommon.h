@@ -163,10 +163,7 @@ typedef enum miracast_player_states_e
     MIRACAST_PLAYER_STATE_INPROGRESS,
     MIRACAST_PLAYER_STATE_PLAYING,
     MIRACAST_PLAYER_STATE_STOPPED,
-    MIRACAST_PLAYER_STATE_PAUSED,
-    // Below are Internal Player States. No need to notify these to subscribers
-    MIRACAST_PLAYER_STATE_M1_M7_XCHANGE_DONE,
-    MIRACAST_PLAYER_STATE_SELF_ABORT,
+    MIRACAST_PLAYER_STATE_PAUSED
 } eMIRA_PLAYER_STATES;
 
 typedef enum miracast_gstplayer_states_e
@@ -189,6 +186,7 @@ typedef enum miracast_service_error_code_e
     MIRACAST_SERVICE_ERR_CODE_MAX_ERROR
 } eMIRACAST_SERVICE_ERR_CODE;
 
+/*
 typedef enum miracast_player_reason_code_e
 {
     MIRACAST_PLAYER_REASON_CODE_SUCCESS = 200,
@@ -209,6 +207,7 @@ typedef enum miracast_player_stop_reason_code_e
     MIRACAST_PLAYER_APP_REQ_TO_STOP_ON_NEW_CONNECTION
 }
 eM_PLAYER_STOP_REASON_CODE;
+*/
 
 typedef struct d_info
 {
@@ -241,81 +240,10 @@ typedef struct controller_msgq_st
     eMSG_TYPE msg_type;
 } CONTROLLER_MSGQ_STRUCT;
 
-typedef struct rtsp_hldr_msgq_st
-{
-    char source_dev_ip[24];
-    char source_dev_mac[24];
-    char sink_dev_ip[24];
-    char source_dev_name[40];
-    VIDEO_RECT_STRUCT videorect;
-    eCONTROLLER_FW_STATES state;
-    eM_PLAYER_STOP_REASON_CODE stop_reason_code;
-    eM_PLAYER_REASON_CODE state_reason_code;
-    eMIRA_GSTPLAYER_STATES  gst_player_state;
-} RTSP_HLDR_MSGQ_STRUCT;
-
 #define CONTROLLER_THREAD_NAME ("CONTROL_MSG_HANDLER")
 #define CONTROLLER_THREAD_STACK (256 * 1024)
 #define CONTROLLER_MSGQ_COUNT (5)
 #define CONTROLLER_MSGQ_SIZE (sizeof(CONTROLLER_MSGQ_STRUCT))
-
-#define RTSP_HANDLER_THREAD_NAME ("RTSP_MSG_HLDR")
-#define RTSP_HANDLER_THREAD_STACK ( 512 * 1024)
-#define RTSP_HANDLER_MSG_COUNT (2)
-#define RTSP_HANDLER_MSGQ_SIZE (sizeof(RTSP_HLDR_MSGQ_STRUCT))
-
-#ifdef ENABLE_MIRACAST_SERVICE_TEST_NOTIFIER
-typedef enum miracaset_service_test_notifier_states_e
-{
-    MIRACAST_SERVICE_TEST_NOTIFIER_INVALID_STATE = 0x00,
-    MIRACAST_SERVICE_TEST_NOTIFIER_CLIENT_CONNECTION_REQUESTED,
-    MIRACAST_SERVICE_TEST_NOTIFIER_LAUNCH_REQUESTED,
-    MIRACAST_SERVICE_TEST_NOTIFIER_CLIENT_CONNECTION_ERROR,
-    MIRACAST_SERVICE_TEST_NOTIFIER_SHUTDOWN
-}MIRACAST_SERVICE_TEST_NOTIFIER_STATES;
-
-typedef struct miracast_service_test_notifier_msgq_st
-{
-    char   src_dev_name[128];
-    char   src_dev_mac_addr[32];
-    char   src_dev_ip_addr[32];
-    char   sink_ip_addr[32];
-    MIRACAST_SERVICE_TEST_NOTIFIER_STATES   state;
-    eMIRACAST_SERVICE_ERR_CODE error_code;
-}
-MIRACAST_SERVICE_TEST_NOTIFIER_MSGQ_ST;
-
-#define MIRACAST_SERVICE_TEST_NOTIFIER_THREAD_NAME ("MIRACAST_SERVICE_TEST_NOTIFIER")
-#define MIRACAST_SERVICE_TEST_NOTIFIER_THREAD_STACK (100 * 1024)
-#define MIRACAST_SERVICE_TEST_NOTIFIER_MSG_COUNT (1)
-#define MIRACAST_SERVICE_TEST_NOTIFIER_MSGQ_SIZE (sizeof(MIRACAST_SERVICE_TEST_NOTIFIER_MSGQ_ST))
-
-#endif/*ENABLE_MIRACAST_SERVICE_TEST_NOTIFIER*/
-
-#ifdef ENABLE_MIRACAST_PLAYER_TEST_NOTIFIER
-typedef enum miracaset_player_test_notifier_states_e
-{
-    MIRACAST_PLAYER_TEST_NOTIFIER_INVALID_STATE = 0x00,
-    MIRACAST_PLAYER_TEST_NOTIFIER_STATE_CHANGED,
-    MIRACAST_PLAYER_TEST_NOTIFIER_SHUTDOWN
-}MIRACAST_PLAYER_TEST_NOTIFIER_STATES;
-
-typedef struct miracast_player_test_notifier_msgq_st
-{
-    char   src_dev_name[128];
-    char   src_dev_mac_addr[32];
-    MIRACAST_PLAYER_TEST_NOTIFIER_STATES    state;
-    eMIRA_PLAYER_STATES player_state;
-    eM_PLAYER_REASON_CODE reason_code;
-}
-MIRACAST_PLAYER_TEST_NOTIFIER_MSGQ_ST;
-
-#define MIRACAST_PLAYER_TEST_NOTIFIER_THREAD_NAME ("MIRACAST_PLAYER_TEST_NOTIFIER")
-#define MIRACAST_PLAYER_TEST_NOTIFIER_THREAD_STACK (100 * 1024)
-#define MIRACAST_PLAYER_TEST_NOTIFIER_MSG_COUNT (1)
-#define MIRACAST_PLAYER_TEST_NOTIFIER_MSGQ_SIZE (sizeof(MIRACAST_PLAYER_TEST_NOTIFIER_MSGQ_ST))
-
-#endif /* ENABLE_MIRACAST_PLAYER_TEST_NOTIFIER */
 
 /**
  * Abstract class for MiracastService Notification.
@@ -327,15 +255,6 @@ public:
     virtual void onMiracastServiceClientConnectionError(string client_mac, string client_name , eMIRACAST_SERVICE_ERR_CODE error_code ) = 0;
     virtual void onMiracastServiceLaunchRequest(string src_dev_ip, string src_dev_mac, string src_dev_name, string sink_dev_ip, bool is_connect_req_reported ) = 0;
     virtual void onStateChange(eMIRA_SERVICE_STATES state ) = 0;
-};
-
-/**
- * Abstract class for MiracastPlayer Notification.
- */
-class MiracastPlayerNotifier
-{
-public:
-    virtual void onStateChange(const std::string& client_mac, const std::string& client_name, eMIRA_PLAYER_STATES player_state, eM_PLAYER_REASON_CODE reason_code) = 0;
 };
 
 class MiracastThread

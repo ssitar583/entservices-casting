@@ -25,6 +25,13 @@
 #include <arpa/inet.h>
 #include <sys/epoll.h>
 #include <fcntl.h>
+#include <interfaces/IMiracastPlayer.h>
+
+using namespace WPEFramework;
+using MiracastLogLevel = WPEFramework::Exchange::IMiracastPlayer::LogLevel;
+using MiracastPlayerState = WPEFramework::Exchange::IMiracastPlayer::State;
+using MiracastPlayerErrorCode = WPEFramework::Exchange::IMiracastPlayer::ErrorCode;
+using MiracastPlayerStopReasonCode = WPEFramework::Exchange::IMiracastPlayer::StopReasonCode;
 
 #define MAX_EPOLL_EVENTS 64
 #define RTSP_REQUEST_RECV_TIMEOUT   ( 6 * ONE_SECOND_IN_MILLISEC )
@@ -45,7 +52,27 @@ typedef enum rtsp_status_e
     RTSP_KEEP_ALIVE_MSG_RECEIVED,
     RTSP_TIMEDOUT,
     RTSP_METHOD_NOT_SUPPORTED
-} RTSP_STATUS;
+}
+RTSP_STATUS;
+
+typedef struct rtsp_hldr_msgq_st
+{
+    char source_dev_ip[24];
+    char source_dev_mac[24];
+    char sink_dev_ip[24];
+    char source_dev_name[40];
+    VIDEO_RECT_STRUCT videorect;
+    eCONTROLLER_FW_STATES state;
+    //eM_PLAYER_STOP_REASON_CODE stop_reason_code;
+	MiracastPlayerStopReasonCode stop_reason_code;
+    eM_PLAYER_REASON_CODE state_reason_code;
+    eMIRA_GSTPLAYER_STATES  gst_player_state;
+} RTSP_HLDR_MSGQ_STRUCT;
+
+#define RTSP_HANDLER_THREAD_NAME ("RTSP_MSG_HLDR")
+#define RTSP_HANDLER_THREAD_STACK ( 512 * 1024)
+#define RTSP_HANDLER_MSG_COUNT (2)
+#define RTSP_HANDLER_MSGQ_SIZE (sizeof(RTSP_HLDR_MSGQ_STRUCT))
 
 /* Default values*/
 #define RTSP_DFLT_CONTENT_PROTECTION "none"
@@ -387,6 +414,15 @@ typedef struct rtsp_wfd_audio_format_st
 }
 RTSP_WFD_AUDIO_FMT_STRUCT;
 
+/**
+ * Abstract class for MiracastPlayer Notification.
+ */
+class MiracastPlayerNotifier
+{
+public:
+    virtual void onStateChange(const std::string& client_mac, const std::string& client_name, MiracastPlayerState player_state, MiracastPlayerErrorCode reason_code) = 0;
+};
+
 class MiracastRTSPMsg
 {
 public:
@@ -421,14 +457,6 @@ public:
     MiracastError stop_streaming( eMIRA_PLAYER_STATES state );
     void RTSPMessageHandler_Thread(void *args);
 
-#ifdef ENABLE_MIRACAST_PLAYER_TEST_NOTIFIER
-    MiracastError create_TestNotifier(void);
-    void destroy_TestNotifier();
-    void TestNotifier_Thread(void *args);
-    void send_msgto_test_notifier_thread(MIRACAST_PLAYER_TEST_NOTIFIER_MSGQ_ST stMsgQ);
-    MiracastThread  *m_test_notifier_thread;
-#endif /* ENABLE_MIRACAST_PLAYER_TEST_NOTIFIER */
-
     static std::string format_string(const char *fmt, const std::vector<const char *> &args)
     {
         std::string result = fmt;
@@ -462,6 +490,7 @@ private:
     eMIRA_PLAYER_STATES m_current_state;
 
     bool m_streaming_started;
+	bool m_rtsp_msg_hldr_running_state;
 
     std::string m_connected_mac_addr;
     std::string m_connected_device_name;
@@ -499,7 +528,7 @@ private:
     MiracastThread *m_controller_thread;
     MiracastPlayerNotifier *m_player_notify_handler;
 
-    void set_state( eMIRA_PLAYER_STATES state , bool send_notification = false , eM_PLAYER_REASON_CODE reason_code = MIRACAST_PLAYER_REASON_CODE_SUCCESS );
+    void set_state( MiracastPlayerState state , bool send_notification = false , MiracastPlayerErrorCode reason_code = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_SUCCESS );
     void store_srcsink_info( std::string client_name, std::string client_mac, std::string src_dev_ip, std::string sink_ip);
 
     MiracastError create_RTSPThread(void);
