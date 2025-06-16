@@ -792,7 +792,7 @@ bool MiracastRTSPMsg::IsValidSequenceNumber(std::string& received_seq_num)
     return ret;
 }
 
-void MiracastRTSPMsg::set_state( MiracastPlayerState state , bool send_notification , MiracastPlayerErrorCode reason_code )
+void MiracastRTSPMsg::set_state( MiracastPlayerState state , bool send_notification , MiracastPlayerReasonCode reason_code )
 {
     MIRACASTLOG_INFO("Entering [%d]notify[%u]reason[%u]...",state,send_notification,reason_code);
     m_current_state = state;
@@ -817,7 +817,7 @@ void MiracastRTSPMsg::set_state( MiracastPlayerState state , bool send_notificat
     MIRACASTLOG_INFO("Exiting...");
 }
 
-eMIRA_PLAYER_STATES MiracastRTSPMsg::get_state(void)
+MiracastPlayerState MiracastRTSPMsg::get_state(void)
 {
     return m_current_state;
 }
@@ -1947,7 +1947,7 @@ MiracastError MiracastRTSPMsg::start_streaming( VIDEO_RECT_STRUCT video_rect )
     return MIRACAST_OK;
 }
 
-MiracastError MiracastRTSPMsg::stop_streaming( eMIRA_PLAYER_STATES state )
+MiracastError MiracastRTSPMsg::stop_streaming( MiracastPlayerState state )
 {
     MIRACASTLOG_TRACE("Entering...");
 
@@ -1990,7 +1990,7 @@ void MiracastRTSPMsg::RTSPMessageHandler_Thread(void *args)
     RTSP_HLDR_MSGQ_STRUCT rtsp_message_data = {};
     VIDEO_RECT_STRUCT     video_rect_st = {0};
     RTSP_STATUS status_code = RTSP_TIMEDOUT;
-    eM_PLAYER_REASON_CODE reason = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_RTSP_ERROR;
+    MiracastPlayerReasonCode reason = WPEFramework::Exchange::IMiracastPlayer::REASON_CODE_RTSP_ERROR;
     std::string rtsp_msg_buffer;
     std::string client_mac = "",
                 client_name = "",
@@ -2044,13 +2044,13 @@ void MiracastRTSPMsg::RTSPMessageHandler_Thread(void *args)
 
             if (MIRACAST_OK != initiate_TCP(rtsp_message_data.source_dev_ip))
             {
-                set_state( WPEFramework::Exchange::IMiracastPlayer::STATE_STOPPED , true , WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_RTSP_ERROR );
+                set_state( WPEFramework::Exchange::IMiracastPlayer::STATE_STOPPED , true , WPEFramework::Exchange::IMiracastPlayer::REASON_CODE_RTSP_ERROR );
                 continue;
             }
         }
         else
         {
-            set_state( WPEFramework::Exchange::IMiracastPlayer::STATE_STOPPED , true , WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_INT_FAILURE );
+            set_state( WPEFramework::Exchange::IMiracastPlayer::STATE_STOPPED , true , WPEFramework::Exchange::IMiracastPlayer::REASON_CODE_INT_FAILURE );
             MIRACASTLOG_ERROR("[%#04X] action received and not yet handled\n", rtsp_message_data.state);
             continue;
         }
@@ -2115,35 +2115,35 @@ void MiracastRTSPMsg::RTSPMessageHandler_Thread(void *args)
         {
             if (RTSP_INVALID_MSG_RECEIVED == status_code)
             {
-                reason = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_RTSP_ERROR;
+                reason = WPEFramework::Exchange::IMiracastPlayer::REASON_CODE_RTSP_ERROR;
                 MIRACASTLOG_ERROR("#### MCAST-TRIAGE-NOK INVALID RTSP MSG RECEIVED ####");
             }
             else if (RTSP_MSG_FAILURE == status_code)
             {
-                reason = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_RTSP_ERROR;
+                reason = WPEFramework::Exchange::IMiracastPlayer::REASON_CODE_RTSP_ERROR;
                 MIRACASTLOG_ERROR("#### MCAST-TRIAGE-NOK RTSP SENT/RECV FAILED ####");
             }
             else if ( RTSP_MSG_TEARDOWN_REQUEST == status_code )
             {
                 if ( Exchange::IMiracastPlayer::STOP_REASON_APP_REQ_FOR_EXIT == rtsp_message_data.stop_reason_code )
                 {
-                    reason = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_APP_REQ_TO_STOP;
+                    reason = WPEFramework::Exchange::IMiracastPlayer::REASON_CODE_APP_REQ_TO_STOP;
                     MIRACASTLOG_INFO("#### MCAST-TRIAGE-OK-APP-EXIT APP REQUESTED TO STOP ON EXIT ####");
                 }
-                else if ( Exchange::IMiracastPlayer::MIRACAST_PLAYER_APP_REQ_TO_STOP_ON_NEW_CONNECTION == rtsp_message_data.stop_reason_code )
+                else if ( Exchange::IMiracastPlayer::STOP_REASON_APP_REQ_FOR_NEW_CONNECTION == rtsp_message_data.stop_reason_code )
                 {
-                    reason = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_NEW_SRC_DEV_CONNECT_REQ;
+                    reason = WPEFramework::Exchange::IMiracastPlayer::REASON_CODE_NEW_SRC_DEV_CONNECT_REQ;
                     MIRACASTLOG_INFO("#### MCAST-TRIAGE-OK-APP-STOP-ON-NEW-CONNECT APP REQUESTED TO STOP ON NEW CONNECTION ####");
                 }
             }
             else if ( RTSP_METHOD_NOT_SUPPORTED == status_code )
             {
-                reason = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_RTSP_METHOD_NOT_SUPPORTED;
+                reason = WPEFramework::Exchange::IMiracastPlayer::REASON_CODE_RTSP_METHOD_NOT_SUPPORTED;
                 MIRACASTLOG_ERROR("#### MCAST-TRIAGE-NOK RTSP METHOD NOT SUPPORTED ####");
             }
             else
             {
-                reason = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_RTSP_TIMEOUT;
+                reason = WPEFramework::Exchange::IMiracastPlayer::REASON_CODE_RTSP_TIMEOUT;
                 MIRACASTLOG_INFO("#### MCAST-TRIAGE-NOK RTSP RECV TIMEOUT ####");
             }
             set_state(WPEFramework::Exchange::IMiracastPlayer::STATE_STOPPED , true , reason );
@@ -2153,7 +2153,7 @@ void MiracastRTSPMsg::RTSPMessageHandler_Thread(void *args)
         struct timespec start_time, current_time;
         int elapsed_seconds = 0;
 
-        reason = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_SRC_DEV_REQ_TO_STOP;
+        reason = WPEFramework::Exchange::IMiracastPlayer::REASON_CODE_SRC_DEV_REQ_TO_STOP;
 
         clock_gettime(CLOCK_REALTIME, &start_time);
 
@@ -2260,19 +2260,19 @@ void MiracastRTSPMsg::RTSPMessageHandler_Thread(void *args)
                         if ((RTSP_MSG_FAILURE == rtsp_sink2src_request_msg_handling(rtsp_message_data.state)) ||
                             (RTSP_TEARDOWN_FROM_SINK2SRC == rtsp_message_data.state))
                         {
-                            reason = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_SUCCESS;
+                            reason = WPEFramework::Exchange::IMiracastPlayer::REASON_CODE_SUCCESS;
                             start_monitor_keep_alive_msg = false;
 
                             if (RTSP_TEARDOWN_FROM_SINK2SRC == rtsp_message_data.state)
                             {
                                 if ( WPEFramework::Exchange::IMiracastPlayer::STOP_REASON_APP_REQ_FOR_EXIT == rtsp_message_data.stop_reason_code )
                                 {
-                                    reason = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_APP_REQ_TO_STOP;
+                                    reason = WPEFramework::Exchange::IMiracastPlayer::REASON_CODE_APP_REQ_TO_STOP;
                                     MIRACASTLOG_INFO("#### MCAST-TRIAGE-OK-APP-EXIT APP REQUESTED TO STOP ON EXIT ####");
                                 }
                                 else if ( WPEFramework::Exchange::IMiracastPlayer::STOP_REASON_APP_REQ_FOR_NEW_CONNECTION == rtsp_message_data.stop_reason_code )
                                 {
-                                    reason = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_NEW_SRC_DEV_CONNECT_REQ;
+                                    reason = WPEFramework::Exchange::IMiracastPlayer::REASON_CODE_NEW_SRC_DEV_CONNECT_REQ;
                                     MIRACASTLOG_INFO("#### MCAST-TRIAGE-OK-APP-STOP-ON-NEW-CONNECT APP REQUESTED TO STOP ON NEW CONNECTION ####");
                                 }
                                 else
@@ -2306,8 +2306,8 @@ void MiracastRTSPMsg::RTSPMessageHandler_Thread(void *args)
                     break;
                     case RTSP_NOTIFY_GSTPLAYER_STATE:
                     {
-                        eMIRA_PLAYER_STATES state = WPEFramework::Exchange::IMiracastPlayer::STATE_IDLE;
-                        eM_PLAYER_REASON_CODE reason_code = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_SUCCESS;
+                        MiracastPlayerState state = WPEFramework::Exchange::IMiracastPlayer::STATE_IDLE;
+                        MiracastPlayerReasonCode reason_code = WPEFramework::Exchange::IMiracastPlayer::REASON_CODE_SUCCESS;
                         bool notifyGstPlayer = true;
                         MIRACASTLOG_INFO("!!! RTSP_NOTIFY_GSTPLAYER_STATE[%#08X] !!!",rtsp_message_data.gst_player_state);
 

@@ -20,6 +20,9 @@
 #pragma once
 
 #include "Module.h"
+
+#include <boost/variant.hpp>
+
 #include <interfaces/Ids.h>
 #include <interfaces/IMiracastPlayer.h>
 
@@ -32,7 +35,8 @@
 #include <vector>
 
 using namespace WPEFramework;
-using ParamsType = boost::variant<std::tuple<std::string, std::string, WPEFramework::Exchange::IMiracastPlayer::State,WPEFramework::Exchange::IMiracastPlayer::ErrorCode>>;
+//using ParamsType = boost::variant<std::tuple<std::string, std::string, WPEFramework::Exchange::IMiracastPlayer::State,WPEFramework::Exchange::IMiracastPlayer::ReasonCode>>;
+using ParamsType = boost::variant<std::tuple<std::string, std::string, MiracastPlayerState, MiracastPlayerReasonCode>>;
 
 namespace WPEFramework
 {
@@ -52,7 +56,7 @@ namespace WPEFramework
 				MiracastPlayerImplementation(const MiracastPlayerImplementation &) = delete;
 				MiracastPlayerImplementation &operator=(const MiracastPlayerImplementation &) = delete;
 
-				virtual void onStateChange(const std::string& client_mac, const std::string& client_name, eMIRA_PLAYER_STATES player_state, eM_PLAYER_REASON_CODE reason_code) override;
+				virtual void onStateChange(const std::string& client_mac, const std::string& client_name, MiracastPlayerState player_state, MiracastPlayerReasonCode reason_code) override;
 				
 				BEGIN_INTERFACE_MAP(MiracastPlayerImplementation)
 				INTERFACE_ENTRY(Exchange::IMiracastPlayer)
@@ -133,8 +137,7 @@ namespace WPEFramework
 				void Dispatch(Event event, const ParamsType &params);
 
 				void unsetWesterosEnvironmentInternal(void);
-				std::string stateDescription(eMIRA_PLAYER_STATES e);
-				std::string reasonDescription(eM_PLAYER_REASON_CODE e);
+				std::string stateDescription(MiracastPlayerState e);
 
 			public:
 				static MiracastPlayerImplementation *_instance;

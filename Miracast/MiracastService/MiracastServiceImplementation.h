@@ -24,7 +24,6 @@
 #include <boost/variant.hpp>
 
 #include <interfaces/Ids.h>
-#include <interfaces/IMiracastPlayer.h>
 #include <interfaces/IMiracastService.h>
 #include <interfaces/IPowerManager.h>
 
@@ -42,11 +41,11 @@
 
 using namespace WPEFramework;
 using PowerState = WPEFramework::Exchange::IPowerManager::PowerState;
-using MiracastLogLevel = WPEFramework::Exchange::IMiracastPlayer::LogLevel;
-using MiracastPlayerState = WPEFramework::Exchange::IMiracastPlayer::State;
-using MiracastPlayerErrorCode = WPEFramework::Exchange::IMiracastPlayer::ErrorCode;
-using MiracastServiceErrorCode = WPEFramework::Exchange::IMiracastService::ErrorCode;
-using ParamsType = boost::variant<std::tuple<std::string, std::string, WPEFramework::Exchange::IMiracastService::ErrorCode>,
+using MiracastLogLevel = WPEFramework::Exchange::IMiracastService::LogLevel;
+using MiracastPlayerState = WPEFramework::Exchange::IMiracastService::PlayerState;
+using MiracastPlayerReasonCode = WPEFramework::Exchange::IMiracastService::PlayerReasonCode;
+using MiracastServiceReasonCode = WPEFramework::Exchange::IMiracastService::ReasonCode;
+using ParamsType = boost::variant<std::tuple<std::string, std::string, WPEFramework::Exchange::IMiracastService::ReasonCode>,
 	std::tuple<std::string, std::string, std::string, std::string>,
 	std::pair<std::string, std::string>>;
 
@@ -80,7 +79,7 @@ namespace WPEFramework
 				MiracastServiceImplementation &operator=(const MiracastServiceImplementation &) = delete;
 
 				virtual void onMiracastServiceClientConnectionRequest(string client_mac, string client_name) override;
-				virtual void onMiracastServiceClientConnectionError(string client_mac, string client_name , eMIRACAST_SERVICE_ERR_CODE error_code ) override;
+				virtual void onMiracastServiceClientConnectionError(string client_mac, string client_name , MiracastServiceReasonCode reason_code ) override;
 				virtual void onMiracastServiceLaunchRequest(string src_dev_ip, string src_dev_mac, string src_dev_name, string sink_dev_ip, bool is_connect_req_reported ) override;
 				virtual void onStateChange(eMIRA_SERVICE_STATES state ) override;
 				
@@ -151,7 +150,7 @@ namespace WPEFramework
 				Core::hresult GetEnabled(bool &enabled , bool &success ) override;
 				Core::hresult AcceptClientConnection(const string &requestStatus , Result &returnPayload ) override;
 				Core::hresult StopClientConnection(const string &clientMac , const string &clientName, Result &returnPayload ) override;
-				Core::hresult UpdatePlayerState(const string &clientMac , const MiracastPlayerState &playerState , const PlayerReasonCode &reasonCode , Result &returnPayload ) override;
+				Core::hresult UpdatePlayerState(const string &clientMac , const MiracastPlayerState &playerState , const MiracastPlayerReasonCode &reasonCode , Result &returnPayload ) override;
 				Core::hresult SetLogging(const MiracastLogLevel &logLevel , const SeparateLogger &separateLogger , Result &returnPayload) override;
 				Core::hresult SetP2PBackendDiscovery(const bool &enabled , Result &returnPayload ) override;
 
@@ -213,7 +212,6 @@ namespace WPEFramework
 
 				eMIRA_SERVICE_STATES getCurrentServiceState(void);
 				void changeServiceState(eMIRA_SERVICE_STATES eService_state);
-				std::string reasonDescription(eMIRACAST_SERVICE_ERR_CODE e);
 				bool envGetValue(const char *key, std::string &value);
 				void getThunderPlugins(void);
 				bool updateSystemFriendlyName();

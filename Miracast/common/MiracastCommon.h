@@ -156,16 +156,6 @@ typedef enum emira_service_states_e
     MIRACAST_SERVICE_STATE_DIRECT_LAUCH_WITH_CONNECTING
 } eMIRA_SERVICE_STATES;
 
-typedef enum miracast_player_states_e
-{
-    MIRACAST_PLAYER_STATE_IDLE,
-    MIRACAST_PLAYER_STATE_INITIATED,
-    MIRACAST_PLAYER_STATE_INPROGRESS,
-    MIRACAST_PLAYER_STATE_PLAYING,
-    MIRACAST_PLAYER_STATE_STOPPED,
-    MIRACAST_PLAYER_STATE_PAUSED
-} eMIRA_PLAYER_STATES;
-
 typedef enum miracast_gstplayer_states_e
 {
     MIRACAST_GSTPLAYER_STATE_IDLE   = 0x01,
@@ -175,39 +165,6 @@ typedef enum miracast_gstplayer_states_e
     MIRACAST_GSTPLAYER_STATE_PAUSED = 0x05,
     MIRACAST_GSTPLAYER_STATE_MAX,
 } eMIRA_GSTPLAYER_STATES;
-
-typedef enum miracast_service_error_code_e
-{
-    MIRACAST_SERVICE_ERR_CODE_SUCCESS = 100,
-    MIRACAST_SERVICE_ERR_CODE_P2P_CONNECT_ERROR,
-    MIRACAST_SERVICE_ERR_CODE_P2P_GROUP_NEGO_ERROR,
-    MIRACAST_SERVICE_ERR_CODE_P2P_GROUP_FORMATION_ERROR,
-    MIRACAST_SERVICE_ERR_CODE_GENERIC_FAILURE,
-    MIRACAST_SERVICE_ERR_CODE_MAX_ERROR
-} eMIRACAST_SERVICE_ERR_CODE;
-
-/*
-typedef enum miracast_player_reason_code_e
-{
-    MIRACAST_PLAYER_REASON_CODE_SUCCESS = 200,
-    MIRACAST_PLAYER_REASON_CODE_APP_REQ_TO_STOP,
-    MIRACAST_PLAYER_REASON_CODE_SRC_DEV_REQ_TO_STOP,
-    MIRACAST_PLAYER_REASON_CODE_RTSP_ERROR,
-    MIRACAST_PLAYER_REASON_CODE_RTSP_TIMEOUT,
-    MIRACAST_PLAYER_REASON_CODE_RTSP_METHOD_NOT_SUPPORTED,
-    MIRACAST_PLAYER_REASON_CODE_GST_ERROR,
-    MIRACAST_PLAYER_REASON_CODE_INT_FAILURE,
-    MIRACAST_PLAYER_REASON_CODE_NEW_SRC_DEV_CONNECT_REQ,
-    MIRACAST_PLAYER_REASON_CODE_MAX_ERROR
-} eM_PLAYER_REASON_CODE;
-
-typedef enum miracast_player_stop_reason_code_e
-{
-    MIRACAST_PLAYER_APP_REQ_TO_STOP_ON_EXIT = 300,
-    MIRACAST_PLAYER_APP_REQ_TO_STOP_ON_NEW_CONNECTION
-}
-eM_PLAYER_STOP_REASON_CODE;
-*/
 
 typedef struct d_info
 {
@@ -244,18 +201,6 @@ typedef struct controller_msgq_st
 #define CONTROLLER_THREAD_STACK (256 * 1024)
 #define CONTROLLER_MSGQ_COUNT (5)
 #define CONTROLLER_MSGQ_SIZE (sizeof(CONTROLLER_MSGQ_STRUCT))
-
-/**
- * Abstract class for MiracastService Notification.
- */
-class MiracastServiceNotifier
-{
-public:
-    virtual void onMiracastServiceClientConnectionRequest(string client_mac, string client_name) = 0;
-    virtual void onMiracastServiceClientConnectionError(string client_mac, string client_name , eMIRACAST_SERVICE_ERR_CODE error_code ) = 0;
-    virtual void onMiracastServiceLaunchRequest(string src_dev_ip, string src_dev_mac, string src_dev_name, string sink_dev_ip, bool is_connect_req_reported ) = 0;
-    virtual void onStateChange(eMIRA_SERVICE_STATES state ) = 0;
-};
 
 class MiracastThread
 {

@@ -30,7 +30,7 @@
 using namespace WPEFramework;
 using MiracastLogLevel = WPEFramework::Exchange::IMiracastPlayer::LogLevel;
 using MiracastPlayerState = WPEFramework::Exchange::IMiracastPlayer::State;
-using MiracastPlayerErrorCode = WPEFramework::Exchange::IMiracastPlayer::ErrorCode;
+using MiracastPlayerReasonCode = WPEFramework::Exchange::IMiracastPlayer::ReasonCode;
 using MiracastPlayerStopReasonCode = WPEFramework::Exchange::IMiracastPlayer::StopReasonCode;
 
 #define MAX_EPOLL_EVENTS 64
@@ -63,11 +63,11 @@ typedef struct rtsp_hldr_msgq_st
     char source_dev_name[40];
     VIDEO_RECT_STRUCT videorect;
     eCONTROLLER_FW_STATES state;
-    //eM_PLAYER_STOP_REASON_CODE stop_reason_code;
-	MiracastPlayerStopReasonCode stop_reason_code;
-    eM_PLAYER_REASON_CODE state_reason_code;
+    MiracastPlayerStopReasonCode stop_reason_code;
+	MiracastPlayerReasonCode state_reason_code;
     eMIRA_GSTPLAYER_STATES  gst_player_state;
-} RTSP_HLDR_MSGQ_STRUCT;
+}
+RTSP_HLDR_MSGQ_STRUCT;
 
 #define RTSP_HANDLER_THREAD_NAME ("RTSP_MSG_HLDR")
 #define RTSP_HANDLER_THREAD_STACK ( 512 * 1024)
@@ -420,7 +420,7 @@ RTSP_WFD_AUDIO_FMT_STRUCT;
 class MiracastPlayerNotifier
 {
 public:
-    virtual void onStateChange(const std::string& client_mac, const std::string& client_name, MiracastPlayerState player_state, MiracastPlayerErrorCode reason_code) = 0;
+    virtual void onStateChange(const std::string& client_mac, const std::string& client_name, MiracastPlayerState player_state, MiracastPlayerReasonCode reason_code) = 0;
 };
 
 class MiracastRTSPMsg
@@ -449,12 +449,12 @@ public:
     bool set_WFDSessionNumber(std::string session);
     bool set_WFDRequestResponseTimeout( unsigned int request_timeout , unsigned int response_timeout );
 
-    eMIRA_PLAYER_STATES get_state(void);
+    MiracastPlayerState get_state(void);
 
     void send_msgto_rtsp_msg_hdler_thread(RTSP_HLDR_MSGQ_STRUCT rtsp_hldr_msgq_data);
     MiracastError initiate_TCP(std::string goIP);
     MiracastError start_streaming( VIDEO_RECT_STRUCT video_rect );
-    MiracastError stop_streaming( eMIRA_PLAYER_STATES state );
+    MiracastError stop_streaming( MiracastPlayerState state );
     void RTSPMessageHandler_Thread(void *args);
 
     static std::string format_string(const char *fmt, const std::vector<const char *> &args)
@@ -487,7 +487,7 @@ private:
     unsigned int m_wfd_src_res_timeout;
     unsigned int m_current_wait_time_ms;
     int m_wfd_src_session_timeout;
-    eMIRA_PLAYER_STATES m_current_state;
+    MiracastPlayerState m_current_state;
 
     bool m_streaming_started;
 	bool m_rtsp_msg_hldr_running_state;
@@ -528,7 +528,7 @@ private:
     MiracastThread *m_controller_thread;
     MiracastPlayerNotifier *m_player_notify_handler;
 
-    void set_state( MiracastPlayerState state , bool send_notification = false , MiracastPlayerErrorCode reason_code = WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_SUCCESS );
+    void set_state( MiracastPlayerState state , bool send_notification = false , MiracastPlayerReasonCode reason_code = WPEFramework::Exchange::IMiracastPlayer::REASON_CODE_SUCCESS );
     void store_srcsink_info( std::string client_name, std::string client_mac, std::string src_dev_ip, std::string sink_ip);
 
     MiracastError create_RTSPThread(void);

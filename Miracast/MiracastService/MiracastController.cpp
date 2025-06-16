@@ -591,7 +591,7 @@ MiracastError MiracastController::connect_device(std::string device_mac , std::s
             MIRACASTLOG_ERROR("#### MCAST-TRIAGE-NOK P2P CONNECT FAILURE FOR DEVICE[%s - %s] ####",device_name.c_str(),device_mac.c_str());
             if ( nullptr != m_notify_handler )
             {
-                m_notify_handler->onMiracastServiceClientConnectionError( device_mac , device_name , WPEFramework::Exchange::IMiracastService::ERROR_CODE_P2P_CONNECT_FAILURE );
+                m_notify_handler->onMiracastServiceClientConnectionError( device_mac , device_name , WPEFramework::Exchange::IMiracastService::REASON_CODE_P2P_CONNECT_FAILURE );
             }
         }
     }
@@ -938,7 +938,7 @@ void MiracastController::Controller_Thread(void *args)
                     case CONTROLLER_GO_NEG_FAILURE:
                     case CONTROLLER_GO_GROUP_FORMATION_FAILURE:
                     {
-                        eMIRACAST_SERVICE_ERR_CODE error_code = WPEFramework::Exchange::IMiracastService::ERROR_CODE_GENERIC_FAILURE;
+                        MiracastServiceReasonCode error_code = WPEFramework::Exchange::IMiracastService::REASON_CODE_GENERIC_FAILURE;
 
                         if ( CONTROLLER_GO_GROUP_STARTED == controller_msgq_data.state )
                         {
@@ -1055,7 +1055,7 @@ void MiracastController::Controller_Thread(void *args)
                                     {
                                         remove_ARPEntry(remote_address);
                                         remote_address.clear();
-                                        MIRACASTLOG_ERROR("#### ARPING failed so clearing remote_address to report [WPEFramework::Exchange::IMiracastService::ERROR_CODE_GENERIC_FAILURE] ####");
+                                        MIRACASTLOG_ERROR("#### ARPING failed so clearing remote_address to report [WPEFramework::Exchange::IMiracastService::REASON_CODE_GENERIC_FAILURE] ####");
                                     }
                                 }
                             }
@@ -1098,7 +1098,7 @@ void MiracastController::Controller_Thread(void *args)
                             }
                             else
                             {
-                                error_code = WPEFramework::Exchange::IMiracastService::ERROR_CODE_GENERIC_FAILURE;
+                                error_code = WPEFramework::Exchange::IMiracastService::REASON_CODE_GENERIC_FAILURE;
                                 session_restart_required = true;
                                 MIRACASTLOG_ERROR("!!!! Unable to get the Source Device IP and Terminating Group Here !!!!");
                                 remove_P2PGroupInstance();
@@ -1108,12 +1108,12 @@ void MiracastController::Controller_Thread(void *args)
                         {
                             if ( CONTROLLER_GO_GROUP_FORMATION_FAILURE == controller_msgq_data.state )
                             {
-                                error_code = WPEFramework::Exchange::IMiracastService::ERROR_CODE_P2P_GROUP_FORMATION_FAILURE;
+                                error_code = WPEFramework::Exchange::IMiracastService::REASON_CODE_P2P_GROUP_FORMATION_FAILURE;
                                 MIRACASTLOG_ERROR("#### MCAST-TRIAGE-NOK CONTROLLER_GO_GROUP_FORMATION_FAILURE ####");
                             }
                             else if ( CONTROLLER_GO_NEG_FAILURE == controller_msgq_data.state )
                             {
-                                error_code = WPEFramework::Exchange::IMiracastService::ERROR_CODE_P2P_GROUP_NEGOTIATION_FAILURE;
+                                error_code = WPEFramework::Exchange::IMiracastService::REASON_CODE_P2P_GROUP_NEGOTIATION_FAILURE;
                                 MIRACASTLOG_ERROR("#### MCAST-TRIAGE-NOK CONTROLLER_GO_NEG_FAILURE ####");
                             }
 

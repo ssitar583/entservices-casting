@@ -32,6 +32,9 @@ add_definitions(-DPLUGIN_MIRACAST_SERVICE_IMPLEMENTATION_NAME="${MIRACAST_SERVIC
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(IARMBus)
 find_package(GLIB REQUIRED)
+find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(WPEFrameworkSecurityUtil)
 
 find_library(GLIB_LIBRARY NAMES glib-2.0 )
@@ -43,7 +46,6 @@ else ()
 endif (USE_THUNDER_R4)
 
 add_library(${MODULE_NAME} SHARED MiracastService.cpp Module.cpp)
-#add_executable(${MODULE_NAME} MiracastService.cpp Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
@@ -53,13 +55,12 @@ target_compile_definitions(${MODULE_NAME} PRIVATE MODULE_NAME=Plugin_${PLUGIN_NA
 
 include_directories(../../helpers)
 
-target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+target_link_libraries(${MODULE_NAME} PRIVATE CompileSettingsDebug::CompileSettingsDebug ${NAMESPACE}Plugins::${NAMESPACE}Plugins ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 install(TARGETS ${MODULE_NAME}
         DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
 add_library(${PLUGIN_IMPLEMENTATION} SHARED MiracastServiceImplementation.cpp Module.cpp ../common/MiracastCommon.cpp ../common/MiracastLogger.cpp MiracastController.cpp P2P/MiracastP2P.cpp)
-#add_executable(${PLUGIN_IMPLEMENTATION} MiracastServiceImplementation.cpp Module.cpp ../common/MiracastCommon.cpp ../common/MiracastLogger.cpp MiracastController.cpp P2P/MiracastP2P.cpp)
 
 target_link_libraries(${PLUGIN_IMPLEMENTATION}
         PRIVATE

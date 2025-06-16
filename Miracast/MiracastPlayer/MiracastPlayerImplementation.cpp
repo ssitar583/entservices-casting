@@ -133,7 +133,7 @@ namespace WPEFramework
 			MIRACASTLOG_TRACE("Exiting..!!!");
 		}
 
-		std::string MiracastPlayerImplementation::stateDescription(eMIRA_PLAYER_STATES e)
+		std::string MiracastPlayerImplementation::stateDescription(MiracastPlayerState e)
 		{
 			switch (e)
 			{
@@ -149,33 +149,6 @@ namespace WPEFramework
 					return "STOPPED";
 				default:
 					return "Unimplemented state";
-			}
-		}
-
-		std::string MiracastPlayerImplementation::reasonDescription(MiracastPlayerErrorCode e)
-		{
-			switch (e)
-			{
-				case WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_SUCCESS:
-					return "SUCCESS";
-				case WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_APP_REQ_TO_STOP:
-					return "APP REQUESTED TO STOP.";
-				case WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_SRC_DEV_REQ_TO_STOP:
-					return "SRC DEVICE REQUESTED TO STOP.";
-				case WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_RTSP_ERROR:
-					return "RTSP Failure.";
-				case WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_RTSP_TIMEOUT:
-					return "RTSP Timeout.";
-				case WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_RTSP_METHOD_NOT_SUPPORTED:
-					return "RTSP Method Not Supported.";
-				case WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_GST_ERROR:
-					return "GStreamer Failure.";
-				case WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_INT_FAILURE:
-					return "Internal Failure.";
-				case WPEFramework::Exchange::IMiracastPlayer::ERROR_CODE_NEW_SRC_DEV_CONNECT_REQ:
-					return "APP REQ TO STOP FOR NEW CONNECTION.";
-				default:
-					return "Unimplemented item.";
 			}
 		}
 		/*  Helper and Internal methods End */
@@ -199,22 +172,21 @@ namespace WPEFramework
 					string clientName;
 					string clientMac;
 					MiracastPlayerState playerState;
-					MiracastPlayerErrorCode erroCode;
-					string errorCodeStr;
-					auto tupleParam = std::make_tuple(client_mac,client_name,player_state,reason_code);
+					MiracastPlayerReasonCode reasonCode;
+					string reasonCodeStr;
 
-					if (const auto* tupleValue = boost::get<std::string, std::string, MiracastPlayerState,MiracastPlayerErrorCode>>(&params))
+					if (const auto* tupleValue = boost::get<std::tuple<std::string, std::string, MiracastPlayerState, MiracastPlayerReasonCode>>(&params))
 					{
 						clientMac = std::get<0>(*tupleValue);
 						clientName = std::get<1>(*tupleValue);
 						playerState = std::get<2>(*tupleValue);
-						erroCode = std::get<3>(*tupleValue);
-						errorCodeStr = std::to_string(errorCode)
+						reasonCode = std::get<3>(*tupleValue);
+						reasonCodeStr = std::to_string(reasonCode);
 					}
 
 					while (index != _miracastPlayerNotification.end())
 					{
-						(*index)->OnStateChange(clientName , clientMac , playerState , errorCodeStr , erroCode );
+						(*index)->OnStateChange(clientName , clientMac , playerState , reasonCode , reasonCodeStr );
 						++index;
 					}
 				}
@@ -476,9 +448,10 @@ namespace WPEFramework
 			return Core::ERROR_NONE;
 		}
 
-		Core::hresult MiracastServiceImplementation::SetLogging(const MiracastLogLevel &logLevel , const SeparateLogger &separateLogger , Result &returnPayload)
+		Core::hresult MiracastPlayerImplementation::SetLogging(const MiracastLogLevel &logLevel , const SeparateLogger &separateLogger , Result &returnPayload)
 		{
 			bool isSuccessOrFailure = false;
+			MIRACAST::LogLevel level = INFO_LEVEL;
 
 			if (!separateLogger.logStatus.empty())
 			{
@@ -560,7 +533,7 @@ namespace WPEFramework
 
 		/*  Events Start */
 		/* ------------------------------------------------------------------------------------------------------- */
-		void MiracastPlayerImplementation::onStateChange(const std::string& client_mac, const std::string& client_name, MiracastPlayerState player_state, MiracastPlayerErrorCode reason_code)
+		void MiracastPlayerImplementation::onStateChange(const std::string& client_mac, const std::string& client_name, MiracastPlayerState player_state, MiracastPlayerReasonCode reason_code)
 		{
 			MIRACASTLOG_INFO("Entering..!!!");
 

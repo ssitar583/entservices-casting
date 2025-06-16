@@ -105,7 +105,7 @@ void MiracastGstPlayer::onFirstVideoFrameCallback(GstElement* object, guint arg0
 	MIRACASTLOG_TRACE("Exiting..!!!");
 }
 
-void MiracastGstPlayer::notifyPlaybackState(eMIRA_GSTPLAYER_STATES gst_player_state, MiracastPlayerErrorCode state_reason_code )
+void MiracastGstPlayer::notifyPlaybackState(eMIRA_GSTPLAYER_STATES gst_player_state, MiracastPlayerReasonCode state_reason_code )
 {
 	MIRACASTLOG_TRACE("Entering..!!!");
 	if ( nullptr != m_rtsp_reference_instance )

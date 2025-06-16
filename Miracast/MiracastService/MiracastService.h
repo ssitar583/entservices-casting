@@ -73,10 +73,10 @@ namespace WPEFramework
 							Exchange::JMiracastService::Event::OnClientConnectionRequest(_parent, clientMac, clientName);
 						}
 
-						void OnClientConnectionError(const string &clientMac , const string &clientName , const string &errorCode , const string &reason ) override
+						void OnClientConnectionError(const string &clientMac , const string &clientName , const Exchange::IMiracastService::ReasonCode &reasonCode , const string &reasonCodeStr ) override
 						{
-							LOGINFO("OnClientConnectionError -> clientMac:[%s], clientName:[%s], errorCode:[%s], reason:[%s]", clientMac.c_str(), clientName.c_str(), errorCode.c_str(), reason.c_str());
-							Exchange::JMiracastService::Event::OnClientConnectionError(_parent, clientMac, clientName, errorCode, reason);
+							LOGINFO("OnClientConnectionError -> clientMac:[%s], clientName:[%s], errorCode:[%s], reason:[%s]", clientMac.c_str(), clientName.c_str(), reasonCodeStr.c_str(), std::to_string(reasonCode).c_str());
+							Exchange::JMiracastService::Event::OnClientConnectionError(_parent, clientMac, clientName, reasonCode, reasonCodeStr);
 						}
 
 						void OnLaunchRequest(const Exchange::IMiracastService::DeviceParameters deviceParameters) override

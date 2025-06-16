@@ -37,17 +37,28 @@
 #include <MiracastCommon.h>
 #include "MiracastP2P.h"
 #include "MiracastLogger.h"
-#include <interfaces/IMiracastPlayer.h>
 #include <interfaces/IMiracastService.h>
 
 using namespace std;
 using namespace MIRACAST;
 using namespace WPEFramework;
-using MiracastPlayerState = WPEFramework::Exchange::IMiracastPlayer::State;
-using MiracastServiceErrorCode = WPEFramework::Exchange::IMiracastService::ErrorCode;
+using MiracastServiceReasonCode = WPEFramework::Exchange::IMiracastService::ReasonCode;
+using MiracastPlayerState = WPEFramework::Exchange::IMiracastService::PlayerState;
 
 #define THUNDER_REQ_THREAD_CLIENT_CONNECTION_WAITTIME (30)
 #define MAX_IFACE_NAME_LEN 16
+
+/**
+ * Abstract class for MiracastService Notification.
+ */
+class MiracastServiceNotifier
+{
+public:
+    virtual void onMiracastServiceClientConnectionRequest(string client_mac, string client_name) = 0;
+    virtual void onMiracastServiceClientConnectionError(string client_mac, string client_name , MiracastServiceReasonCode reason_code ) = 0;
+    virtual void onMiracastServiceLaunchRequest(string src_dev_ip, string src_dev_mac, string src_dev_name, string sink_dev_ip, bool is_connect_req_reported ) = 0;
+    virtual void onStateChange(eMIRA_SERVICE_STATES state ) = 0;
+};
 
 class MiracastController
 {

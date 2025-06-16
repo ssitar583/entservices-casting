@@ -32,7 +32,9 @@ add_definitions(-DPLUGIN_MIRACAST_PLAYER_IMPLEMENTATION_NAME="${MIRACAST_PLAYER_
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(IARMBus)
 find_package(GLIB REQUIRED)
-
+find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GSTREAMERBASE REQUIRED gstreamer-app-1.0)
 
@@ -47,7 +49,6 @@ else ()
 endif (USE_THUNDER_R4)
 
 add_library(${MODULE_NAME} SHARED MiracastPlayer.cpp Module.cpp)
-#add_executable(${MODULE_NAME} MiracastPlayer.cpp Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
@@ -57,17 +58,15 @@ target_compile_definitions(${MODULE_NAME} PRIVATE MODULE_NAME=Plugin_${PLUGIN_NA
 
 include_directories(../../helpers)
 
-target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+target_link_libraries(${MODULE_NAME} PRIVATE CompileSettingsDebug::CompileSettingsDebug ${NAMESPACE}Plugins::${NAMESPACE}Plugins ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 install(TARGETS ${MODULE_NAME}
         DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
 add_library(${PLUGIN_IMPLEMENTATION} SHARED Module.cpp MiracastPlayerImplementation.cpp ../common/MiracastLogger.cpp ../common/MiracastCommon.cpp RTSP/MiracastRTSPMsg.cpp)
-#add_executable(${PLUGIN_IMPLEMENTATION} Module.cpp MiracastPlayerImplementation.cpp ../common/MiracastLogger.cpp ../common/MiracastCommon.cpp RTSP/MiracastRTSPMsg.cpp)
 
-target_link_libraries(${PLUGIN_IMPLEMENTATION}
-        PRIVATE
-        ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+
 set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
