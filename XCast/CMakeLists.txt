@@ -21,7 +21,7 @@ set(PLUGIN_IMPLEMENTATION ${MODULE_NAME}Implementation)
 
 set(PLUGIN_XCAST_AUTOSTART "false" CACHE STRING "Automatically start XCast plugin")
 set(PLUGIN_XCAST_STARTUPORDER "" CACHE STRING "To configure startup order of XCast plugin")
-set(PLUGIN_XCAST_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote")
+#set(PLUGIN_XCAST_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 if (USE_THUNDER_R4)
