@@ -47,6 +47,8 @@
  #define API_VERSION_NUMBER_MINOR 0
  #define API_VERSION_NUMBER_PATCH 2
 
+ #define DIAL_MAX_ADDITIONALURL (1024)
+
  #define LOCATE_CAST_FIRST_TIMEOUT_IN_MILLIS  5000  //5 seconds
 #define LOCATE_CAST_SECOND_TIMEOUT_IN_MILLIS 10000  //10 seconds
  
@@ -184,9 +186,107 @@
             getSystemPlugin();
             m_SystemPluginObj->Subscribe<JsonObject>(1000, "onFriendlyNameChanged", &XCastImplementation::onFriendlyNameUpdateHandler, this);
             LOGINFO("XCastImplementation::Configure: Initialization done");
+            if (Core::ERROR_NONE == updateSystemFriendlyName())
+            {
+                LOGINFO("XCast::Initialize m_friendlyName:  %s\n ",m_friendlyName.c_str());
+            }
             return Core::ERROR_NONE;
         }
 
+        void XCastImplementation::getUrlFromAppLaunchParams (const char *app_name, const char *payload, const char *query_string, const char *additional_data_url, char *url)
+        {
+            LOGINFO("getUrlFromAppLaunchParams : Application launch request: appName: %s  query: [%s], payload: [%s], additionalDataUrl [%s]\n",
+                app_name, query_string, payload, additional_data_url);
+
+            int url_len = DIAL_MAX_PAYLOAD+DIAL_MAX_ADDITIONALURL+100;
+            memset (url, '\0', url_len);
+            if(strcmp(app_name,"YouTube") == 0) {
+                if ((payload != NULL) && (additional_data_url != NULL)){
+                    snprintf( url, url_len, "https://www.youtube.com/tv?%s&additionalDataUrl=%s", payload, additional_data_url);
+                }else if (payload != NULL){
+                    snprintf( url, url_len, "https://www.youtube.com/tv?%s", payload);
+                }else{
+                    snprintf( url, url_len, "https://www.youtube.com/tv");
+                }
+            }
+            else if(strcmp(app_name,"YouTubeTV") == 0) {
+                if ((payload != NULL) && (additional_data_url != NULL)){
+                    snprintf( url, url_len, "https://www.youtube.com/tv/upg?%s&additionalDataUrl=%s", payload, additional_data_url);
+                }else if (payload != NULL){
+                    snprintf( url, url_len, "https://www.youtube.com/tv/upg?%s", payload);
+                }else{
+                    snprintf( url, url_len, "https://www.youtube.com/tv/upg?");
+                }
+            }
+            else if(strcmp(app_name,"YouTubeKids") == 0) {
+                if ((payload != NULL) && (additional_data_url != NULL)){
+                    snprintf( url, url_len, "https://www.youtube.com/tv_kids?%s&additionalDataUrl=%s", payload, additional_data_url);
+                }else if (payload != NULL){
+                    snprintf( url, url_len, "https://www.youtube.com/tv_kids?%s", payload);
+                }else{
+                    snprintf( url, url_len, "https://www.youtube.com/tv_kids?");
+                }
+            }
+            else if(strcmp(app_name,"Netflix") == 0) {
+                memset( url, 0, url_len );
+                strncat( url, "source_type=12", url_len - strlen(url) - 1);
+                if(payload != NULL)
+                {
+                    const char * pUrlEncodedParams;
+                    pUrlEncodedParams = payload;
+                    if( pUrlEncodedParams ){
+                        strncat( url, "&dial=", url_len - strlen(url) - 1);
+                        strncat( url, pUrlEncodedParams, url_len - strlen(url) - 1);
+                    }
+                }
+
+                if(additional_data_url != NULL){
+                    strncat(url, "&additionalDataUrl=", url_len - strlen(url) - 1);
+                    strncat(url, additional_data_url, url_len - strlen(url) - 1);
+                }
+            }
+            else {
+                    memset( url, 0, url_len );
+                    url_len -= DIAL_MAX_ADDITIONALURL+1; //save for &additionalDataUrl
+                    url_len -= 1; //save for nul byte
+                    LOGINFO("query_string=[%s]\r\n", query_string);
+                    int has_query = query_string && strlen(query_string);
+                    int has_payload = 0;
+                    if (has_query) {
+                        snprintf(url + strlen(url), url_len, "%s", query_string);
+                        url_len -= strlen(query_string);
+                    }
+                    if(payload && strlen(payload)) {
+                        const char payload_key[] = "dialpayload=";
+                        if(url_len >= 0){
+                            if (has_query) {
+                                snprintf(url + strlen(url), url_len, "%s", "&");
+                                url_len -= 1;
+                            }
+                            if(url_len >= 0) {
+                                snprintf(url + strlen(url), url_len, "%s%s", payload_key, payload);
+                                url_len -= strlen(payload_key) + strlen(payload);
+                                has_payload = 1;
+                            }
+                        }
+                        else {
+                            LOGINFO("there is not enough room for payload\r\n");
+                        }
+                    }
+                    
+                    if(additional_data_url != NULL){
+                        if ((has_query || has_payload) && url_len >= 0) {
+                            snprintf(url + strlen(url), url_len, "%s", "&");
+                            url_len -= 1;
+                        }
+                        if (url_len >= 0) {
+                            snprintf(url + strlen(url), url_len, "additionalDataUrl=%s", additional_data_url);
+                            url_len -= strlen(additional_data_url) + 18;
+                        }
+                    }
+                    LOGINFO(" url is [%s]\r\n", url);
+            }
+        }
         void XCastImplementation::InitializePowerManager(PluginHost::IShell* service)
         {
             LOGINFO("Connect the COM-RPC socket\n");
@@ -234,6 +334,38 @@
                     LOGINFO("m_networkStandbyMode:%u ",m_networkStandbyMode);
                 }
             }
+        }
+
+        int XCastImplementation::updateSystemFriendlyName()
+        {
+            JsonObject params, Result;
+            LOGINFO("Entering..!!!");
+
+            if (nullptr == m_SystemPluginObj)
+            {
+                LOGERR("m_SystemPluginObj not yet instantiated");
+                return Core::ERROR_GENERAL;
+            }
+
+            uint32_t ret = m_SystemPluginObj->Invoke<JsonObject, JsonObject>(THUNDER_RPC_TIMEOUT, _T("getFriendlyName"), params, Result);
+
+            if (Core::ERROR_NONE == ret)
+            {
+                if (Result["success"].Boolean())
+                {
+                    m_friendlyName = Result["friendlyName"].String();
+                }
+                else
+                {
+                    ret = Core::ERROR_GENERAL;
+                    LOGERR("getSystemFriendlyName call failed");
+                }
+            }
+            else
+            {
+                LOGERR("getiSystemFriendlyName call failed E[%u]", ret);
+            }
+            return ret;
         }
         uint32_t XCastImplementation::Initialize(bool networkStandbyMode)
         {
@@ -826,14 +958,14 @@
             }
             return Core::ERROR_NONE;
         }
-		Core::hresult XCastImplementation::SetNetworkStandbyMode(bool networkStandbyMode) { 
+		uint32_t XCastImplementation::SetNetworkStandbyMode(bool networkStandbyMode) { 
             LOGINFO("nwStandbymode: %d", networkStandbyMode);
             if (nullptr != m_xcast_manager)
             {
                 m_xcast_manager->setNetworkStandbyMode(networkStandbyMode);
                 m_networkStandbyMode = networkStandbyMode;
             }
-            return Core::ERROR_NONE;
+            return 0;
         }
 
 
@@ -1153,64 +1285,64 @@
 	    Core::hresult XCastImplementation::RegisterApplications(Exchange::IXCast::IApplicationInfoIterator* const appInfoList) { 
 
             LOGINFO("XcastService::registerApplications");
-            // std::vector <DynamicAppConfig*> appConfigListTemp;
-            // uint32_t status = Core::ERROR_GENERAL;
+            std::vector <DynamicAppConfig*> appConfigListTemp;
+            uint32_t status = Core::ERROR_GENERAL;
 
-            // if ((nullptr != m_xcast_manager) && (appInfoList))
-            // {
-            //     enableCastService(m_friendlyName,false);
+            if ((nullptr != m_xcast_manager) && (appInfoList))
+            {
+                enableCastService(m_friendlyName,false);
 
-            //     m_isDynamicRegistrationsRequired = true;
-            //     Exchange::IXCast::ApplicationInfo entry{};
+                m_isDynamicRegistrationsRequired = true;
+                Exchange::IXCast::ApplicationInfo entry{};
 
-            //     while (appInfoList->Next(entry) == true)
-            //     {
-            //         DynamicAppConfig* pDynamicAppConfig = (DynamicAppConfig*) malloc (sizeof(DynamicAppConfig));
-            //         if (pDynamicAppConfig)
-            //         {
-            //             memset ((void*)pDynamicAppConfig, '\0', sizeof(DynamicAppConfig));
-            //             memset (pDynamicAppConfig->appName, '\0', sizeof(pDynamicAppConfig->appName));
-            //             memset (pDynamicAppConfig->prefixes, '\0', sizeof(pDynamicAppConfig->prefixes));
-            //             memset (pDynamicAppConfig->cors, '\0', sizeof(pDynamicAppConfig->cors));
-            //             memset (pDynamicAppConfig->query, '\0', sizeof(pDynamicAppConfig->query));
-            //             memset (pDynamicAppConfig->payload, '\0', sizeof(pDynamicAppConfig->payload));
+                while (appInfoList->Next(entry) == true)
+                {
+                    DynamicAppConfig* pDynamicAppConfig = (DynamicAppConfig*) malloc (sizeof(DynamicAppConfig));
+                    if (pDynamicAppConfig)
+                    {
+                        memset ((void*)pDynamicAppConfig, '\0', sizeof(DynamicAppConfig));
+                        memset (pDynamicAppConfig->appName, '\0', sizeof(pDynamicAppConfig->appName));
+                        memset (pDynamicAppConfig->prefixes, '\0', sizeof(pDynamicAppConfig->prefixes));
+                        memset (pDynamicAppConfig->cors, '\0', sizeof(pDynamicAppConfig->cors));
+                        memset (pDynamicAppConfig->query, '\0', sizeof(pDynamicAppConfig->query));
+                        memset (pDynamicAppConfig->payload, '\0', sizeof(pDynamicAppConfig->payload));
 
-            //             strncpy (pDynamicAppConfig->appName, entry.appName.c_str(), sizeof(pDynamicAppConfig->appName) - 1);
-            //             strncpy (pDynamicAppConfig->prefixes, entry.prefixes.c_str(), sizeof(pDynamicAppConfig->prefixes) - 1);
-            //             strncpy (pDynamicAppConfig->cors, entry.cors.c_str(), sizeof(pDynamicAppConfig->cors) - 1);
-            //             pDynamicAppConfig->allowStop = entry.allowStop;
-            //             strncpy (pDynamicAppConfig->query, entry.query.c_str(), sizeof(pDynamicAppConfig->query) - 1);
-            //             strncpy (pDynamicAppConfig->payload, entry.payload.c_str(), sizeof(pDynamicAppConfig->payload) - 1);
-            //             appConfigListTemp.push_back (pDynamicAppConfig);
-            //         }
-            //     }
-            //     dumpDynamicAppCacheList(string("appConfigListTemp"), appConfigListTemp);
+                        strncpy (pDynamicAppConfig->appName, entry.appName.c_str(), sizeof(pDynamicAppConfig->appName) - 1);
+                        strncpy (pDynamicAppConfig->prefixes, entry.prefixes.c_str(), sizeof(pDynamicAppConfig->prefixes) - 1);
+                        strncpy (pDynamicAppConfig->cors, entry.cors.c_str(), sizeof(pDynamicAppConfig->cors) - 1);
+                        pDynamicAppConfig->allowStop = entry.allowStop;
+                        strncpy (pDynamicAppConfig->query, entry.query.c_str(), sizeof(pDynamicAppConfig->query) - 1);
+                        strncpy (pDynamicAppConfig->payload, entry.payload.c_str(), sizeof(pDynamicAppConfig->payload) - 1);
+                        appConfigListTemp.push_back (pDynamicAppConfig);
+                    }
+                }
+                dumpDynamicAppCacheList(string("appConfigListTemp"), appConfigListTemp);
 
-            //     vector<string> appsToDelete;
-            //     for (DynamicAppConfig* pDynamicAppConfig : appConfigListTemp) {
-            //         appsToDelete.push_back(string(pDynamicAppConfig->appName));
-            //     }
-            //     deleteFromDynamicAppCache (appsToDelete);
+                vector<string> appsToDelete;
+                for (DynamicAppConfig* pDynamicAppConfig : appConfigListTemp) {
+                    appsToDelete.push_back(string(pDynamicAppConfig->appName));
+                }
+                deleteFromDynamicAppCache (appsToDelete);
 
-            //     LOGINFO("appConfigList count: %d", (int)appConfigListTemp.size());
+                LOGINFO("appConfigList count: %d", (int)appConfigListTemp.size());
 
-            //     m_isDynamicRegistrationsRequired = true;
+                m_isDynamicRegistrationsRequired = true;
 
-            //     m_xcast_manager->registerApplications(appConfigListTemp);
-            //     {
-            //         lock_guard<mutex> lck(m_appConfigMutex);
-            //         for (DynamicAppConfig* pDynamicAppConfigOld : appConfigListCache)
-            //         {
-            //             free (pDynamicAppConfigOld);
-            //             pDynamicAppConfigOld = NULL;
-            //         }
-            //         appConfigListCache.clear();
-            //         appConfigListCache = appConfigListTemp;
-            //         dumpDynamicAppCacheList(string("registeredAppsFromUser"), appConfigListCache);
-            //     }
-            //     status = Core::ERROR_NONE;
-            // }
-            // return status;
+                m_xcast_manager->registerApplications(appConfigListTemp);
+                {
+                    lock_guard<mutex> lck(m_appConfigMutex);
+                    for (DynamicAppConfig* pDynamicAppConfigOld : appConfigListCache)
+                    {
+                        free (pDynamicAppConfigOld);
+                        pDynamicAppConfigOld = NULL;
+                    }
+                    appConfigListCache.clear();
+                    appConfigListCache = appConfigListTemp;
+                    dumpDynamicAppCacheList(string("registeredAppsFromUser"), appConfigListCache);
+                }
+                status = Core::ERROR_NONE;
+            }
+            return status;
             return 0;
         }
 
