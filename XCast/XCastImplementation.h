@@ -147,7 +147,7 @@ using namespace WPEFramework;
 
             Core::hresult ApplicationStateChanged(const string& applicationName, const string& state, const string& applicationId, const string& error) override;
             Core::hresult GetProtocolVersion(string &protocolVersion  ) override;
-            Core::hresult SetNetworkStandbyMode(bool networkStandbyMode) override;
+            // Core::hresult SetNetworkStandbyMode(bool networkStandbyMode) override;
             Core::hresult SetManufacturerName(string manufacturername) override;
             Core::hresult GetManufacturerName(string &manufacturername  ) override;
             Core::hresult SetModelName(string modelname) override;
@@ -289,6 +289,8 @@ using namespace WPEFramework;
             void onFriendlyNameUpdateHandler(const JsonObject& parameters);
             static gboolean update_friendly_name_timercallback(gpointer userdata);
             int updateSystemFriendlyName();
+            void getUrlFromAppLaunchParams (const char *app_name, const char *payload, const char *query_string, const char *additional_data_url, char *url);
+            uint32_t SetNetworkStandbyMode(bool networkStandbyMode);
            // WPEFramework::Exchange::IPowerManager::PowerState::m_powerState = WPEFramework::Exchange::IPowerManager::POWER_STATE_STANDBY;
         
      };
