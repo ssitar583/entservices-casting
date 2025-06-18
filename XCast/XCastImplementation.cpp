@@ -96,7 +96,8 @@
         static int m_sleeptime = 1;
 
          XCastImplementation::XCastImplementation()
-         : _adminLock(), _service(nullptr)
+         : _adminLock(), _service(nullptr),
+	 _powerManagerPlugin(this)
          {
              LOGINFO("Create XCastImplementation Instance");
              LOGINFO("##### API VER[%d : %d : %d] #####", API_VERSION_NUMBER_MAJOR,API_VERSION_NUMBER_MINOR,API_VERSION_NUMBER_PATCH);
