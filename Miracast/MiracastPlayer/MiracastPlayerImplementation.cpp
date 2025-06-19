@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE
  * file the following copyright and licenses apply:
  *
- * Copyright 2023 RDK Management
+ * Copyright 2025 RDK Management
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,25 +32,27 @@ namespace WPEFramework
 {
 	namespace Plugin
 	{
-		SERVICE_REGISTRATION(MiracastPlayerImplementation, MIRACAST_PLAYER_API_VERSION_NUMBER_MAJOR, MIRACAST_PLAYER_API_VERSION_NUMBER_MINOR);
-		
+		SERVICE_REGISTRATION(MiracastPlayerImplementation, MIRACAST_PLAYER_API_VERSION_NUMBER_MAJOR, MIRACAST_PLAYER_API_VERSION_NUMBER_MINOR, MIRACAST_PLAYER_API_VERSION_NUMBER_PATCH);
 		MiracastPlayerImplementation *MiracastPlayerImplementation::_instance = nullptr;
 		MiracastRTSPMsg *MiracastPlayerImplementation::m_miracast_rtsp_obj = nullptr;
-	
+
 		MiracastPlayerImplementation::MiracastPlayerImplementation()
 		: _adminLock()
+		, mService(nullptr)
+		, m_isPluginInitialized(false)
 		{
-			LOGINFO("Create MiracastPlayerImplementation Instance");
+			LOGINFO("Call MiracastPlayerImplementation constructor");
 			MiracastPlayerImplementation::_instance = this;
-			m_isServiceInitialized = false;
 			MIRACAST::logger_init("MiracastPlayer");
 		}
 
 		MiracastPlayerImplementation::~MiracastPlayerImplementation()
 		{
-			if(m_CurrentService != nullptr)
+			LOGINFO("Call MiracastPlayerImplementation destructor");
+			if(mService != nullptr)
 			{
-				m_CurrentService->Release();
+				mService->Release();
+				mService = nullptr;
 			}
 			MIRACAST::logger_deinit();
 			MiracastPlayerImplementation::_instance = nullptr;
@@ -61,11 +63,11 @@ namespace WPEFramework
 		 */
 		Core::hresult MiracastPlayerImplementation::Register(Exchange::IMiracastPlayer::INotification *notification)
 		{
+			MIRACASTLOG_TRACE("Entering ...");
 			ASSERT(nullptr != notification);
 
+			MIRACASTLOG_INFO("Register: notification = %p", notification);
 			_adminLock.Lock();
-			printf("MiracastPlayerImplementation::Register: notification = %p", notification);
-			LOGINFO("Register notification");
 
 			// Make sure we can't register the same notification callback multiple times
 			if (std::find(_miracastPlayerNotification.begin(), _miracastPlayerNotification.end(), notification) == _miracastPlayerNotification.end())
@@ -75,11 +77,11 @@ namespace WPEFramework
 			}
 			else
 			{
-				LOGERR("same notification is registered already");
+				MIRACASTLOG_ERROR("same notification is registered already");
 			}
 
 			_adminLock.Unlock();
-
+			MIRACASTLOG_TRACE("Exiting ...");
 			return Core::ERROR_NONE;
 		}
 
@@ -88,6 +90,7 @@ namespace WPEFramework
 		 */
 		Core::hresult MiracastPlayerImplementation::Unregister(Exchange::IMiracastPlayer::INotification *notification)
 		{
+			MIRACASTLOG_TRACE("Entering ...");
 			Core::hresult status = Core::ERROR_GENERAL;
 
 			ASSERT(nullptr != notification);
@@ -99,7 +102,7 @@ namespace WPEFramework
 			if (itr != _miracastPlayerNotification.end())
 			{
 				(*itr)->Release();
-				LOGINFO("Unregister notification");
+				MIRACASTLOG_INFO("Unregister notification");
 				_miracastPlayerNotification.erase(itr);
 				status = Core::ERROR_NONE;
 			}
@@ -109,7 +112,7 @@ namespace WPEFramework
 			}
 
 			_adminLock.Unlock();
-
+			MIRACASTLOG_TRACE("Exiting ...");
 			return status;
 		}
 
@@ -117,7 +120,7 @@ namespace WPEFramework
 		/* ------------------------------------------------------------------------------------------------------- */
 		void MiracastPlayerImplementation::unsetWesterosEnvironmentInternal(void)
 		{
-			MIRACASTLOG_TRACE("Entering..!!!");
+			MIRACASTLOG_TRACE("Entering ...");
 			for (const auto& argName : m_westerosEnvArgs)
 			{
 				if (0 == unsetenv(argName.c_str()))
@@ -130,11 +133,12 @@ namespace WPEFramework
 				}
 			}
 			m_westerosEnvArgs.clear();
-			MIRACASTLOG_TRACE("Exiting..!!!");
+			MIRACASTLOG_TRACE("Exiting ...");
 		}
 
 		std::string MiracastPlayerImplementation::stateDescription(MiracastPlayerState e)
 		{
+			MIRACASTLOG_INFO("MiracastPlayer state [%#08X]", e);
 			switch (e)
 			{
 				case WPEFramework::Exchange::IMiracastPlayer::STATE_IDLE:
@@ -184,6 +188,9 @@ namespace WPEFramework
 						reasonCodeStr = std::to_string(reasonCode);
 					}
 
+					MIRACASTLOG_INFO("Notifying PLAYER_STATE_CHANGE Event ClientMac[%s] ClientName[%s] PlayerState[%d] ReasonCode[%u] ReasonCodeStr[%s]",
+					  clientMac.c_str(), clientName.c_str(), (int)playerState, (int)reasonCode, reasonCodeStr.c_str());
+
 					while (index != _miracastPlayerNotification.end())
 					{
 						(*index)->OnStateChange(clientName , clientMac , playerState , reasonCode , reasonCodeStr );
@@ -192,8 +199,8 @@ namespace WPEFramework
 				}
 				break;
 				default:
-					LOGWARN("Event[%u] not handled", event);
-					break;
+					MIRACASTLOG_WARNING("Event[%u] not handled", event);
+				break;
 			}
 			_adminLock.Unlock();
 		}
@@ -202,22 +209,24 @@ namespace WPEFramework
 		/* ------------------------------------------------------------------------------------------------------- */
 		Core::hresult MiracastPlayerImplementation::Initialize(PluginHost::IShell *service)
 		{
+			MIRACASTLOG_TRACE("Entering ...");
 			Core::hresult result = Core::ERROR_GENERAL;
 
 			ASSERT(nullptr != service);
 
-			if (nullptr != m_CurrentService)
+			mService = service;
+
+			if (nullptr != mService)
 			{
-				if (!m_isServiceInitialized)
+				mService->AddRef();
+				if (!m_isPluginInitialized)
 				{
 					MiracastError ret_code = MIRACAST_OK;
 					m_miracast_rtsp_obj = MiracastRTSPMsg::getInstance(ret_code, this);
 					if (nullptr != m_miracast_rtsp_obj)
 					{
-						m_CurrentService = service;
-						m_CurrentService->AddRef();
 						m_GstPlayer = MiracastGstPlayer::getInstance();
-						m_isServiceInitialized = true;
+						m_isPluginInitialized = true;
 						result = Core::ERROR_NONE;
 					}
 					else
@@ -238,34 +247,34 @@ namespace WPEFramework
 					}
 				}
 			}
+			MIRACASTLOG_TRACE("Exiting ...");
 			return result;
 		}
 
 		Core::hresult MiracastPlayerImplementation::Deinitialize(PluginHost::IShell* service)
 		{
-			MIRACASTLOG_INFO("Entering..!!!");
+			MIRACASTLOG_TRACE("Entering ...");
 
 			ASSERT(nullptr != service);
 
-			MiracastPlayerImplementation::_instance = nullptr;
-			MIRACASTLOG_INFO("Entering..!!!");
-
-			if (m_isServiceInitialized)
+			if (m_isPluginInitialized)
 			{
 				MiracastRTSPMsg::destroyInstance();
-				m_CurrentService = nullptr;
 				m_miracast_rtsp_obj = nullptr;
-				m_isServiceInitialized = false;
+				m_GstPlayer = nullptr;
+				m_isPluginInitialized = false;
 				MIRACASTLOG_INFO("Done..!!!");
 			}
-			MIRACASTLOG_INFO("Exiting..!!!");
+			MIRACASTLOG_TRACE("Exiting ...");
 
-			if (nullptr != m_CurrentService)
+			if (nullptr != mService)
 			{
-				m_CurrentService->Release();
-				m_CurrentService = nullptr;
+				mService->Release();
+				mService = nullptr;
 			}
-			MIRACASTLOG_INFO("Exiting..!!!");
+			MiracastPlayerImplementation::_instance = nullptr;
+
+			MIRACASTLOG_TRACE("Exiting ...");
 			return Core::ERROR_NONE;
 		}
 
@@ -273,7 +282,7 @@ namespace WPEFramework
 		{
 			RTSP_HLDR_MSGQ_STRUCT rtsp_hldr_msgq_data = {0};
 			bool isSuccessOrFailure = false;
-			MIRACASTLOG_INFO("Entering..!!!");
+			MIRACASTLOG_TRACE("Entering ...");
 
 			strncpy( rtsp_hldr_msgq_data.source_dev_ip, deviceParam.sourceDeviceIP.c_str() , sizeof(rtsp_hldr_msgq_data.source_dev_ip));
 			rtsp_hldr_msgq_data.source_dev_ip[sizeof(rtsp_hldr_msgq_data.source_dev_ip) - 1] = '\0';
@@ -298,7 +307,7 @@ namespace WPEFramework
 				isSuccessOrFailure = true;
 			}
 			returnPayload.success = isSuccessOrFailure;
-			MIRACASTLOG_INFO("Exiting..!!!");
+			MIRACASTLOG_TRACE("Exiting ...");
 			return Core::ERROR_NONE;
 		}
 
@@ -307,7 +316,7 @@ namespace WPEFramework
 			RTSP_HLDR_MSGQ_STRUCT rtsp_hldr_msgq_data = {0};
 			bool isSuccessOrFailure = true;
 
-			MIRACASTLOG_INFO("Entering..!!!");
+			MIRACASTLOG_TRACE("Entering ...");
 
 			switch (reasonCode)
 			{
@@ -332,7 +341,7 @@ namespace WPEFramework
 
 			returnPayload.success = isSuccessOrFailure;
 
-			MIRACASTLOG_INFO("Exiting..!!!");
+			MIRACASTLOG_TRACE("Exiting ...");
 			return Core::ERROR_NONE;
 		}
 
@@ -340,7 +349,7 @@ namespace WPEFramework
 		{
 			RTSP_HLDR_MSGQ_STRUCT rtsp_hldr_msgq_data = {0};
 			bool isSuccessOrFailure = false;
-			MIRACASTLOG_INFO("Entering..!!!");
+			MIRACASTLOG_TRACE("Entering ...");
 
 			if (( 0 < width ) && ( 0 < height ) &&
 				(( startX != m_video_sink_rect.startX ) ||
@@ -359,7 +368,7 @@ namespace WPEFramework
 				isSuccessOrFailure = true;
 			}
 			returnPayload.success = isSuccessOrFailure;
-			MIRACASTLOG_INFO("Exiting..!!!");
+			MIRACASTLOG_TRACE("Exiting ...");
 			return Core::ERROR_NONE;
 		}
 
@@ -441,16 +450,17 @@ namespace WPEFramework
 
 		Core::hresult MiracastPlayerImplementation::UnsetWesterosEnvironment(Result &returnPayload )
 		{
-			MIRACASTLOG_INFO("Entering..!!!");
+			MIRACASTLOG_TRACE("Entering ...");
 			unsetWesterosEnvironmentInternal();
 			returnPayload.success = true;
-			MIRACASTLOG_INFO("Exiting..!!!");
+			MIRACASTLOG_TRACE("Exiting ...");
 			return Core::ERROR_NONE;
 		}
 
 		Core::hresult MiracastPlayerImplementation::SetLogging(const MiracastLogLevel &logLevel , const SeparateLogger &separateLogger , Result &returnPayload)
 		{
-			bool isSuccessOrFailure = false;
+			MIRACASTLOG_TRACE("Entering ...");
+			bool isSuccessOrFailure = true;
 			MIRACAST::LogLevel level = INFO_LEVEL;
 
 			if (!separateLogger.logStatus.empty())
@@ -462,23 +472,27 @@ namespace WPEFramework
 					if (!separateLogger.logfileName.empty())
 					{
 						MIRACAST::enable_separate_logger(separateLogger.logfileName);
-						isSuccessOrFailure = true;
 					}
 					else
 					{
 						returnPayload.message = "'separate_logger.logfilename' parameter is required";
+						isSuccessOrFailure = false;
+						MIRACASTLOG_ERROR("separate_logger.logfilename is empty");
 					}
 				}
 				else if ( "DISABLE" == separateLogger.logStatus || "disable" == separateLogger.logStatus )
 				{
 					MIRACAST::disable_separate_logger();
-					isSuccessOrFailure = true;
 				}
 				else
 				{
 					returnPayload.message = "Supported 'separate_logger.status' parameter values are ENABLE or DISABLE";
+					isSuccessOrFailure = false;
+					MIRACASTLOG_ERROR("Unsupported param passed [%s]", status.c_str());
 				}
 			}
+
+			MIRACASTLOG_INFO("Log Level [%d]", logLevel);
 
 			switch (logLevel)
 			{
@@ -516,6 +530,7 @@ namespace WPEFramework
 				{
 					returnPayload.message = "Supported 'level' parameter values are FATAL, ERROR, WARNING, INFO, VERBOSE or TRACE";
 					isSuccessOrFailure = false;
+					MIRACASTLOG_ERROR("Unsupported Loglevel passed [%d]", logLevel);
 				}
 				break;
 			}
@@ -523,9 +538,10 @@ namespace WPEFramework
 			if (isSuccessOrFailure)
 			{
 				set_loglevel(level);
+				MIRACASTLOG_INFO("Loglevel configured as [%d]", level);
 			}
 			returnPayload.success = isSuccessOrFailure;
-			MIRACASTLOG_INFO("Exiting..!!!");
+			MIRACASTLOG_TRACE("Exiting ...");
 			return Core::ERROR_NONE;
 		}
 		/*  COMRPC Methods End */
@@ -535,7 +551,7 @@ namespace WPEFramework
 		/* ------------------------------------------------------------------------------------------------------- */
 		void MiracastPlayerImplementation::onStateChange(const std::string& client_mac, const std::string& client_name, MiracastPlayerState player_state, MiracastPlayerReasonCode reason_code)
 		{
-			MIRACASTLOG_INFO("Entering..!!!");
+			MIRACASTLOG_TRACE("Entering ...");
 
 			auto tupleParam = std::make_tuple(client_mac,client_name,player_state,reason_code);
 
@@ -560,7 +576,7 @@ namespace WPEFramework
 			{
 				unsetWesterosEnvironmentInternal();
 			}
-			MIRACASTLOG_INFO("Exiting..!!!");
+			MIRACASTLOG_TRACE("Exiting ...");
 		}
 		/*  Events End */
 		/* ------------------------------------------------------------------------------------------------------- */

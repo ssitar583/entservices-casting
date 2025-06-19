@@ -188,25 +188,25 @@ namespace WPEFramework
 					private:
 						MiracastServiceImplementation& _parent;
 				}; // class PowerManagerNotification
-				bool m_isServiceInitialized;
-				bool m_isServiceEnabled;
+
+				mutable Core::CriticalSection _adminLock;
 				std::mutex m_DiscoveryStateMutex;
 				std::recursive_mutex m_EventMutex;
+				std::string m_src_dev_ip{""};
+				std::string m_src_dev_mac{""};
+				std::string m_src_dev_name{""};
+				std::string m_sink_dev_ip{""};
+				WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement> *m_SystemPluginObj = nullptr;
+				WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement> *m_WiFiPluginObj = nullptr;
+				std::list<Exchange::IMiracastService::INotification *> _miracastServiceNotification; // List of registered notifications
+				PluginHost::IShell *m_CurrentService;
 				guint m_FriendlyNameMonitorTimerID{0};
 				guint m_WiFiConnectedStateMonitorTimerID{0};
 				guint m_MiracastConnectionMonitorTimerID{0};
 				eMIRA_SERVICE_STATES m_eService_state;
-				std::string m_src_dev_ip;
-				std::string m_src_dev_mac;
-				std::string m_src_dev_name;
-				std::string m_sink_dev_ip;
-				WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement> *m_SystemPluginObj = nullptr;
-				WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement> *m_WiFiPluginObj = nullptr;
+				bool m_isServiceInitialized{false};
+				bool m_isServiceEnabled{false};
 
-				mutable Core::CriticalSection _adminLock;
-				PluginHost::IShell *mShell;
-				std::list<Exchange::IMiracastService::INotification *> _miracastServiceNotification; // List of registered notifications
-				PluginHost::IShell *m_CurrentService;
 				void dispatchEvent(Event, const ParamsType &params);
 				void Dispatch(Event event, const ParamsType &params);
 
@@ -242,6 +242,8 @@ namespace WPEFramework
 				static PowerManagerInterfaceRef _powerManagerPlugin;
 				Core::Sink<PowerManagerNotification> _pwrMgrNotification;
 				bool _registeredEventHandlers;
+
+				friend class Job;
 		}; // class MiracastServiceImplementation
 	} // namespace Plugin
 } // namespace WPEFramework
