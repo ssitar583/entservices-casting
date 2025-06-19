@@ -58,12 +58,12 @@ namespace WPEFramework {
 						INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
 						END_INTERFACE_MAP
 							
-						void Activated(RPC::IRemoteConnection *) override
+						void Activated(RPC::IRemoteConnection *) final
 						{
 							LOGINFO("XCast Notification Activated");
 						}
 		
-						void Deactivated(RPC::IRemoteConnection *connection) override
+						void Deactivated(RPC::IRemoteConnection *connection) final
 						{
 							LOGINFO("XCast Notification Deactivated");
 							_parent.Deactivated(connection);
