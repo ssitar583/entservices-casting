@@ -122,8 +122,8 @@ namespace WPEFramework
 			Core::hresult Unregister(Exchange::IMiracastPlayer::INotification *notification) override;
 
 			Core::hresult PlayRequest(const DeviceParameters &deviceParam , const VideoRectangle &videoRect , Result &returnPayload ) override;
-			Core::hresult StopRequest(const string &clientMac , const string &clientName , const MiracastPlayerStopReasonCode &reasonCode , Result &returnPayload ) override;
-			Core::hresult SetVideoRectangle(const int32_t &startX , const int32_t &startY , const int32_t &width , const int32_t &height , Result &returnPayload ) override;
+			Core::hresult StopRequest(const string &clientMac , const string &clientName , const int &reasonCode , Result &returnPayload ) override;
+			Core::hresult SetVideoRectangle(const int &startX , const int &startY , const int &width , const int &height , Result &returnPayload ) override;
 			Core::hresult SetWesterosEnvironment( IWesterosEnvArgumentsIterator * const westerosArgs , Result &returnPayload ) override;
 			Core::hresult UnsetWesterosEnvironment(Result &returnPayload ) override;
 			Core::hresult SetLogging(const MiracastLogLevel &logLevel , const SeparateLogger &separateLogger , Result &returnPayload) override;

@@ -69,19 +69,19 @@ namespace WPEFramework
 
 						void OnClientConnectionRequest(const string &clientMac , const string &clientName ) override
 						{
-							LOGINFO("OnClientConnectionRequest -> clientMac:[%s], clientName:[%s]", clientMac.c_str(), clientName.c_str());
+							LOGINFO("=> clientMac:[%s], clientName:[%s]", clientMac.c_str(), clientName.c_str());
 							Exchange::JMiracastService::Event::OnClientConnectionRequest(_parent, clientMac, clientName);
 						}
 
-						void OnClientConnectionError(const string &clientMac , const string &clientName , const Exchange::IMiracastService::ReasonCode &reasonCode , const string &reasonCodeStr ) override
+						void OnClientConnectionError(const string &clientMac , const string &clientName , const string &reasonCode , const Exchange::IMiracastService::ReasonCode &reasonDescription ) override
 						{
-							LOGINFO("OnClientConnectionError -> clientMac:[%s], clientName:[%s], errorCode:[%s], reason:[%s]", clientMac.c_str(), clientName.c_str(), reasonCodeStr.c_str(), std::to_string(reasonCode).c_str());
-							Exchange::JMiracastService::Event::OnClientConnectionError(_parent, clientMac, clientName, reasonCode, reasonCodeStr);
+							LOGINFO("=> clientMac:[%s], clientName:[%s], errorCode:[%s]", clientMac.c_str(), clientName.c_str(), reasonCode.c_str());
+							Exchange::JMiracastService::Event::OnClientConnectionError(_parent, clientMac, clientName, reasonCode, reasonDescription);
 						}
 
 						void OnLaunchRequest(const Exchange::IMiracastService::DeviceParameters deviceParameters) override
 						{
-							LOGINFO("OnLaunchRequest -> SrcDevIP[%s] SrcDevMac[%s] SrcDevName[%s] SinkDevIP[%s]",
+							LOGINFO("=> SrcDevIP[%s] SrcDevMac[%s] SrcDevName[%s] SinkDevIP[%s]",
 									deviceParameters.sourceDeviceIP.c_str(),
 									deviceParameters.sourceDeviceMac.c_str(),
 									deviceParameters.sourceDeviceName.c_str(),

@@ -328,20 +328,19 @@ namespace WPEFramework
 					string clientMac;
 					string clientName;
 					string reasonCodeStr;
-					MiracastServiceReasonCode reasonCode;
+					MiracastServiceReasonCode reason;
 
 					if (const auto* tupleValue = boost::get<std::tuple<std::string, std::string, MiracastServiceReasonCode>>(&params))
 					{
 						clientMac = std::get<0>(*tupleValue);
 						clientName = std::get<1>(*tupleValue);
-						reasonCode = std::get<2>(*tupleValue);
-						reasonCodeStr = std::to_string(reasonCode);
+						reason = std::get<2>(*tupleValue);
+						reasonCodeStr = std::to_string(reason);
 					}
-					MIRACASTLOG_INFO("Notifying CLIENT_CONNECTION_ERROR Event ClientMac[%s] ClientName[%s] ReasonCode[%u] ReasonCodeStr[%s]",
-					  clientMac.c_str(), clientName.c_str(), reasonCode, reasonCodeStr.c_str());
+					MIRACASTLOG_INFO("Notifying CLIENT_CONNECTION_ERROR Event Mac[%s] Name[%s] Reason[%u]",clientMac.c_str(), clientName.c_str(), reason);
 					while (index != _miracastServiceNotification.end())
 					{
-						(*index)->OnClientConnectionError(clientMac , clientName , reasonCode , reasonCodeStr);
+						(*index)->OnClientConnectionError(clientMac , clientName , reasonCodeStr , reason);
 						++index;
 					}
 				}
@@ -660,6 +659,7 @@ namespace WPEFramework
 		{
 			MIRACASTLOG_TRACE("Entering ...");
 			bool isSuccessOrFailure = false;
+			MIRACASTLOG_INFO("stopConnection clientMac[%s] clientName[%s]", clientMac.c_str(), clientName.c_str());
 			lock_guard<recursive_mutex> lock(m_EventMutex);
 			eMIRA_SERVICE_STATES current_state = getCurrentServiceState();
 
@@ -705,7 +705,7 @@ namespace WPEFramework
 			return Core::ERROR_NONE;
 		}
 
-		Core::hresult MiracastServiceImplementation::UpdatePlayerState(const string &clientMac , const MiracastPlayerState &playerState , const MiracastPlayerReasonCode &reasonCode , Result &returnPayload )
+		Core::hresult MiracastServiceImplementation::UpdatePlayerState(const string &clientMac , const MiracastPlayerState &playerState , const int &reasonCode , Result &returnPayload )
 		{
 			MIRACASTLOG_TRACE("Entering ...");
 			bool restart_discovery_needed = false;
@@ -717,11 +717,12 @@ namespace WPEFramework
 				case WPEFramework::Exchange::IMiracastService::PLAYER_STATE_PLAYING:
 				case WPEFramework::Exchange::IMiracastService::PLAYER_STATE_STOPPED:
 				{
-					MIRACASTLOG_INFO("#### clientMac[%s] playerState[%d] reasonCode[%#04X] ####", clientMac.c_str(), (int)playerState, (int)reasonCode);
+					MIRACASTLOG_INFO("#### clientMac[%s] playerState[%d] reasonCode[%d] ####", clientMac.c_str(), (int)playerState, (int)reasonCode);
 					m_miracast_ctrler_obj->m_ePlayer_state = playerState;
 					if (WPEFramework::Exchange::IMiracastService::PLAYER_STATE_STOPPED == playerState)
 					{
-						if (WPEFramework::Exchange::IMiracastService::PLAYER_REASON_CODE_NEW_SRC_DEV_CONNECT_REQ == reasonCode )
+						MiracastPlayerReasonCode playerReasonCode = static_cast<MiracastPlayerReasonCode>(reasonCode);
+						if (WPEFramework::Exchange::IMiracastService::PLAYER_REASON_CODE_NEW_SRC_DEV_CONNECT_REQ == playerReasonCode )
 						{
 							MIRACASTLOG_INFO("!!! STOPPED RECEIVED FOR NEW CONECTION !!!");
 							m_miracast_ctrler_obj->flush_current_session();
@@ -729,17 +730,17 @@ namespace WPEFramework
 						else
 						{
 							restart_discovery_needed = true;
-							if ( WPEFramework::Exchange::IMiracastService::PLAYER_REASON_CODE_APP_REQ_TO_STOP == reasonCode )
+							if ( WPEFramework::Exchange::IMiracastService::PLAYER_REASON_CODE_APP_REQ_TO_STOP == playerReasonCode )
 							{
 								MIRACASTLOG_INFO("!!! STOPPED RECEIVED FOR ON EXIT !!!");
 							}
-							else if ( WPEFramework::Exchange::IMiracastService::PLAYER_REASON_CODE_SRC_DEV_REQ_TO_STOP == reasonCode )
+							else if ( WPEFramework::Exchange::IMiracastService::PLAYER_REASON_CODE_SRC_DEV_REQ_TO_STOP == playerReasonCode )
 							{
 								MIRACASTLOG_INFO("!!! SRC DEV TEARDOWN THE CONNECTION !!!");
 							}
 							else
 							{
-								MIRACASTLOG_ERROR("!!! STOPPED RECEIVED FOR REASON[%#04X] !!!",reasonCode);
+								MIRACASTLOG_ERROR("!!! STOPPED RECEIVED FOR REASON[%d] !!!",playerReasonCode);
 							}
 						}
 					}
@@ -748,7 +749,7 @@ namespace WPEFramework
 				default:
 				{
 					returnPayload.message = "Invalid Player State";
-					MIRACASTLOG_ERROR("Invalid Player State[%d]", (int)playerState);
+					MIRACASTLOG_ERROR("Invalid Player State[%#04X]", (int)playerState);
 					return Core::ERROR_BAD_REQUEST;
 				}
 			}

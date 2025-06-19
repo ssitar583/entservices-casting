@@ -150,7 +150,7 @@ namespace WPEFramework
 				Core::hresult GetEnabled(bool &enabled , bool &success ) override;
 				Core::hresult AcceptClientConnection(const string &requestStatus , Result &returnPayload ) override;
 				Core::hresult StopClientConnection(const string &clientMac , const string &clientName, Result &returnPayload ) override;
-				Core::hresult UpdatePlayerState(const string &clientMac , const MiracastPlayerState &playerState , const MiracastPlayerReasonCode &reasonCode , Result &returnPayload ) override;
+				Core::hresult UpdatePlayerState(const string &clientMac , const MiracastPlayerState &playerState , const int &reasonCode , Result &returnPayload ) override;
 				Core::hresult SetLogging(const MiracastLogLevel &logLevel , const SeparateLogger &separateLogger , Result &returnPayload) override;
 				Core::hresult SetP2PBackendDiscovery(const bool &enabled , Result &returnPayload ) override;
 

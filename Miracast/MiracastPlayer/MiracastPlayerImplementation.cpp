@@ -176,7 +176,7 @@ namespace WPEFramework
 					string clientName;
 					string clientMac;
 					MiracastPlayerState playerState;
-					MiracastPlayerReasonCode reasonCode;
+					MiracastPlayerReasonCode reason;
 					string reasonCodeStr;
 
 					if (const auto* tupleValue = boost::get<std::tuple<std::string, std::string, MiracastPlayerState, MiracastPlayerReasonCode>>(&params))
@@ -184,16 +184,13 @@ namespace WPEFramework
 						clientMac = std::get<0>(*tupleValue);
 						clientName = std::get<1>(*tupleValue);
 						playerState = std::get<2>(*tupleValue);
-						reasonCode = std::get<3>(*tupleValue);
-						reasonCodeStr = std::to_string(reasonCode);
+						reason = std::get<3>(*tupleValue);
+						reasonCodeStr = std::to_string(reason);
 					}
-
-					MIRACASTLOG_INFO("Notifying PLAYER_STATE_CHANGE Event ClientMac[%s] ClientName[%s] PlayerState[%d] ReasonCode[%u] ReasonCodeStr[%s]",
-					  clientMac.c_str(), clientName.c_str(), (int)playerState, (int)reasonCode, reasonCodeStr.c_str());
-
+					MIRACASTLOG_INFO("Notifying PLAYER_STATE_CHANGE Event ClientMac[%s] ClientName[%s] PlayerState[%d] ReasonCode[%u]",clientMac.c_str(), clientName.c_str(), (int)playerState, (int)reason);
 					while (index != _miracastPlayerNotification.end())
 					{
-						(*index)->OnStateChange(clientName , clientMac , playerState , reasonCode , reasonCodeStr );
+						(*index)->OnStateChange(clientName , clientMac , playerState , reasonCodeStr, reason );
 						++index;
 					}
 				}
@@ -311,19 +308,20 @@ namespace WPEFramework
 			return Core::ERROR_NONE;
 		}
 
-		Core::hresult MiracastPlayerImplementation::StopRequest(const string &clientMac , const string &clientName , const MiracastPlayerStopReasonCode &reasonCode , Result &returnPayload )
+		Core::hresult MiracastPlayerImplementation::StopRequest(const string &clientMac , const string &clientName , const int &reasonCode , Result &returnPayload )
 		{
 			RTSP_HLDR_MSGQ_STRUCT rtsp_hldr_msgq_data = {0};
 			bool isSuccessOrFailure = true;
+			MiracastPlayerStopReasonCode stopReasonCode = static_cast<MiracastPlayerStopReasonCode>(reasonCode);
 
 			MIRACASTLOG_TRACE("Entering ...");
 
-			switch (reasonCode)
+			switch (stopReasonCode)
 			{
 				case WPEFramework::Exchange::IMiracastPlayer::STOP_REASON_APP_REQ_FOR_EXIT:
 				case WPEFramework::Exchange::IMiracastPlayer::STOP_REASON_APP_REQ_FOR_NEW_CONNECTION:
 				{
-					rtsp_hldr_msgq_data.stop_reason_code = reasonCode;
+					rtsp_hldr_msgq_data.stop_reason_code = stopReasonCode;
 
 					rtsp_hldr_msgq_data.state = RTSP_TEARDOWN_FROM_SINK2SRC;
 					m_miracast_rtsp_obj->send_msgto_rtsp_msg_hdler_thread(rtsp_hldr_msgq_data);
@@ -333,19 +331,17 @@ namespace WPEFramework
 				default:
 				{
 					isSuccessOrFailure = false;
-					MIRACASTLOG_ERROR("!!! UNKNOWN STOP REASON CODE RECEIVED[%#04X] !!!",reasonCode);
+					MIRACASTLOG_ERROR("!!! UNKNOWN STOP REASON CODE RECEIVED[%u] !!!",stopReasonCode);
 					returnPayload.message = "UNKNOWN STOP REASON CODE RECEIVED";
 				}
 				break;
 			}
-
 			returnPayload.success = isSuccessOrFailure;
-
 			MIRACASTLOG_TRACE("Exiting ...");
 			return Core::ERROR_NONE;
 		}
 
-		Core::hresult MiracastPlayerImplementation::SetVideoRectangle(const int32_t &startX , const int32_t &startY , const int32_t &width , const int32_t &height , Result &returnPayload )
+		Core::hresult MiracastPlayerImplementation::SetVideoRectangle(const int &startX , const int &startY , const int &width , const int &height , Result &returnPayload )
 		{
 			RTSP_HLDR_MSGQ_STRUCT rtsp_hldr_msgq_data = {0};
 			bool isSuccessOrFailure = false;

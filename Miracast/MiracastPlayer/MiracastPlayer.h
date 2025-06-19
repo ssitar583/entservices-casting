@@ -67,11 +67,10 @@ namespace WPEFramework
 							_parent.Deactivated(connection);
 						}
 
-						void OnStateChange(const string &clientName , const string &clientMac , const Exchange::IMiracastPlayer::State &playerState , const Exchange::IMiracastPlayer::ReasonCode &reasonCode , const string &reason ) override
+						void OnStateChange(const string &clientName , const string &clientMac , const Exchange::IMiracastPlayer::State &playerState , const string &reasonCode , const Exchange::IMiracastPlayer::ReasonCode &reasonDescription ) override
 						{
-							LOGINFO("OnStateChange -> clientName:[%s], clientMac:[%s], playerState:[%d], reasonCode:[%d], reason:[%s]",
-									clientName.c_str(), clientMac.c_str(), static_cast<int>(playerState), static_cast<int>(reasonCode), reason.c_str());
-							Exchange::JMiracastPlayer::Event::OnStateChange(_parent, clientName, clientMac, playerState, reasonCode, reason);
+							LOGINFO("=> clientName:[%s], clientMac:[%s], playerState:[%d], Reason:[%s]",clientName.c_str(), clientMac.c_str(), static_cast<int>(playerState), reasonCode.c_str());
+							Exchange::JMiracastPlayer::Event::OnStateChange(_parent, clientName, clientMac, playerState, reasonCode, reasonDescription);
 						}
 
 					private:
