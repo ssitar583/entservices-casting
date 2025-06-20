@@ -291,6 +291,8 @@ namespace WPEFramework
 			rtsp_hldr_msgq_data.sink_dev_ip[sizeof(rtsp_hldr_msgq_data.sink_dev_ip) - 1] = '\0';
 			rtsp_hldr_msgq_data.state = RTSP_START_RECEIVE_MSGS;
 
+			MIRACASTLOG_INFO("source_dev_ip[%s] source_dev_mac[%s] source_dev_name[%s] sink_dev_ip[%s] videoRect:[%d,%d,%d,%d]",
+					rtsp_hldr_msgq_data.source_dev_ip, rtsp_hldr_msgq_data.source_dev_mac, rtsp_hldr_msgq_data.source_dev_name, rtsp_hldr_msgq_data.sink_dev_ip);
 			if (( 0 < videoRect.width ) && ( 0 < videoRect.height ))
 			{
 				m_video_sink_rect.startX = videoRect.startX;
@@ -315,7 +317,7 @@ namespace WPEFramework
 			MiracastPlayerStopReasonCode stopReasonCode = static_cast<MiracastPlayerStopReasonCode>(reasonCode);
 
 			MIRACASTLOG_TRACE("Entering ...");
-
+			MIRACASTLOG_INFO("clientMac[%s] clientName[%s] reasonCode[%d]",clientMac.c_str(), clientName.c_str(), reasonCode);
 			switch (stopReasonCode)
 			{
 				case WPEFramework::Exchange::IMiracastPlayer::STOP_REASON_APP_REQ_FOR_EXIT:
@@ -346,6 +348,10 @@ namespace WPEFramework
 			RTSP_HLDR_MSGQ_STRUCT rtsp_hldr_msgq_data = {0};
 			bool isSuccessOrFailure = false;
 			MIRACASTLOG_TRACE("Entering ...");
+
+			MIRACASTLOG_INFO("NewRect:[%d,%d,%d,%d] CurrentRect[%d,%d,%d,%d]",
+								startX, startY, width, height,
+								m_video_sink_rect.startX, m_video_sink_rect.startY,m_video_sink_rect.width, m_video_sink_rect.height);
 
 			if (( 0 < width ) && ( 0 < height ) &&
 				(( startX != m_video_sink_rect.startX ) ||
@@ -379,7 +385,7 @@ namespace WPEFramework
 				while (westerosArgs->Next(entry) == true)
 				{
 					std::string argName = entry.argName;
-					std::string argValue = entry.argName;
+					std::string argValue = entry.argValue;
 
 					m_westerosEnvArgs.push_back(argName);
 					MIRACASTLOG_INFO("Configuring environment variable: %s=%s", argName.c_str(), argValue.c_str());

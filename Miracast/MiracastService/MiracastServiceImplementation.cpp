@@ -517,6 +517,7 @@ namespace WPEFramework
 		{
 			MIRACASTLOG_TRACE("Entering ...");
 			bool isSuccessOrFailure = false;
+			MIRACASTLOG_INFO("SetEnabled called with [%s]", enabled ? "true" : "false");
 			lock_guard<mutex> lck(m_DiscoveryStateMutex);
 			eMIRA_SERVICE_STATES current_state = getCurrentServiceState();
 			if (enabled)
@@ -659,7 +660,7 @@ namespace WPEFramework
 		{
 			MIRACASTLOG_TRACE("Entering ...");
 			bool isSuccessOrFailure = false;
-			MIRACASTLOG_INFO("stopConnection clientMac[%s] clientName[%s]", clientMac.c_str(), clientName.c_str());
+			MIRACASTLOG_INFO("clientMac[%s] clientName[%s]", clientMac.c_str(), clientName.c_str());
 			lock_guard<recursive_mutex> lock(m_EventMutex);
 			eMIRA_SERVICE_STATES current_state = getCurrentServiceState();
 
@@ -761,7 +762,6 @@ namespace WPEFramework
 				changeServiceState(MIRACAST_SERVICE_STATE_RESTARTING_SESSION);
 			}
 			MIRACASTLOG_INFO("#### MiracastPlayerState[%d] reasonCode[%#04X] ####", (int)playerState, (int)reasonCode);
-
 			MIRACASTLOG_TRACE("Exiting ...");
 			returnPayload.success = true;
 			return Core::ERROR_NONE;
