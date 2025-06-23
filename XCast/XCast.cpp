@@ -76,7 +76,7 @@ namespace WPEFramework
 
             if (nullptr != _xcast)
             {
-                configure = _xcast->QueryInterface<Exchange::IConfiguration>();
+                auto configure = _xcast->QueryInterface<Exchange::IConfiguration>();
                 if (configure != nullptr)
                 {
                     uint32_t result = configure->Configure(_service);
