@@ -41,7 +41,7 @@ namespace WPEFramework
 		, mService(nullptr)
 		, m_isPluginInitialized(false)
 		{
-			LOGINFO("Call MiracastPlayerImplementation constructor");
+			LOGINFO("Call MiracastPlayerImplementation constructor Trial 1");
 			MiracastPlayerImplementation::_instance = this;
 			MIRACAST::logger_init("MiracastPlayer");
 		}
@@ -551,7 +551,7 @@ namespace WPEFramework
 
 		/*  Events Start */
 		/* ------------------------------------------------------------------------------------------------------- */
-		void MiracastPlayerImplementation::onStateChange(const std::string& client_mac, const std::string& client_name, MiracastPlayerState player_state, MiracastPlayerReasonCode reason_code)
+		void MiracastPlayerImplementation::onStateChange(string client_mac, string client_name, MiracastPlayerState player_state, MiracastPlayerReasonCode reason_code )
 		{
 			MIRACASTLOG_TRACE("Entering ...");
 

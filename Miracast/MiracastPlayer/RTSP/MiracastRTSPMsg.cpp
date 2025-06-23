@@ -21,11 +21,8 @@
 #include <MiracastGstPlayer.h>
 
 MiracastRTSPMsg *MiracastRTSPMsg::m_rtsp_msg_obj{nullptr};
-static std::string empty_string = "";
 
-void RTSPMsgHandlerCallback(void *args);
-
-RTSP_MSG_FMT_TEMPLATE MiracastRTSPMsg::rtsp_msg_fmt_template[] = {
+static RTSP_MSG_FMT_TEMPLATE m_rtsp_msg_fmt_template[] = {
     {RTSP_MSG_FMT_M1_RESPONSE, "RTSP/1.0 200 OK\r\nPublic: \"%s, GET_PARAMETER, SET_PARAMETER\"\r\nCSeq: %s\r\n\r\n"},
     {RTSP_MSG_FMT_M2_REQUEST, "OPTIONS * RTSP/1.0\r\nRequire: %s\r\nCSeq: %s\r\n\r\n"},
     {RTSP_MSG_FMT_M3_RESPONSE, "RTSP/1.0 200 OK\r\nContent-Length: %s\r\nContent-Type: text/parameters\r\nCSeq: %s\r\n\r\n%s"},
@@ -41,7 +38,7 @@ RTSP_MSG_FMT_TEMPLATE MiracastRTSPMsg::rtsp_msg_fmt_template[] = {
     {RTSP_MSG_FMT_REPORT_ERROR, "%sCSeq: %s\r\n\r\n"}
 };
 
-RTSP_PARSER_TEMPLATE MiracastRTSPMsg::rtsp_msg_parser_fields[] = {
+static RTSP_PARSER_TEMPLATE m_rtsp_msg_parser_fields[] = {
     {RTSP_PARSER_FIELD_START, ""},
 
     {RTSP_OPTIONS_REQ_FIELD, "OPTIONS * RTSP/1.0"},
@@ -81,9 +78,7 @@ RTSP_PARSER_TEMPLATE MiracastRTSPMsg::rtsp_msg_parser_fields[] = {
     {RTSP_PARSER_FIELD_END, ""},
 };
 
-const int MiracastRTSPMsg::num_parse_fields = sizeof(rtsp_msg_parser_fields) / sizeof(rtsp_msg_parser_fields[0]);
-
-RTSP_ERRORCODE_TEMPLATE MiracastRTSPMsg::rtsp_msg_error_codes[] = {
+static RTSP_ERRORCODE_TEMPLATE m_rtsp_msg_error_codes[] = {
     {RTSP_ERRORCODE_CONTINUE, "RTSP/1.0 100 Continue\r\n"},
 
     {RTSP_ERRORCODE_OK, "RTSP/1.0 200 OK\r\n"},
@@ -137,6 +132,12 @@ RTSP_ERRORCODE_TEMPLATE MiracastRTSPMsg::rtsp_msg_error_codes[] = {
 
     {RTSP_ERRORCODE_OPTION_NOT_SUPPORTED, "RTSP/1.0 551 Option not supported\r\n"}
 };
+static const int m_num_parse_fields = sizeof(m_rtsp_msg_parser_fields) / sizeof(m_rtsp_msg_parser_fields[0]);
+
+static RTSP_WFD_VIDEO_FMT_STRUCT m_wfd_video_formats_st;
+static RTSP_WFD_AUDIO_FMT_STRUCT m_wfd_audio_formats_st;
+
+void RTSPMsgHandlerCallback(void *args);
 
 MiracastRTSPMsg *MiracastRTSPMsg::getInstance(MiracastError &error_code , MiracastPlayerNotifier *player_notifier, MiracastThread *controller_thread_id)
 {
@@ -579,10 +580,10 @@ const char* MiracastRTSPMsg::get_RequestResponseFormat(RTSP_MSG_FMT_SINK2SRC for
 {
     MIRACASTLOG_TRACE("Entering...");
     int index = static_cast<RTSP_MSG_FMT_SINK2SRC>(format_type) - static_cast<RTSP_MSG_FMT_SINK2SRC>(RTSP_MSG_FMT_M1_RESPONSE);
-    if (index >= 0 && index < static_cast<int>(sizeof(rtsp_msg_fmt_template) / sizeof(rtsp_msg_fmt_template[0])))
+    if (index >= 0 && index < static_cast<int>(sizeof(m_rtsp_msg_fmt_template) / sizeof(m_rtsp_msg_fmt_template[0])))
     {
         MIRACASTLOG_TRACE("Exiting...");
-        return rtsp_msg_fmt_template[index].template_name;
+        return m_rtsp_msg_fmt_template[index].template_name;
     }
     MIRACASTLOG_TRACE("Exiting...");
     return "";
@@ -592,10 +593,10 @@ const char* MiracastRTSPMsg::get_errorcode_string(RTSP_ERRORCODES error_code)
 {
     MIRACASTLOG_TRACE("Entering...");
     int index = static_cast<RTSP_ERRORCODES>(error_code) - static_cast<RTSP_ERRORCODES>(RTSP_ERRORCODE_CONTINUE);
-    if (index >= 0 && index < static_cast<int>(sizeof(rtsp_msg_error_codes) / sizeof(rtsp_msg_error_codes[0])))
+    if (index >= 0 && index < static_cast<int>(sizeof(m_rtsp_msg_error_codes) / sizeof(m_rtsp_msg_error_codes[0])))
     {
         MIRACASTLOG_TRACE("Exiting...");
-        return rtsp_msg_error_codes[index].string_fmt;
+        return m_rtsp_msg_error_codes[index].string_fmt;
     }
     MIRACASTLOG_TRACE("Exiting...");
     return "";
@@ -605,10 +606,10 @@ const char* MiracastRTSPMsg::get_parser_field_by_index(RTSP_PARSER_FIELDS parse_
 {
     MIRACASTLOG_TRACE("Entering...");
 
-    if ( RTSP_PARSER_FIELD_START < parse_field && parse_field < num_parse_fields )
+    if ( RTSP_PARSER_FIELD_START < parse_field && parse_field < m_num_parse_fields )
     {
-        MIRACASTLOG_TRACE("Exiting with [%d][%s]...",parse_field,rtsp_msg_parser_fields[parse_field].string_fmt);
-        return rtsp_msg_parser_fields[parse_field].string_fmt;
+        MIRACASTLOG_TRACE("Exiting with [%d][%s]...",parse_field,m_rtsp_msg_parser_fields[parse_field].string_fmt);
+        return m_rtsp_msg_parser_fields[parse_field].string_fmt;
     }
     MIRACASTLOG_TRACE("Exiting...");
     return "";
@@ -618,12 +619,12 @@ std::string MiracastRTSPMsg::get_parser_field_value(RTSP_PARSER_FIELDS parse_fie
 {
     MIRACASTLOG_TRACE("Entering [%#04X]...",parse_field);
 
-    if ( RTSP_PARSER_FIELD_START < parse_field && parse_field < num_parse_fields )
+    if ( RTSP_PARSER_FIELD_START < parse_field && parse_field < m_num_parse_fields )
     {
-        MIRACASTLOG_TRACE("parse_field[%#04X][%x]",parse_field,rtsp_msg_parser_fields[parse_field].member_variable_ptr);
-        if ( nullptr != rtsp_msg_parser_fields[parse_field].member_variable_ptr ){
+        MIRACASTLOG_TRACE("parse_field[%#04X][%x]",parse_field,m_rtsp_msg_parser_fields[parse_field].member_variable_ptr);
+        if ( nullptr != m_rtsp_msg_parser_fields[parse_field].member_variable_ptr ){
             MIRACASTLOG_TRACE("Exiting...");
-            return (this->*rtsp_msg_parser_fields[parse_field].member_variable_ptr).c_str();
+            return (this->*m_rtsp_msg_parser_fields[parse_field].member_variable_ptr).c_str();
         }
     }
     MIRACASTLOG_TRACE("Exiting...");
@@ -637,12 +638,12 @@ std::string MiracastRTSPMsg::get_parser_field_n_value_by_name(std::string reques
 
     while ( parse_field < RTSP_PARSER_FIELD_END )
     {
-        if (0 == (request_field_name.compare(rtsp_msg_parser_fields[parse_field].string_fmt)))
+        if (0 == (request_field_name.compare(m_rtsp_msg_parser_fields[parse_field].string_fmt)))
         {
             MIRACASTLOG_TRACE("Inx[%d]request_field_name[%s]fmt[%s]",
                                 parse_field,
                                 request_field_name.c_str(),
-                                rtsp_msg_parser_fields[parse_field].string_fmt);
+                                m_rtsp_msg_parser_fields[parse_field].string_fmt);
             MIRACASTLOG_TRACE("Exiting...");
             return get_parser_field_value(parse_field);
         }
@@ -1227,7 +1228,7 @@ RTSP_STATUS MiracastRTSPMsg::validate_rtsp_m1_msg_m2_send_request(std::string rt
         std::string m2_msg_req_sink2src = "";
         MIRACASTLOG_INFO("M1 response sent");
 
-        m2_msg_req_sink2src = generate_request_response_msg(RTSP_MSG_FMT_M2_REQUEST, empty_string, req_str);
+        m2_msg_req_sink2src = generate_request_response_msg(RTSP_MSG_FMT_M2_REQUEST, "", req_str);
 
         MIRACASTLOG_INFO("Sending the M2 request [%s]",m2_msg_req_sink2src.c_str());
         status_code = send_rstp_msg(m_tcpSockfd, m2_msg_req_sink2src);
@@ -1446,7 +1447,7 @@ RTSP_STATUS MiracastRTSPMsg::validate_rtsp_m4_response_back(std::string rtsp_m4_
         }
     }
 
-    m4_msg_resp_sink2src = generate_request_response_msg( RTSP_MSG_FMT_M4_RESPONSE,seq_str,empty_string);
+    m4_msg_resp_sink2src = generate_request_response_msg( RTSP_MSG_FMT_M4_RESPONSE,seq_str,"");
 
     MIRACASTLOG_INFO("Sending the M4 response");
     status_code = send_rstp_msg(m_tcpSockfd, m4_msg_resp_sink2src);
@@ -1486,7 +1487,7 @@ RTSP_STATUS MiracastRTSPMsg::validate_rtsp_m5_msg_m6_send_request(std::string rt
         }
     }
 
-    m5_msg_resp_sink2src = generate_request_response_msg(RTSP_MSG_FMT_M5_RESPONSE, seq_str, empty_string);
+    m5_msg_resp_sink2src = generate_request_response_msg(RTSP_MSG_FMT_M5_RESPONSE, seq_str, "");
 
     MIRACASTLOG_INFO("Sending the M5 response");
     status_code = send_rstp_msg(m_tcpSockfd, m5_msg_resp_sink2src);
@@ -1780,7 +1781,7 @@ RTSP_STATUS MiracastRTSPMsg::send_rtsp_reply_sink2src( RTSP_MSG_FMT_SINK2SRC req
         case RTSP_MSG_FMT_TRIGGER_METHODS_RESPONSE:
         {
             std::string rtsp_request_buffer = "";
-            rtsp_request_buffer = generate_request_response_msg(req_fmt, received_seq_num , empty_string , error_code );
+            rtsp_request_buffer = generate_request_response_msg(req_fmt, received_seq_num , "" , error_code );
 
             MIRACASTLOG_INFO("Sending the RTSP Msg for [%#04X] format\n",req_fmt);
             status_code = send_rstp_msg(m_tcpSockfd, rtsp_request_buffer);
