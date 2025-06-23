@@ -277,6 +277,24 @@ jobs:
         if: ${{ matrix.compiler == 'gcc' && matrix.coverage == 'with-coverage' && !env.ACT }}
         run: echo "TOOLCHAIN_FILE=$GITHUB_WORKSPACE/entservices-testframework/Tests/gcc-with-coverage.cmake" >> $GITHUB_ENV
 
+      - name: Build googletest
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: >
+          cmake -G Ninja
+          -S "$GITHUB_WORKSPACE/googletest"
+          -B build/googletest
+          -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/usr"
+          -DCMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
+          -DGENERIC_CMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
+          -DBUILD_TYPE=Debug
+          -DBUILD_GMOCK=ON
+          -DBUILD_SHARED_LIBS=OFF
+          -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+          &&
+          cmake --build build/googletest -j8
+          &&
+          cmake --install build/googletest
+
       - name: Build mocks
         run: >
           cmake
@@ -309,6 +327,7 @@ jobs:
           -I $GITHUB_WORKSPACE/entservices-casting/helpers
           -I $GITHUB_WORKSPACE/Thunder/Source
           -I $GITHUB_WORKSPACE/Thunder/Source/core
+          -I $GITHUB_WORKSPACE/install/usr/include
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/devicesettings.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Iarm.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Rfc.h
@@ -339,22 +358,6 @@ jobs:
           cmake --build build/mocks -j8
           &&
           cmake --install build/mocks
-
-      - name: Build googletest
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: >
-          cmake -G Ninja
-          -S "$GITHUB_WORKSPACE/googletest"
-          -B build/googletest
-          -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/usr"
-          -DCMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
-          -DGENERIC_CMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
-          -DBUILD_TYPE=Debug
-          -DBUILD_GMOCK=ON
-          &&
-          cmake --build build/googletest -j8
-          &&
-          cmake --install build/googletest
 
       - name: Build entservices-casting
         run: >
