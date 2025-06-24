@@ -1012,13 +1012,26 @@
             }
             LOGINFO ("=================================================================");
         }  
-        Core::hresult XCastImplementation::ApplicationStateChanged(const string& applicationName, const string& state, const string& applicationId, const string& error) { 
-            LOGINFO("ApplicationStateChanged  ARGS = %s : %s : %s : %s ", applicationName.c_str(), applicationId.c_str() , state.c_str() , error.c_str());
+        Core::hresult XCastImplementation::ApplicationStateChanged(const string& applicationName, const Exchange::IXCast::State& state, const string& applicationId, const string& error) {
+            LOGINFO("ApplicationStateChanged  ARGS = %s : %s : %d : %s ", applicationName.c_str(), applicationId.c_str() , state , error.c_str());
             uint32_t status = Core::ERROR_GENERAL;
-            if(!applicationName.empty() && !state.empty() && (nullptr != m_xcast_manager))
+            if(!applicationName.empty() && (nullptr != m_xcast_manager))
             {
-                LOGINFO("XcastService::ApplicationStateChanged  ARGS = %s : %s : %s : %s ", applicationName.c_str(), applicationId.c_str() , state.c_str() , error.c_str());
-                m_xcast_manager->applicationStateChanged(applicationName, state, applicationId, error);
+                LOGINFO("XcastService::ApplicationStateChanged  ARGS = %s : %s : %d : %s ", applicationName.c_str(), applicationId.c_str() , state , error.c_str());
+                string appstate = "";
+                if (state == Exchange::IXCast::State::RUNNING)
+                {
+                    appstate = "running";
+                }
+                else if (state == Exchange::IXCast::State::STOPPED)
+                {
+                    appstate = "stopped";
+                }
+                else if(state == Exchange::IXCast::State::HIDDEN)
+                {
+                    appstate = "suspended";
+                }
+                m_xcast_manager->applicationStateChanged(applicationName, appstate , applicationId, error);
                 status = Core::ERROR_NONE;
             }
             return status;
@@ -1284,18 +1297,24 @@
             return status;
             //return 0;
          }
-		Core::hresult XCastImplementation::UnregisterApplications(const string &appName ) 
+		Core::hresult XCastImplementation::UnregisterApplications(Exchange::IXCast::IStringIterator* const apps) 
         {
             LOGINFO("XcastService::unregisterApplications \n ");
             Core::hresult returnStatus = Core::ERROR_GENERAL;
-            if (appName != "")
-            {
-                LOGINFO ("\nInput string is:%s\n", appName.c_str());
+            if (apps != nullptr)
+            {              
                 enableCastService(m_friendlyName,false);
                 m_isDynamicRegistrationsRequired = true;
                 //Remove app names from cache map
 
-                std::vector<std::string> appsToDelete = { appName };
+                // std::vector<std::string> appsToDelete = { appName };
+                std::vector<string> appsToDelete;
+                string appName;
+                while (apps->Next(appName))
+                {
+                    LOGINFO("Going to delete the app: %s from dynamic cache", appName.c_str());
+                    appsToDelete.push_back(appName);
+                }
                 if(deleteFromDynamicAppCache (appsToDelete))
                 {
                     returnStatus = Core::ERROR_NONE;
@@ -1314,7 +1333,6 @@
                 if (appConfigList.empty())
                 {
                     LOGINFO("No applications registered, returning");
-                    returnStatus = Core::ERROR_GENERAL;
                     return returnStatus;
                 }
                 for (auto appConfig : appConfigList)
@@ -1341,6 +1359,7 @@
                 if (m_xcastEnable && ( (m_standbyBehavior == true) || ((m_standbyBehavior == false)&&(m_powerState == WPEFramework::Exchange::IPowerManager::POWER_STATE_ON)) ) ) {
                     LOGINFO("Enable CastService  m_xcastEnable: %d m_standbyBehavior: %d m_powerState:%d", m_xcastEnable, m_standbyBehavior, m_powerState);
                     enableCastService(m_friendlyName,true);
+                    returnStatus = Core::ERROR_NONE;
                 }
                 else {
                     LOGINFO("CastService not enabled m_xcastEnable: %d m_standbyBehavior: %d m_powerState:%d", m_xcastEnable, m_standbyBehavior, m_powerState);
