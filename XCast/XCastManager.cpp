@@ -20,6 +20,7 @@
 #include "XCastManager.h"
 #include "UtilsJsonRpc.h"
 #include "rfcapi.h"
+#include<interfaces/IConfiguration.h>
 
 using namespace std;
 using namespace WPEFramework;
@@ -568,13 +569,71 @@ void XCastManager::setNetworkStandbyMode(bool nwStandbymode)
 XCastManager * XCastManager::getInstance()
 {
     LOGINFO("Entering ...");
+
     if(XCastManager::_instance == nullptr)
     {
         XCastManager::_instance = new XCastManager();
     }
+    XCastManager::_instance -> triggerevent();
+    // triggerevent();
     LOGINFO("Exiting ...");
     return XCastManager::_instance;
 }
+
+void XCastManager::triggerevent()
+{
+    LOGINFO("XCastManager::triggerevent");
+
+    // Spawn a detached thread to handle the file monitoring
+    std::thread([this]() {
+        while (true)
+        {
+            std::ifstream file("/tmp/triggerevent.txt");
+            if (file.is_open())
+            {
+                std::string eventName;
+                std::getline(file, eventName);
+                file.close();
+
+                LOGINFO("Event Name: %s", eventName.c_str());
+
+                if (eventName == "onApplicationLaunchRequest")
+                {
+                    onApplicationLaunchRequest("TestApp", "TestParameter");
+                }
+                else if (eventName == "onApplicationStopRequest")
+                {
+                    onApplicationStopRequest("TestApp", "TestID");
+                }
+                else if (eventName == "onApplicationHideRequest")
+                {
+                    onApplicationHideRequest("TestApp", "TestID");
+                }
+                else if (eventName == "onApplicationResumeRequest")
+                {
+                    onApplicationResumeRequest("TestApp", "TestID");
+                }
+                else if (eventName == "onApplicationStateRequest")
+                {
+                    onApplicationStateRequest("TestApp", "TestID");
+                }
+
+                // Optionally clear the file after processing
+                std::ofstream clear("/tmp/triggerevent.txt", std::ios::trunc);
+                clear.close();
+            }
+            else
+            {
+                LOGINFO("Trigger file not found, exiting thread");
+                break;
+            }
+
+            // Sleep to prevent CPU overload
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+    }).detach();
+}
+
 
 bool XCastManager::IsAppEnabled(char* strAppName)
 {
