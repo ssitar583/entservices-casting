@@ -179,7 +179,7 @@ using PowerState = WPEFramework::Exchange::IPowerManager::PowerState;
              Core::hresult Unregister(Exchange::IXCast::INotification *notification) override; 
 
 
-            Core::hresult ApplicationStateChanged(const string& applicationName, const string& state, const string& applicationId, const string& error) override;
+            Core::hresult ApplicationStateChanged(const string& applicationName, const Exchange::IXCast::State& state, const string& applicationId, const string& error) override;
             Core::hresult GetProtocolVersion(string &protocolVersion, bool &success) override;
             Core::hresult SetManufacturerName(const string &manufacturername) override;
             Core::hresult GetManufacturerName(string &manufacturername, bool &success) override;
@@ -195,7 +195,7 @@ using PowerState = WPEFramework::Exchange::IPowerManager::PowerState;
             Core::hresult GetApiVersionNumber(uint32_t &version , bool &success) override;
 
             Core::hresult RegisterApplications(Exchange::IXCast::IApplicationInfoIterator* const appInfoList) override;
-            Core::hresult UnregisterApplications(const string &appName) override;
+            Core::hresult UnregisterApplications(Exchange::IXCast::IStringIterator* const apps) override;
 
             virtual void onXcastApplicationLaunchRequestWithLaunchParam (string appName, string strPayLoad, string strQuery, string strAddDataUrl) override ;
             virtual void onXcastApplicationLaunchRequest(string appName, string parameter) override ;
