@@ -1,0 +1,13 @@
+name: main-workflow
+
+on:
+  push:
+    branches: [ main, develop, 'sprint/**', 'release/**' ]
+  pull_request:
+    branches: [ main, develop, 'sprint/**', 'release/**' ]
+
+jobs:
+  trigger-L1:
+    uses: ./.github/workflows/L1-tests.yml
+    secrets:
+      RDKCM_RDKE: ${{ secrets.RDKCM_RDKE }}
