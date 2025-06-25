@@ -92,25 +92,26 @@ namespace WPEFramework {
 							
 						void Activated(RPC::IRemoteConnection *connection) final
 						{
-							LOGINFO("XCast Notification Activated");
-							// if (connection->Id() == _parent._connectionId)
-            				// {
-							// 	LOGINFO("XCast Notification Activated");
-            				//     ASSERT(nullptr != _parent._service);
-            				//     Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_parent._service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
-            				// }
+							//LOGINFO("XCast Notification Activated");
+							if (connection->Id() == _parent._connectionId)
+            				{
+								LOGINFO("XCast Notification Activated");
+            				    //ASSERT(nullptr != _parent._service);
+            				    //Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_parent._service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
+            				}
 						}
 		
 						void Deactivated(RPC::IRemoteConnection *connection) final
 						{
-							//  if (connection->Id() == _parent._connectionId)
-            				// {
-							// 	LOGINFO("XCast Notification Deactivated");
-            				//     ASSERT(nullptr != _parent._service);
-            				//     Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_parent._service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
-            				// }
-							LOGINFO("XCast Notification Deactivated");
-							_parent.Deactivated(connection);
+							if (connection->Id() == _parent._connectionId)
+            				{
+								LOGINFO("XCast Notification Deactivated");
+								_parent.Deactivated(connection);
+            				    ASSERT(nullptr != _parent._service);
+            				    Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_parent._service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
+            				}
+							// LOGINFO("XCast Notification Deactivated");
+							
 						}
 		
 						private:
