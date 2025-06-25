@@ -71,9 +71,10 @@ namespace WPEFramework
 
             _service = service;
             _service->AddRef();
-            _service->Register(&_xcastNotification);
-            _xcast = _service->Root<Exchange::IXCast>(_connectionId, 5000, _T("XCastImplementation"));
+            _service->Register(&_xcastNotification); 
 
+            _xcast = _service->Root<Exchange::IXCast>(_connectionId, 5000, _T("XCastImplementation"));
+            
             if (nullptr != _xcast)
             {
                 auto configure = _xcast->QueryInterface<Exchange::IConfiguration>();
