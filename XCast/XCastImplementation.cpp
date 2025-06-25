@@ -359,6 +359,13 @@
         {
 
             LOGINFO("Connect the COM-RPC socket\n");
+            
+            _powerManagerPlugin = PowerManagerInterfaceBuilder(_T("org.rdk.PowerManager"))
+                .withIShell(service)
+                .withRetryIntervalMS(200)
+                .withRetryCount(25)
+                .createInterface();
+            registerEventHandlers();
 
              Core::hresult retStatus = Core::ERROR_GENERAL;
             PowerState pwrStateCur = WPEFramework::Exchange::IPowerManager::POWER_STATE_UNKNOWN;
@@ -383,14 +390,6 @@
                     LOGINFO("m_networkStandbyMode:%u ",m_networkStandbyMode);
                 }
             }
-
-            
-            _powerManagerPlugin = PowerManagerInterfaceBuilder(_T("org.rdk.PowerManager"))
-                .withIShell(service)
-                .withRetryIntervalMS(200)
-                .withRetryCount(25)
-                .createInterface();
-            registerEventHandlers();
         }
 
         void XCastImplementation::registerEventHandlers()
@@ -1031,7 +1030,7 @@
                 {
                     appstate = "suspended";
                 }
-                m_xcast_manager->applicationStateChanged(applicationName, appstate , applicationId, error);
+                m_xcast_manager->applicationStateChanged(applicationName.c_str(), appstate.c_str(), applicationId.c_str(), error.c_str());
                 status = Core::ERROR_NONE;
             }
             return status;
@@ -1141,27 +1140,34 @@
             success = true;
             return Core::ERROR_NONE;
          }
-		Core::hresult XCastImplementation::SetStandbyBehavior(const string& standbybehavior){
+         //Core::hresult SetStandbyBehavior(const Exchange::IXCast::StandbyBehavior &standbybehavior) override;
+          //  Core::hresult GetStandbyBehavior(Exchange::IXCast::StandbyBehavior &standbybehavior, bool &success) override;
+		Core::hresult XCastImplementation::SetStandbyBehavior(const Exchange::IXCast::StandbyBehavior &standbybehavior) { 
             LOGINFO("XcastService::setStandbyBehavior \n ");
             bool enabled = false;
-            if (standbybehavior == "active")
+            if (standbybehavior == Exchange::IXCast::StandbyBehavior::ACTIVE)
             {
                 enabled = true;
             }
+            else if (standbybehavior == Exchange::IXCast::StandbyBehavior::INACTIVE)
+            {
+                enabled = false;
+            }
             else
             {
+                LOGERR("XcastService::setStandbyBehavior - Invalid standby behavior ");
                 return Core::ERROR_GENERAL;
             }
             m_standbyBehavior = enabled;
             LOGINFO("XcastService::setStandbyBehavior m_standbyBehavior : %d", m_standbyBehavior);
             return Core::ERROR_NONE;
         }
-		Core::hresult XCastImplementation::GetStandbyBehavior(string &standbybehavior , bool &success  ) { 
+		Core::hresult XCastImplementation::GetStandbyBehavior(Exchange::IXCast::StandbyBehavior &standbybehavior, bool &success) { 
             LOGINFO("XcastService::getStandbyBehavior m_standbyBehavior :%d",m_standbyBehavior);
             if(m_standbyBehavior)
-                standbybehavior = "active";
+                standbybehavior = Exchange::IXCast::StandbyBehavior::ACTIVE;
             else
-                standbybehavior = "inactive";
+                standbybehavior = Exchange::IXCast::StandbyBehavior::INACTIVE;
             success = true;
             return Core::ERROR_NONE;
         }
