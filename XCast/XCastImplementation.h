@@ -17,25 +17,24 @@
  * limitations under the License.
  */
 
- #pragma once
+#pragma once
 
- #include "Module.h"
- #include <interfaces/Ids.h>
- #include <interfaces/IXCast.h>
- #include <interfaces/IPowerManager.h>
- #include<interfaces/IConfiguration.h>
+#include "Module.h"
+#include <interfaces/Ids.h>
+#include <interfaces/IXCast.h>
+#include <interfaces/IPowerManager.h>
+#include <interfaces/IConfiguration.h>
  
- #include <com/com.h>
- #include <core/core.h>
- #include <mutex>
- #include <vector>
-
- #include "XCastManager.h"
- 
- #include "libIBus.h"
-#include "XCastNotifier.h"
- #include "PowerManagerInterface.h"
+#include <com/com.h>
+#include <core/core.h>
+#include <mutex>
 #include <vector>
+
+#include "XCastManager.h"
+#include "XCastNotifier.h"
+
+#include "libIBus.h"
+#include "PowerManagerInterface.h"
 
 
 #define SYSTEM_CALLSIGN "org.rdk.System"
@@ -46,13 +45,13 @@
 using PowerState = WPEFramework::Exchange::IPowerManager::PowerState;
 
 
- namespace WPEFramework
- {
-     namespace Plugin
-     {
+namespace WPEFramework
+{
+    namespace Plugin
+    {
         WPEFramework::Exchange::IPowerManager::PowerState m_powerState = WPEFramework::Exchange::IPowerManager::POWER_STATE_STANDBY;
         class XCastImplementation : public Exchange::IXCast,public Exchange::IConfiguration, public XCastNotifier 
-         {
+        {
          public:
             enum PluginState
             {
@@ -141,7 +140,6 @@ using PowerState = WPEFramework::Exchange::IPowerManager::PowerState;
                 public:
                     void OnPowerModeChanged(const PowerState currentState, const PowerState newState) override
                     {
-                        // _parent.onPowerModeChanged(currentState, newState);
                         LOGINFO("onPowerModeChanged: State Changed %d -- > %d\r",currentState, newState);
                         m_powerState = newState;
                         LOGWARN("creating worker thread for threadPowerModeChangeEvent m_powerState :%d",m_powerState);
@@ -151,7 +149,6 @@ using PowerState = WPEFramework::Exchange::IPowerManager::PowerState;
 
                     void OnNetworkStandbyModeChanged(const bool enabled)
                     {
-                        // _parent.onNetworkStandbyModeChanged(enabled);
                         _parent.m_networkStandbyMode = enabled;
                         LOGWARN("creating worker thread for threadNetworkStandbyModeChangeEvent Mode :%u", _parent.m_networkStandbyMode);
                         std::thread networkStandbyModeChangeThread = std::thread(&XCastImplementation::networkStandbyModeChangeEvent,&_parent);
@@ -174,26 +171,23 @@ using PowerState = WPEFramework::Exchange::IPowerManager::PowerState;
                     XCastImplementation& _parent;
             };
  
-         public:
-             Core::hresult Register(Exchange::IXCast::INotification *notification) override;
-             Core::hresult Unregister(Exchange::IXCast::INotification *notification) override; 
+        public:
+            Core::hresult Register(Exchange::IXCast::INotification *notification) override;
+            Core::hresult Unregister(Exchange::IXCast::INotification *notification) override; 
 
-
-            Core::hresult ApplicationStateChanged(const string& applicationName, const Exchange::IXCast::State& state, const string& applicationId, const string& error) override;
+            Core::hresult ApplicationStateChanged(const string& applicationName, const Exchange::IXCast::State& state, const string& applicationId, const Exchange::IXCast::ErrorCode& error) override;
             Core::hresult GetProtocolVersion(string &protocolVersion, bool &success) override;
             Core::hresult SetManufacturerName(const string &manufacturername) override;
             Core::hresult GetManufacturerName(string &manufacturername, bool &success) override;
             Core::hresult SetModelName(const string &modelname) override;
             Core::hresult GetModelName(string &modelname, bool &success) override;
-
             Core::hresult SetEnabled(const bool& enabled) override;
             Core::hresult GetEnabled(bool &enabled , bool &success ) override;
-            Core::hresult SetStandbyBehavior(const string &standbybehavior) override;
-            Core::hresult GetStandbyBehavior(string &standbybehavior , bool &success  ) override;
+            Core::hresult SetStandbyBehavior(const Exchange::IXCast::StandbyBehavior &standbybehavior) override;
+            Core::hresult GetStandbyBehavior(Exchange::IXCast::StandbyBehavior &standbybehavior, bool &success) override;
             Core::hresult SetFriendlyName(const string &friendlyname) override;
             Core::hresult GetFriendlyName(string &friendlyname , bool &success ) override;
             Core::hresult GetApiVersionNumber(uint32_t &version , bool &success) override;
-
             Core::hresult RegisterApplications(Exchange::IXCast::IApplicationInfoIterator* const appInfoList) override;
             Core::hresult UnregisterApplications(Exchange::IXCast::IStringIterator* const apps) override;
 
@@ -215,24 +209,26 @@ using PowerState = WPEFramework::Exchange::IPowerManager::PowerState;
             guint m_FriendlyNameUpdateTimerID{0};
             TpTimer m_locateCastTimer;
             PluginState _networkPluginState;
-            static XCastImplementation* _instance;
-            bool m_networkStandbyMode;
+            
+            
             WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement> *m_ControllerObj = nullptr;
             WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement> *m_NetworkPluginObj = nullptr;
-            WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement> * m_SystemPluginObj = NULL;
+            WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement> *m_SystemPluginObj = NULL;
             PluginHost::IShell* _service;
-            bool _registeredEventHandlers;
+            
             PowerManagerInterfaceRef _powerManagerPlugin;
             Core::Sink<PowerManagerNotification> _pwrMgrNotification;
             void threadPowerModeChangeEvent(void);
             void networkStandbyModeChangeEvent(void);
             static bool m_xcastEnable;
             static bool m_standbyBehavior;
+            bool m_networkStandbyMode;
+            bool _registeredEventHandlers;
 
         private:
-             mutable Core::CriticalSection _adminLock;
+            mutable Core::CriticalSection _adminLock;
              
-             std::list<Exchange::IXCast::INotification *> _xcastNotification; // List of registered notifications
+            std::list<Exchange::IXCast::INotification *> _xcastNotification; // List of registered notifications
 
             void dumpDynamicAppCacheList(string strListName, std::vector<DynamicAppConfig*> appConfigList);
             bool deleteFromDynamicAppCache(vector<string>& appsToDelete);
@@ -247,25 +243,22 @@ using PowerState = WPEFramework::Exchange::IPowerManager::PowerState;
             void startTimer(int interval);
             void stopTimer();
             bool isTimerActive();
-
-
             
             void registerEventHandlers();
             void InitializePowerManager(PluginHost::IShell *service);
 
             std::string getSecurityToken();
             void getThunderPlugins();
-            bool connectToGDialService(void);
             int activatePlugin(string callsign);
             int deactivatePlugin(string callsign);
             bool isPluginActivated(string callsign);
             void eventHandler_onDefaultInterfaceChanged(const JsonObject& parameters);
             void eventHandler_ipAddressChanged(const JsonObject& parameters);
             void eventHandler_pluginState(const JsonObject& parameters);
-            
+            bool connectToGDialService(void);
             bool getDefaultNameAndIPAddress(std::string& interface, std::string& ipaddress);
             void updateNWConnectivityStatus(std::string nwInterface, bool nwConnected, std::string ipaddress = "");
-             uint32_t enableCastService(string friendlyname,bool enableService);
+            uint32_t enableCastService(string friendlyname,bool enableService);
             uint32_t Configure(PluginHost::IShell* shell);
             
             void getSystemPlugin();
@@ -278,11 +271,11 @@ using PowerState = WPEFramework::Exchange::IPowerManager::PowerState;
             bool setPowerState(std::string powerState);
             void getUrlFromAppLaunchParams (const char *app_name, const char *payload, const char *query_string, const char *additional_data_url, char *url);
             
-         public:
-            // static XCastImplementation *_instance;
-            
+        public:
+            static XCastImplementation* _instance;
+
             friend class Job;
-         };
+        };
  
-     } // namespace Plugin
- } // namespace WPEFramework
+    } // namespace Plugin
+} // namespace WPEFramework
