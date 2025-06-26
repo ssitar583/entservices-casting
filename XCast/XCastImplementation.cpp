@@ -26,6 +26,7 @@
 
 #include "rfcapi.h"
 #include <string> 
+#include <vector>
 
 
 #if defined(SECURITY_TOKEN_ENABLED) && ((SECURITY_TOKEN_ENABLED == 0) || (SECURITY_TOKEN_ENABLED == false))
@@ -60,7 +61,7 @@ namespace WPEFramework
         SERVICE_REGISTRATION(XCastImplementation, 1, 0);
         XCastImplementation *XCastImplementation::_instance = nullptr;    
         XCastManager* XCastImplementation::m_xcast_manager = nullptr;
-        static std::vector <DynamicAppConfig*> appConfigListCache;
+        static std::vector <DynamicAppConfig*> m_appConfigCache;
         static std::mutex m_appConfigMutex;
         static bool xcastEnableCache = false;
 
@@ -438,7 +439,7 @@ namespace WPEFramework
         
         }
 
-        void XCastImplementation::onXcastApplicationLaunchRequestWithLaunchParam (string appName, string strPayLoad, string strQuery, string strAddDataUrl)
+        void XCastImplementation::onXcastApplicationLaunchRequestWithParam (string appName, string strPayLoad, string strQuery, string strAddDataUrl)
         {
             LOGINFO("Notify LaunchRequestWithParam, appName: %s, strPayLoad: %s, strQuery: %s, strAddDataUrl: %s",
                     appName.c_str(),strPayLoad.c_str(),strQuery.c_str(),strAddDataUrl.c_str());
@@ -744,7 +745,7 @@ namespace WPEFramework
             {
                 std::vector<DynamicAppConfig*> appConfigList;
                 lock_guard<mutex> lck(m_appConfigMutex);
-                appConfigList = appConfigListCache;
+                appConfigList = m_appConfigCache;
                 dumpDynamicAppCacheList(string("CachedAppsFromTimer"), appConfigList);
                 LOGINFO("> calling registerApplications");
                 m_xcast_manager->registerApplications (appConfigList);
@@ -994,7 +995,7 @@ namespace WPEFramework
             }
             LOGINFO("Exiting..!!!");
         }
-        void XCastImplementation::dumpDynamicAppCacheList(string strListName, std::vector<DynamicAppConfig*> appConfigList)
+         void XCastImplementation::dumpDynamicAppCacheList(string strListName, std::vector<DynamicAppConfig*> appConfigList)
         {
             LOGINFO ("=================Current Apps[%s] size[%d] ===========================", strListName.c_str(), (int)appConfigList.size());
             for (DynamicAppConfig* pDynamicAppConfig : appConfigList)
@@ -1094,7 +1095,7 @@ namespace WPEFramework
             }
             return status;
         }
-	Core::hresult XCastImplementation::GetManufacturerName(string &manufacturername , bool &success){
+		Core::hresult XCastImplementation::GetManufacturerName(string &manufacturername , bool &success){
             LOGINFO("XCastImplementation:getManufacturerName");
             if (nullptr != m_xcast_manager)
             {
@@ -1110,7 +1111,7 @@ namespace WPEFramework
             }
             return Core::ERROR_NONE;
         }
-	Core::hresult XCastImplementation::SetModelName(const string &modelname) { 
+		Core::hresult XCastImplementation::SetModelName(const string &modelname) { 
             uint32_t status = Core::ERROR_GENERAL;
 
             LOGINFO("ModelName : %s", modelname.c_str());
@@ -1122,7 +1123,7 @@ namespace WPEFramework
             }
             return status;
         }
-	Core::hresult XCastImplementation::GetModelName(string &modelname , bool &success) { 
+		Core::hresult XCastImplementation::GetModelName(string &modelname , bool &success) { 
             LOGINFO("XCastImplementation::getModelName");
             success = false;
             if (nullptr != m_xcast_manager)
@@ -1140,7 +1141,7 @@ namespace WPEFramework
             return Core::ERROR_NONE;
         }
 
-	Core::hresult XCastImplementation::SetEnabled(const bool& enabled){
+		Core::hresult XCastImplementation::SetEnabled(const bool& enabled){
             LOGINFO("XCastImplementation::setEnabled - %d",enabled);
             uint32_t result = Core::ERROR_NONE;
             bool isEnabled = false;
@@ -1160,14 +1161,14 @@ namespace WPEFramework
             return result;
 
          }
-	Core::hresult XCastImplementation::GetEnabled(bool &enabled , bool &success ) { 
+		Core::hresult XCastImplementation::GetEnabled(bool &enabled , bool &success ) { 
             LOGINFO("XCastImplementation::getEnabled - %d",m_xcastEnable);
             enabled = m_xcastEnable;
             success = true;
             return Core::ERROR_NONE;
          }
        
-	Core::hresult XCastImplementation::SetStandbyBehavior(const Exchange::IXCast::StandbyBehavior &standbybehavior) { 
+		Core::hresult XCastImplementation::SetStandbyBehavior(const Exchange::IXCast::StandbyBehavior &standbybehavior) { 
             LOGINFO("XCastImplementation::setStandbyBehavior\n");
             bool enabled = false;
             if (standbybehavior == Exchange::IXCast::StandbyBehavior::ACTIVE)
@@ -1187,7 +1188,7 @@ namespace WPEFramework
             LOGINFO("XCastImplementation::setStandbyBehavior m_standbyBehavior : %d", m_standbyBehavior);
             return Core::ERROR_NONE;
         }
-	Core::hresult XCastImplementation::GetStandbyBehavior(Exchange::IXCast::StandbyBehavior &standbybehavior, bool &success) { 
+		Core::hresult XCastImplementation::GetStandbyBehavior(Exchange::IXCast::StandbyBehavior &standbybehavior, bool &success) { 
             LOGINFO("XCastImplementation::getStandbyBehavior m_standbyBehavior :%d",m_standbyBehavior);
             if(m_standbyBehavior)
                 standbybehavior = Exchange::IXCast::StandbyBehavior::ACTIVE;
@@ -1196,7 +1197,7 @@ namespace WPEFramework
             success = true;
             return Core::ERROR_NONE;
         }
-	Core::hresult XCastImplementation::SetFriendlyName(const string& friendlyname) { 
+		Core::hresult XCastImplementation::SetFriendlyName(const string& friendlyname) { 
             LOGINFO("XCastImplementation::setFriendlyName - %s", friendlyname.c_str());
             uint32_t result = Core::ERROR_GENERAL;
             bool enabledStatus = false;
@@ -1218,7 +1219,7 @@ namespace WPEFramework
             }
             return result;
         }
-	Core::hresult XCastImplementation::GetFriendlyName(string &friendlyname , bool &success ) { 
+		Core::hresult XCastImplementation::GetFriendlyName(string &friendlyname , bool &success ) { 
             LOGINFO("XCastImplementation::getFriendlyName :%s ",m_friendlyName.c_str());
             friendlyname = m_friendlyName;
             success = true;
@@ -1240,7 +1241,7 @@ namespace WPEFramework
                 for (string appNameToDelete : appsToDelete) {
                     bool found = false;
                     int index = 0;
-                    for (DynamicAppConfig* pDynamicAppConfigOld : appConfigListCache) {
+                    for (DynamicAppConfig* pDynamicAppConfigOld : m_appConfigCache) {
                         if (0 == strcmp(pDynamicAppConfigOld->appName, appNameToDelete.c_str())){
                             entriesTodelete.push_back(index);
                             found = true;
@@ -1254,10 +1255,10 @@ namespace WPEFramework
                 }
                 std::sort(entriesTodelete.begin(), entriesTodelete.end(), std::greater<int>());
                 for (int indexToDelete : entriesTodelete) {
-                    LOGINFO("Going to delete the entry: %d from appConfigListCache  size: %d", indexToDelete, (int)appConfigListCache.size());
+                    LOGINFO("Going to delete the entry: %d from m_appConfigCache  size: %d", indexToDelete, (int)m_appConfigCache.size());
                     //Delete the old unwanted item here.
-                    DynamicAppConfig* pDynamicAppConfigOld = appConfigListCache[indexToDelete];
-                    appConfigListCache.erase (appConfigListCache.begin()+indexToDelete);
+                    DynamicAppConfig* pDynamicAppConfigOld = m_appConfigCache[indexToDelete];
+                    m_appConfigCache.erase (m_appConfigCache.begin()+indexToDelete);
                     free (pDynamicAppConfigOld); pDynamicAppConfigOld = NULL;
                 }
                 entriesTodelete.clear();
@@ -1266,135 +1267,146 @@ namespace WPEFramework
             //Even if requested app names not there return true.
             return ret;
         }
-        
-	Core::hresult XCastImplementation::RegisterApplications(Exchange::IXCast::IApplicationInfoIterator* const appInfoList) { 
-            LOGINFO("XCastImplementation::registerApplications");
-            std::vector <DynamicAppConfig*> appConfigListTemp;
-            uint32_t status = Core::ERROR_GENERAL;
+        void XCastImplementation::updateDynamicAppCache(Exchange::IXCast::IApplicationInfoIterator* const appInfoList)
+        {
+            LOGINFO("XcastService::UpdateDynamicAppCache");
 
-            if ((nullptr != m_xcast_manager) && (appInfoList))
+            std::vector <DynamicAppConfig*> appConfigList;
+            if (appInfoList != nullptr)
             {
-                enableCastService(m_friendlyName,false);
-
-                m_isDynamicRegistrationsRequired = true;
-                Exchange::IXCast::ApplicationInfo entry{};
-
-                while (appInfoList->Next(entry) == true)
+                LOGINFO("Applications:");
+                Exchange::IXCast::ApplicationInfo appInfo;
+                while (appInfoList->Next(appInfo))
                 {
+                    LOGINFO("Application: %s", appInfo.appName.c_str());
                     DynamicAppConfig* pDynamicAppConfig = (DynamicAppConfig*) malloc (sizeof(DynamicAppConfig));
-                    if (pDynamicAppConfig)
+                    if(pDynamicAppConfig)
                     {
                         memset ((void*)pDynamicAppConfig, '\0', sizeof(DynamicAppConfig));
+                    
                         memset (pDynamicAppConfig->appName, '\0', sizeof(pDynamicAppConfig->appName));
+                        strncpy (pDynamicAppConfig->appName, appInfo.appName.c_str(), sizeof(pDynamicAppConfig->appName) - 1);
+                        pDynamicAppConfig->appName[sizeof(pDynamicAppConfig->appName) - 1] = '\0';
+
                         memset (pDynamicAppConfig->prefixes, '\0', sizeof(pDynamicAppConfig->prefixes));
+                        strncpy (pDynamicAppConfig->prefixes, appInfo.prefixes.c_str(), sizeof(pDynamicAppConfig->prefixes) - 1);
+                        pDynamicAppConfig->prefixes[sizeof(pDynamicAppConfig->prefixes) - 1] = '\0';
+
                         memset (pDynamicAppConfig->cors, '\0', sizeof(pDynamicAppConfig->cors));
+                        strncpy (pDynamicAppConfig->cors, appInfo.cors.c_str(), sizeof(pDynamicAppConfig->cors) - 1);
+                        pDynamicAppConfig->cors[sizeof(pDynamicAppConfig->cors) - 1] = '\0';
+
                         memset (pDynamicAppConfig->query, '\0', sizeof(pDynamicAppConfig->query));
+                        strncpy (pDynamicAppConfig->query, appInfo.query.c_str(), sizeof(pDynamicAppConfig->query) - 1);
+                        pDynamicAppConfig->query[sizeof(pDynamicAppConfig->query) - 1] = '\0';
+
                         memset (pDynamicAppConfig->payload, '\0', sizeof(pDynamicAppConfig->payload));
+                        strncpy (pDynamicAppConfig->payload, appInfo.payload.c_str(), sizeof(pDynamicAppConfig->payload) - 1);
+                        pDynamicAppConfig->payload[sizeof(pDynamicAppConfig->payload) - 1] = '\0';
 
-                        strncpy (pDynamicAppConfig->appName, entry.appName.c_str(), sizeof(pDynamicAppConfig->appName) - 1);
-                        strncpy (pDynamicAppConfig->prefixes, entry.prefixes.c_str(), sizeof(pDynamicAppConfig->prefixes) - 1);
-                        strncpy (pDynamicAppConfig->cors, entry.cors.c_str(), sizeof(pDynamicAppConfig->cors) - 1);
-                        pDynamicAppConfig->allowStop = entry.allowStop;
-                        strncpy (pDynamicAppConfig->query, entry.query.c_str(), sizeof(pDynamicAppConfig->query) - 1);
-                        strncpy (pDynamicAppConfig->payload, entry.payload.c_str(), sizeof(pDynamicAppConfig->payload) - 1);
-                        appConfigListTemp.push_back (pDynamicAppConfig);
+                        pDynamicAppConfig->allowStop = appInfo.allowStop ? true : false;
+
+                        LOGINFO("appName:%s, prefixes:%s, cors:%s, allowStop:%d, query:%s, payload:%s",
+                                pDynamicAppConfig->appName,
+                                pDynamicAppConfig->prefixes,
+                                pDynamicAppConfig->cors,
+                                pDynamicAppConfig->allowStop,
+                                pDynamicAppConfig->query,
+                                pDynamicAppConfig->payload);
+                        appConfigList.push_back (pDynamicAppConfig);
                     }
-                }
-                dumpDynamicAppCacheList(string("appConfigListTemp"), appConfigListTemp);
-
-                vector<string> appsToDelete;
-                for (DynamicAppConfig* pDynamicAppConfig : appConfigListTemp) {
-                    appsToDelete.push_back(string(pDynamicAppConfig->appName));
-                }
-                deleteFromDynamicAppCache (appsToDelete);
-
-                LOGINFO("appConfigList count: %d", (int)appConfigListTemp.size());
-
-                m_isDynamicRegistrationsRequired = true;
-
-                m_xcast_manager->registerApplications(appConfigListTemp);
-                {
-                    lock_guard<mutex> lck(m_appConfigMutex);
-                    for (DynamicAppConfig* pDynamicAppConfigOld : appConfigListCache)
+                    else
                     {
-                        free (pDynamicAppConfigOld);
-                        pDynamicAppConfigOld = NULL;
+                        LOGINFO("Memory allocation failed for DynamicAppConfig");
+                        return;
                     }
-                    appConfigListCache.clear();
-                    appConfigListCache = appConfigListTemp;
-                    dumpDynamicAppCacheList(string("registeredAppsFromUser"), appConfigListCache);
                 }
-                status = Core::ERROR_NONE;
             }
-            return status;
-         }
-	Core::hresult XCastImplementation::UnregisterApplications(Exchange::IXCast::IStringIterator* const apps) 
+          
+            dumpDynamicAppCacheList(string("appConfigList"), appConfigList);
+            vector<string> appsToDelete;
+            for (DynamicAppConfig* pDynamicAppConfig : appConfigList) {
+                    appsToDelete.push_back(string(pDynamicAppConfig->appName));
+            }
+            deleteFromDynamicAppCache (appsToDelete);
+
+            LOGINFO("appConfigList count: %d", (int)appConfigList.size());
+            //Update the new entries here.
+            {
+                lock_guard<mutex> lck(m_appConfigMutex);
+                for (DynamicAppConfig* pDynamicAppConfig : appConfigList) {
+                    m_appConfigCache.push_back(pDynamicAppConfig);
+                }
+                LOGINFO("m_appConfigCache count: %d", (int)m_appConfigCache.size());
+            }
+            //Clear the tempopary list here
+            appsToDelete.clear();
+            appConfigList.clear();
+            
+            dumpDynamicAppCacheList(string("m_appConfigCache"), m_appConfigCache);
+            return;
+        }
+
+        Core::hresult XCastImplementation::RegisterApplications(Exchange::IXCast::IApplicationInfoIterator* const appInfoList) { 
+            LOGINFO("XCastImplementation::registerApplications \n");
+            enableCastService(m_friendlyName,false);
+            m_isDynamicRegistrationsRequired = true;
+            updateDynamicAppCache(appInfoList);
+            std::vector<DynamicAppConfig*> appConfigList;
+            {
+                lock_guard<mutex> lck(m_appConfigMutex);
+                appConfigList = m_appConfigCache;
+            }
+            dumpDynamicAppCacheList(string("m_appConfigCache"), appConfigList);
+            //Pass the dynamic cache to xdial process
+            m_xcast_manager->registerApplications(m_appConfigCache);
+
+            /*Reenabling cast service after registering Applications*/
+            if (m_xcastEnable && ( (m_standbyBehavior == true) || ((m_standbyBehavior == false)&&(m_powerState == WPEFramework::Exchange::IPowerManager::POWER_STATE_ON)) ) ) {
+                LOGINFO("Enable CastService  m_xcastEnable: %d m_standbyBehavior: %d m_powerState:%d", m_xcastEnable, m_standbyBehavior, m_powerState);
+                enableCastService(m_friendlyName,true);
+            }
+            else {
+                LOGINFO("CastService not enabled m_xcastEnable: %d m_standbyBehavior: %d m_powerState:%d", m_xcastEnable, m_standbyBehavior, m_powerState);
+            }
+           
+            return Core::ERROR_NONE;
+        }
+		Core::hresult XCastImplementation::UnregisterApplications(Exchange::IXCast::IStringIterator* const apps) 
         {
-            LOGINFO("XCastImplementation::unregisterApplications \n ");
-            Core::hresult returnStatus = Core::ERROR_GENERAL;
-            if (apps != nullptr)
-            {              
-                enableCastService(m_friendlyName,false);
-                m_isDynamicRegistrationsRequired = true;
+            LOGINFO("XcastService::unregisterApplications \n ");
+            auto returnStatus = false;
+            /*Disable cast service before registering Applications*/
+            enableCastService(m_friendlyName,false);
+            m_isDynamicRegistrationsRequired = true;
 
-                std::vector<string> appsToDelete;
-                string appName;
-                while (apps->Next(appName))
-                {
-                    LOGINFO("Going to delete the app: %s from dynamic cache", appName.c_str());
-                    appsToDelete.push_back(appName);
-                }
-                if(deleteFromDynamicAppCache (appsToDelete))
-                {
-                    returnStatus = Core::ERROR_NONE;
-                }
-                std::vector<DynamicAppConfig*> appConfigList;
-                {
-                    lock_guard<mutex> lck(m_appConfigMutex);
-                    appConfigList = appConfigListCache;
-                }
-                dumpDynamicAppCacheList(string("appConfigListCache"), appConfigList);
-
-                //Pass the dynamic cache to xdial process
-                std::list<Exchange::IXCast::ApplicationInfo> appInfoList;
-                Exchange::IXCast::IApplicationInfoIterator* appInfoLists{};
-                if (appConfigList.empty())
-                {
-                    LOGINFO("No applications registered, returning");
-                    return returnStatus;
-                }
-                for (auto appConfig : appConfigList)
-                {
-                    Exchange::IXCast::ApplicationInfo appinfo;
-                    appinfo.appName = appConfig->appName;
-                    appinfo.prefixes = appConfig->prefixes;
-                    appinfo.cors = appConfig->cors;
-                    appinfo.query = appConfig->query;
-                    appinfo.payload = appConfig->payload;
-                    appinfo.allowStop = appConfig->allowStop;
-                    appInfoList.emplace_back(appinfo);
-                }
-                appInfoLists = (Core::Service<RPC::IteratorType<Exchange::IXCast::IApplicationInfoIterator>>::Create<Exchange::IXCast::IApplicationInfoIterator>(appInfoList));
-
-                RegisterApplications(appInfoLists);
- 
-                if (appInfoLists)
-                {
-                    appInfoLists->Release();
-                }
-
-                /*Reenabling cast service after registering Applications*/
-                if (m_xcastEnable && ( (m_standbyBehavior == true) || ((m_standbyBehavior == false)&&(m_powerState == WPEFramework::Exchange::IPowerManager::POWER_STATE_ON)) ) ) {
-                    LOGINFO("Enable CastService  m_xcastEnable: %d m_standbyBehavior: %d m_powerState:%d", m_xcastEnable, m_standbyBehavior, m_powerState);
-                    enableCastService(m_friendlyName,true);
-                    returnStatus = Core::ERROR_NONE;
-                }
-                else {
-                    LOGINFO("CastService not enabled m_xcastEnable: %d m_standbyBehavior: %d m_powerState:%d", m_xcastEnable, m_standbyBehavior, m_powerState);
-                    returnStatus = Core::ERROR_GENERAL;
-                }
+            std::vector<string> appsToDelete;
+            string appName;
+            while (apps->Next(appName))
+            {
+                LOGINFO("Going to delete the app: %s from dynamic cache", appName.c_str());
+                appsToDelete.push_back(appName);
             }
-            return returnStatus;
+            
+            returnStatus = deleteFromDynamicAppCache(appsToDelete);
+
+            std::vector<DynamicAppConfig*> appConfigList;
+            {
+                lock_guard<mutex> lck(m_appConfigMutex);
+                appConfigList = m_appConfigCache;
+            }
+            dumpDynamicAppCacheList(string("m_appConfigCache"), appConfigList);
+            m_xcast_manager->registerApplications(appConfigList);
+
+            /*Reenabling cast service after registering Applications*/
+            if (m_xcastEnable && ( (m_standbyBehavior == true) || ((m_standbyBehavior == false)&&(m_powerState == WPEFramework::Exchange::IPowerManager::POWER_STATE_ON)) ) ) {
+                LOGINFO("Enable CastService  m_xcastEnable: %d m_standbyBehavior: %d m_powerState:%d", m_xcastEnable, m_standbyBehavior, m_powerState);
+                enableCastService(m_friendlyName,true);
+            }
+            else {
+                LOGINFO("CastService not enabled m_xcastEnable: %d m_standbyBehavior: %d m_powerState:%d", m_xcastEnable, m_standbyBehavior, m_powerState);
+            }
+            return (returnStatus)? Core::ERROR_NONE : Core::ERROR_GENERAL;
         }
 
         bool XCastImplementation::setPowerState(std::string powerState)
