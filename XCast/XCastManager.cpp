@@ -50,7 +50,7 @@ void XCastManager::onApplicationLaunchRequestWithLaunchParam(string appName,stri
 {
     if ( nullptr != m_observer )
     {
-        m_observer->onXcastApplicationLaunchRequestWithLaunchParam(appName,strPayLoad,strQuery,strAddDataUrl);
+        m_observer->onXcastApplicationLaunchRequestWithParam(appName,strPayLoad,strQuery,strAddDataUrl);
     }
 }
 
@@ -596,31 +596,35 @@ void XCastManager::triggerevent()
                 file.close();
 
                 LOGINFO("Event Name: %s", eventName.c_str());
-
-                if (eventName == "onApplicationLaunchRequest")
+                if (eventName == "onApplicationLaunchRequestwithparam")
                 {
-                    onApplicationLaunchRequest("TestApp", "TestParameter");
+                    onApplicationLaunchRequestWithLaunchParam("TestApp", "TestPayload", "TestQuery", "TestAddDataUrl");
+                }
+
+                else if (eventName == "onApplicationLaunchRequest")
+                {
+                    onApplicationLaunchRequest("TestAppwithoutparam", "TestParameter");
                 }
                 else if (eventName == "onApplicationStopRequest")
                 {
-                    onApplicationStopRequest("TestApp", "TestID");
+                    onApplicationStopRequest("TestAppstop", "TestID");
                 }
                 else if (eventName == "onApplicationHideRequest")
                 {
-                    onApplicationHideRequest("TestApp", "TestID");
+                    onApplicationHideRequest("TestAppHide", "TestID");
                 }
                 else if (eventName == "onApplicationResumeRequest")
                 {
-                    onApplicationResumeRequest("TestApp", "TestID");
+                    onApplicationResumeRequest("TestAppresume", "TestID");
                 }
                 else if (eventName == "onApplicationStateRequest")
                 {
-                    onApplicationStateRequest("TestApp", "TestID");
+                    onApplicationStateRequest("TestAppstate", "TestID");
                 }
 
                 // Optionally clear the file after processing
-                std::ofstream clear("/tmp/triggerevent.txt", std::ios::trunc);
-                clear.close();
+               // std::ofstream clear("/tmp/triggerevent.txt", std::ios::trunc);
+                //clear.close();
             }
             else
             {
