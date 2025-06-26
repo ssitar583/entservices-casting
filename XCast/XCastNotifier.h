@@ -28,7 +28,7 @@ class XCastNotifier
 public:
     virtual void onGDialServiceStopped(void)=0;
     virtual void onXcastApplicationLaunchRequest(string appName, string parameter)=0;
-    virtual void onXcastApplicationLaunchRequestWithLaunchParam (string appName,string strPayLoad, string strQuery, string strAddDataUrl)=0;
+    virtual void onXcastApplicationLaunchRequestWithParam (string appName,string strPayLoad, string strQuery, string strAddDataUrl)=0;
     virtual void onXcastApplicationStopRequest(string appName, string appID)=0;
     virtual void onXcastApplicationHideRequest(string appName, string appID)=0;
     virtual void onXcastApplicationResumeRequest(string appName, string appID)=0;
