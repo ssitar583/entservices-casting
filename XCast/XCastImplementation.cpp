@@ -90,8 +90,8 @@ namespace WPEFramework
 
         XCastImplementation::XCastImplementation()
         : _service(nullptr),
-        _registeredEventHandlers(false),
-        _pwrMgrNotification(*this), _adminLock()
+        _pwrMgrNotification(*this),
+         _registeredEventHandlers(false), _adminLock()
         {
             LOGINFO("Create XCastImplementation Instance");
             m_locateCastTimer.connect( bind( &XCastImplementation::onLocateCastTimer, this ));
@@ -593,7 +593,7 @@ namespace WPEFramework
             }
         }
 
-        void XCastImplementation::updateNWConnectivityStatus(std::string nwInterface, bool nwConnected, std::string ipaddress)
+         void XCastImplementation::updateNWConnectivityStatus(std::string nwInterface, bool nwConnected, std::string ipaddress)
         {
             bool status = false;
             if(nwConnected)
@@ -1009,12 +1009,13 @@ namespace WPEFramework
             }
             LOGINFO ("=================================================================");
         }  
-        Core::hresult XCastImplementation::ApplicationStateChanged(const string& applicationName, const Exchange::IXCast::State& state, const string& applicationId, const string& error) {
-            LOGINFO("ARGS = %s : %s : %d : %s ", applicationName.c_str(), applicationId.c_str() , state , error.c_str());
+
+        Core::hresult XCastImplementation::ApplicationStateChanged(const string& applicationName, const Exchange::IXCast::State& state, const string& applicationId, const Exchange::IXCast::ErrorCode& error){
+            LOGINFO("ARGS = %s : %s : %d : %d ", applicationName.c_str(), applicationId.c_str() , state , error);
             uint32_t status = Core::ERROR_GENERAL;
             if(!applicationName.empty() && (nullptr != m_xcast_manager))
             {
-                LOGINFO("XcastService::ApplicationStateChanged  ARGS = %s : %s : %d : %s ", applicationName.c_str(), applicationId.c_str() , state , error.c_str());
+                LOGINFO("XCastImplementation::ApplicationStateChanged  ARGS = %s : %s : %d : %d ", applicationName.c_str(), applicationId.c_str() , state , error);
                 string appstate = "";
                 if (state == Exchange::IXCast::State::RUNNING)
                 {
@@ -1028,12 +1029,40 @@ namespace WPEFramework
                 {
                     appstate = "suspended";
                 }
-                m_xcast_manager->applicationStateChanged(applicationName.c_str(), appstate.c_str(), applicationId.c_str(), error.c_str());
+
+                string errorStr = "";
+                if (error == Exchange::IXCast::ErrorCode::NONE)
+                {
+                    errorStr = "none";
+                }
+                else if (error == Exchange::IXCast::ErrorCode::FORBIDDEN)
+                {
+                    errorStr = "forbidden";
+                }
+                else if (error == Exchange::IXCast::ErrorCode::UNAVAILABLE)
+                {
+                    errorStr = "unavailable";
+                }
+                else if (error == Exchange::IXCast::ErrorCode::INVALID)
+                {
+                    errorStr = "invalid";
+                }
+                else if (error == Exchange::IXCast::ErrorCode::INTERNAL)
+                {
+                    errorStr = "internal";
+                }
+                else
+                {
+                    LOGERR("XCastImplementation::ApplicationStateChanged - Invalid Error Code");
+                    return Core::ERROR_GENERAL;
+                }
+
+                m_xcast_manager->applicationStateChanged(applicationName.c_str(), appstate.c_str(), applicationId.c_str(), errorStr.c_str());
                 status = Core::ERROR_NONE;
             }
             return status;
         }
-		      Core::hresult XCastImplementation::GetProtocolVersion(string &protocolVersion , bool &success) {
+		Core::hresult XCastImplementation::GetProtocolVersion(string &protocolVersion , bool &success) {
             LOGINFO("XCastImplementation::getProtocolVersion");
             success = false;
             if (nullptr != m_xcast_manager)
@@ -1065,7 +1094,7 @@ namespace WPEFramework
             }
             return status;
         }
-		      Core::hresult XCastImplementation::GetManufacturerName(string &manufacturername , bool &success){
+	Core::hresult XCastImplementation::GetManufacturerName(string &manufacturername , bool &success){
             LOGINFO("XCastImplementation:getManufacturerName");
             if (nullptr != m_xcast_manager)
             {
@@ -1075,13 +1104,13 @@ namespace WPEFramework
             }
             else
             {
-                LOGINFO("XcastService::getManufacturerName m_xcast_manager is NULL");
+                LOGINFO("XCastImplementation::getManufacturerName m_xcast_manager is NULL");
                 success = false;
                 return Core::ERROR_GENERAL;
             }
             return Core::ERROR_NONE;
         }
-		      Core::hresult XCastImplementation::SetModelName(const string &modelname) { 
+	Core::hresult XCastImplementation::SetModelName(const string &modelname) { 
             uint32_t status = Core::ERROR_GENERAL;
 
             LOGINFO("ModelName : %s", modelname.c_str());
@@ -1093,8 +1122,8 @@ namespace WPEFramework
             }
             return status;
         }
-		      Core::hresult XCastImplementation::GetModelName(string &modelname , bool &success) { 
-            LOGINFO("XcastService::getModelName");
+	Core::hresult XCastImplementation::GetModelName(string &modelname , bool &success) { 
+            LOGINFO("XCastImplementation::getModelName");
             success = false;
             if (nullptr != m_xcast_manager)
             {
@@ -1104,15 +1133,15 @@ namespace WPEFramework
             }
             else
             {
-                LOGINFO("XcastService::getModelName m_xcast_manager is NULL");
+                LOGINFO("XCastImplementation::getModelName m_xcast_manager is NULL");
                 success = false;
                 return Core::ERROR_GENERAL;
             }
             return Core::ERROR_NONE;
         }
 
-	 	     Core::hresult XCastImplementation::SetEnabled(const bool& enabled){
-            LOGINFO("XcastService::setEnabled - %d",enabled);
+	Core::hresult XCastImplementation::SetEnabled(const bool& enabled){
+            LOGINFO("XCastImplementation::setEnabled - %d",enabled);
             uint32_t result = Core::ERROR_NONE;
             bool isEnabled = false;
             m_xcastEnable= enabled;
@@ -1125,22 +1154,21 @@ namespace WPEFramework
             {
                 isEnabled = false;
             }
-            LOGINFO("XcastService::setEnabled : %d, enabled : %d" , m_xcastEnable, isEnabled);
+            LOGINFO("XCastImplementation::setEnabled : %d, enabled : %d" , m_xcastEnable, isEnabled);
             result = enableCastService(m_friendlyName,isEnabled);
 
-            
             return result;
 
          }
-		       Core::hresult XCastImplementation::GetEnabled(bool &enabled , bool &success ) { 
-            LOGINFO("XcastService::getEnabled - %d",m_xcastEnable);
+	Core::hresult XCastImplementation::GetEnabled(bool &enabled , bool &success ) { 
+            LOGINFO("XCastImplementation::getEnabled - %d",m_xcastEnable);
             enabled = m_xcastEnable;
             success = true;
             return Core::ERROR_NONE;
          }
        
-		        Core::hresult XCastImplementation::SetStandbyBehavior(const Exchange::IXCast::StandbyBehavior &standbybehavior) { 
-            LOGINFO("XcastService::setStandbyBehavior\n");
+	Core::hresult XCastImplementation::SetStandbyBehavior(const Exchange::IXCast::StandbyBehavior &standbybehavior) { 
+            LOGINFO("XCastImplementation::setStandbyBehavior\n");
             bool enabled = false;
             if (standbybehavior == Exchange::IXCast::StandbyBehavior::ACTIVE)
             {
@@ -1152,15 +1180,15 @@ namespace WPEFramework
             }
             else
             {
-                LOGERR("XcastService::setStandbyBehavior - Invalid standby behavior ");
+                LOGERR("XCastImplementation::setStandbyBehavior - Invalid standby behavior ");
                 return Core::ERROR_GENERAL;
             }
             m_standbyBehavior = enabled;
-            LOGINFO("XcastService::setStandbyBehavior m_standbyBehavior : %d", m_standbyBehavior);
+            LOGINFO("XCastImplementation::setStandbyBehavior m_standbyBehavior : %d", m_standbyBehavior);
             return Core::ERROR_NONE;
         }
-		      Core::hresult XCastImplementation::GetStandbyBehavior(Exchange::IXCast::StandbyBehavior &standbybehavior, bool &success) { 
-            LOGINFO("XcastService::getStandbyBehavior m_standbyBehavior :%d",m_standbyBehavior);
+	Core::hresult XCastImplementation::GetStandbyBehavior(Exchange::IXCast::StandbyBehavior &standbybehavior, bool &success) { 
+            LOGINFO("XCastImplementation::getStandbyBehavior m_standbyBehavior :%d",m_standbyBehavior);
             if(m_standbyBehavior)
                 standbybehavior = Exchange::IXCast::StandbyBehavior::ACTIVE;
             else
@@ -1168,15 +1196,15 @@ namespace WPEFramework
             success = true;
             return Core::ERROR_NONE;
         }
-		      Core::hresult XCastImplementation::SetFriendlyName(const string& friendlyname) { 
-            LOGINFO("XcastService::setFriendlyName - %s", friendlyname.c_str());
+	Core::hresult XCastImplementation::SetFriendlyName(const string& friendlyname) { 
+            LOGINFO("XCastImplementation::setFriendlyName - %s", friendlyname.c_str());
             uint32_t result = Core::ERROR_GENERAL;
             bool enabledStatus = false;
 
             if (!friendlyname.empty())
             {
                 m_friendlyName = friendlyname;
-                LOGINFO("XcastService::setFriendlyName  :%s",m_friendlyName.c_str());
+                LOGINFO("XCastImplementation::setFriendlyName  :%s",m_friendlyName.c_str());
                 if (m_xcastEnable && ( (m_standbyBehavior == true) || ((m_standbyBehavior == false)&&(m_powerState == WPEFramework::Exchange::IPowerManager::POWER_STATE_ON))))
                     {
                         enabledStatus = true;                
@@ -1190,14 +1218,14 @@ namespace WPEFramework
             }
             return result;
         }
-		      Core::hresult XCastImplementation::GetFriendlyName(string &friendlyname , bool &success ) { 
-            LOGINFO("XcastService::getFriendlyName :%s ",m_friendlyName.c_str());
+	Core::hresult XCastImplementation::GetFriendlyName(string &friendlyname , bool &success ) { 
+            LOGINFO("XCastImplementation::getFriendlyName :%s ",m_friendlyName.c_str());
             friendlyname = m_friendlyName;
             success = true;
             return Core::ERROR_NONE;
         }
-		      Core::hresult XCastImplementation::GetApiVersionNumber(uint32_t &version , bool &success) { 
-            LOGINFO("XcastService::getApiVersionNumber");
+		Core::hresult XCastImplementation::GetApiVersionNumber(uint32_t &version , bool &success) { 
+            LOGINFO("XCastImplementation::getApiVersionNumber");
             version = API_VERSION_NUMBER_MAJOR;
             success = true;
             return Core::ERROR_NONE;
@@ -1239,8 +1267,8 @@ namespace WPEFramework
             return ret;
         }
         
-	       Core::hresult XCastImplementation::RegisterApplications(Exchange::IXCast::IApplicationInfoIterator* const appInfoList) { 
-            LOGINFO("XcastService::registerApplications");
+	Core::hresult XCastImplementation::RegisterApplications(Exchange::IXCast::IApplicationInfoIterator* const appInfoList) { 
+            LOGINFO("XCastImplementation::registerApplications");
             std::vector <DynamicAppConfig*> appConfigListTemp;
             uint32_t status = Core::ERROR_GENERAL;
 
@@ -1300,9 +1328,9 @@ namespace WPEFramework
             }
             return status;
          }
-		      Core::hresult XCastImplementation::UnregisterApplications(Exchange::IXCast::IStringIterator* const apps) 
+	Core::hresult XCastImplementation::UnregisterApplications(Exchange::IXCast::IStringIterator* const apps) 
         {
-            LOGINFO("XcastService::unregisterApplications \n ");
+            LOGINFO("XCastImplementation::unregisterApplications \n ");
             Core::hresult returnStatus = Core::ERROR_GENERAL;
             if (apps != nullptr)
             {              
@@ -1326,9 +1354,8 @@ namespace WPEFramework
                     appConfigList = appConfigListCache;
                 }
                 dumpDynamicAppCacheList(string("appConfigListCache"), appConfigList);
-                //Pass the dynamic cache to xdial process
-                //registerApplicationsInternal (appConfigList);
 
+                //Pass the dynamic cache to xdial process
                 std::list<Exchange::IXCast::ApplicationInfo> appInfoList;
                 Exchange::IXCast::IApplicationInfoIterator* appInfoLists{};
                 if (appConfigList.empty())
@@ -1373,7 +1400,7 @@ namespace WPEFramework
         bool XCastImplementation::setPowerState(std::string powerState)
         {
             PowerState cur_powerState = m_powerState,
-                    new_powerState = WPEFramework::Exchange::IPowerManager::POWER_STATE_OFF;
+            new_powerState = WPEFramework::Exchange::IPowerManager::POWER_STATE_OFF;
             Core::hresult status = Core::ERROR_GENERAL;
             bool ret = true;
             if ("ON" == powerState)
@@ -1466,45 +1493,45 @@ namespace WPEFramework
                 }
             }
             else {
-                    memset( url, 0, url_len );
-                    url_len -= DIAL_MAX_ADDITIONALURL+1; //save for &additionalDataUrl
-                    url_len -= 1; //save for nul byte
-                    LOGINFO("query_string=[%s]\r\n", query_string);
-                    int has_query = query_string && strlen(query_string);
-                    int has_payload = 0;
-                    if (has_query) {
-                        snprintf(url + strlen(url), url_len, "%s", query_string);
-                        url_len -= strlen(query_string);
-                    }
-                    if(payload && strlen(payload)) {
-                        const char payload_key[] = "dialpayload=";
-                        if(url_len >= 0){
-                            if (has_query) {
-                                snprintf(url + strlen(url), url_len, "%s", "&");
-                                url_len -= 1;
-                            }
-                            if(url_len >= 0) {
-                                snprintf(url + strlen(url), url_len, "%s%s", payload_key, payload);
-                                url_len -= strlen(payload_key) + strlen(payload);
-                                has_payload = 1;
-                            }
-                        }
-                        else {
-                            LOGINFO("there is not enough room for payload\r\n");
-                        }
-                    }
-                    
-                    if(additional_data_url != NULL){
-                        if ((has_query || has_payload) && url_len >= 0) {
+                memset( url, 0, url_len );
+                url_len -= DIAL_MAX_ADDITIONALURL+1; //save for &additionalDataUrl
+                url_len -= 1; //save for nul byte
+                LOGINFO("query_string=[%s]\r\n", query_string);
+                int has_query = query_string && strlen(query_string);
+                int has_payload = 0;
+                if (has_query) {
+                    snprintf(url + strlen(url), url_len, "%s", query_string);
+                    url_len -= strlen(query_string);
+                }
+                if(payload && strlen(payload)) {
+                    const char payload_key[] = "dialpayload=";
+                    if(url_len >= 0){
+                        if (has_query) {
                             snprintf(url + strlen(url), url_len, "%s", "&");
                             url_len -= 1;
                         }
-                        if (url_len >= 0) {
-                            snprintf(url + strlen(url), url_len, "additionalDataUrl=%s", additional_data_url);
-                            url_len -= strlen(additional_data_url) + 18;
+                        if(url_len >= 0) {
+                            snprintf(url + strlen(url), url_len, "%s%s", payload_key, payload);
+                            url_len -= strlen(payload_key) + strlen(payload);
+                            has_payload = 1;
                         }
                     }
-                    LOGINFO(" url is [%s]\r\n", url);
+                    else {
+                        LOGINFO("there is not enough room for payload\r\n");
+                    }
+                }
+                
+                if(additional_data_url != NULL){
+                    if ((has_query || has_payload) && url_len >= 0) {
+                        snprintf(url + strlen(url), url_len, "%s", "&");
+                        url_len -= 1;
+                    }
+                    if (url_len >= 0) {
+                        snprintf(url + strlen(url), url_len, "additionalDataUrl=%s", additional_data_url);
+                        url_len -= strlen(additional_data_url) + 18;
+                    }
+                }
+                LOGINFO(" url is [%s]\r\n", url);
             }
         }
         
