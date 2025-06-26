@@ -150,7 +150,7 @@ namespace WPEFramework
                     connection->Release();
                 }
             }
-			_connectionId = 0;
+						_connectionId = 0;
 
             if (_service != nullptr)
             {
@@ -159,7 +159,7 @@ namespace WPEFramework
             }
             SYSLOG(Logging::Shutdown, (string(_T("XCast de-initialised"))));
         }
-	    string XCast::Information() const
+	    	string XCast::Information() const
         {
             return ("This XCast Plugin facilitates to persist event data for monitoring applications");
         }
