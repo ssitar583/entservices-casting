@@ -191,7 +191,7 @@ namespace WPEFramework
             Core::hresult RegisterApplications(Exchange::IXCast::IApplicationInfoIterator* const appInfoList) override;
             Core::hresult UnregisterApplications(Exchange::IXCast::IStringIterator* const apps) override;
 
-            virtual void onXcastApplicationLaunchRequestWithLaunchParam (string appName, string strPayLoad, string strQuery, string strAddDataUrl) override ;
+            virtual void onXcastApplicationLaunchRequestWithParam (string appName, string strPayLoad, string strQuery, string strAddDataUrl) override ;
             virtual void onXcastApplicationLaunchRequest(string appName, string parameter) override ;
             virtual void onXcastApplicationStopRequest(string appName, string appId) override ;
             virtual void onXcastApplicationHideRequest(string appName, string appId) override ;
@@ -270,6 +270,7 @@ namespace WPEFramework
             uint32_t SetNetworkStandbyMode(bool networkStandbyMode);
             bool setPowerState(std::string powerState);
             void getUrlFromAppLaunchParams (const char *app_name, const char *payload, const char *query_string, const char *additional_data_url, char *url);
+            void updateDynamicAppCache(Exchange::IXCast::IApplicationInfoIterator* const appInfoList);
             
         public:
             static XCastImplementation* _instance;
