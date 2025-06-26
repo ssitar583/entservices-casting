@@ -90,28 +90,21 @@ namespace WPEFramework {
 							Exchange::JXCast::Event::OnApplicationResumeRequest(_parent, appName, appID);
 						}
 							
-						void Activated(RPC::IRemoteConnection *connection) final
+						virtual void Activated(RPC::IRemoteConnection *connection) final
 						{
-							//LOGINFO("XCast Notification Activated");
-							if (connection->Id() == _parent._connectionId)
-            				{
+							if(_parent._connectionId == connection->Id())
+							{
 								LOGINFO("XCast Notification Activated");
-            				    //ASSERT(nullptr != _parent._service);
-            				    //Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_parent._service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
-            				}
+							}
 						}
 		
-						void Deactivated(RPC::IRemoteConnection *connection) final
+						virtual void Deactivated(RPC::IRemoteConnection *connection) final
 						{
-							if (connection->Id() == _parent._connectionId)
-            				{
+							if(_parent._connectionId == connection->Id())
+							{
 								LOGINFO("XCast Notification Deactivated");
 								_parent.Deactivated(connection);
-            				    ASSERT(nullptr != _parent._service);
-            				    Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_parent._service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
-            				}
-							// LOGINFO("XCast Notification Deactivated");
-							
+							}
 						}
 		
 						private:
@@ -145,7 +138,6 @@ namespace WPEFramework {
 					uint32_t _connectionId{};
 					Exchange::IXCast *_xcast{};
 					Core::Sink<Notification> _xcastNotification;
-					//Exchange::IConfiguration* configure;
 
 					friend class Notification;
         };
