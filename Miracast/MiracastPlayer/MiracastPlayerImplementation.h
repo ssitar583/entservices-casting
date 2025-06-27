@@ -36,7 +36,6 @@
 
 using namespace WPEFramework;
 
-using MiracastLogLevel = WPEFramework::Exchange::IMiracastPlayer::LogLevel;
 using MiracastPlayerState = WPEFramework::Exchange::IMiracastPlayer::State;
 using MiracastPlayerReasonCode = WPEFramework::Exchange::IMiracastPlayer::ReasonCode;
 using MiracastPlayerStopReasonCode = WPEFramework::Exchange::IMiracastPlayer::StopReasonCode;
@@ -121,12 +120,13 @@ namespace WPEFramework
             Core::hresult Register(Exchange::IMiracastPlayer::INotification *notification) override;
             Core::hresult Unregister(Exchange::IMiracastPlayer::INotification *notification) override;
 
-            Core::hresult PlayRequest(const DeviceParameters &deviceParam , const VideoRectangle &videoRect , Result &returnPayload ) override;
-            Core::hresult StopRequest(const string &clientMac , const string &clientName , const int &reasonCode , Result &returnPayload ) override;
-            Core::hresult SetVideoRectangle(const int &startX , const int &startY , const int &width , const int &height , Result &returnPayload ) override;
-            Core::hresult SetWesterosEnvironment( IWesterosEnvArgumentsIterator * const westerosArgs , Result &returnPayload ) override;
-            Core::hresult UnsetWesterosEnvironment(Result &returnPayload ) override;
-            Core::hresult SetLogging(const MiracastLogLevel &logLevel , const SeparateLogger &separateLogger , Result &returnPayload) override;
+            Core::hresult PlayRequest(const DeviceParameters &deviceParam , const VideoRectangle &videoRect , Result &result ) override;
+            Core::hresult StopRequest(const string &clientMac , const string &clientName , const int &reasonCode , Result &result ) override;
+            Core::hresult SetVideoRectangle(const int &startX , const int &startY , const int &width , const int &height , Result &result ) override;
+            Core::hresult SetWesterosEnvironment( IEnvArgumentsIterator * const westerosArgs , Result &result ) override;
+            Core::hresult UnsetWesterosEnvironment(Result &result ) override;
+            Core::hresult SetEnvArguments( IEnvArgumentsIterator * const envArgs , Result &result ) override;
+            Core::hresult UnsetEnvArguments(Result &result ) override;
 
         private:
             mutable Core::CriticalSection _adminLock;
@@ -139,7 +139,7 @@ namespace WPEFramework
 
             void dispatchEvent(Event, const ParamsType &params);
             void Dispatch(Event event, const ParamsType &params);
-            void unsetWesterosEnvironmentInternal(void);
+            void unsetEnvArgumentsInternal(void);
             std::string stateDescription(MiracastPlayerState e);
 
         public:

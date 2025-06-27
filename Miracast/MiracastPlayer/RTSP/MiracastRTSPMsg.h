@@ -28,7 +28,6 @@
 #include <interfaces/IMiracastPlayer.h>
 
 using namespace WPEFramework;
-using MiracastLogLevel = WPEFramework::Exchange::IMiracastPlayer::LogLevel;
 using MiracastPlayerState = WPEFramework::Exchange::IMiracastPlayer::State;
 using MiracastPlayerReasonCode = WPEFramework::Exchange::IMiracastPlayer::ReasonCode;
 using MiracastPlayerStopReasonCode = WPEFramework::Exchange::IMiracastPlayer::StopReasonCode;
