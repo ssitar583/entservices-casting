@@ -58,11 +58,11 @@ namespace WPEFramework {
 						INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
 						END_INTERFACE_MAP
 
-						 virtual void OnApplicationLaunchRequestWithLaunchParam(const string& appName, const string& strPayLoad, const string& strQuery, const string& strAddDataUrl) override
+						 virtual void OnApplicationLaunchRequestWithParam(const string& appName, const string& strPayLoad, const string& strQuery, const string& strAddDataUrl) override
 						{
-							LOGINFO("OnApplicationLaunchRequestWithLaunchParam: appName=%s, strPayLoad=%s, strQuery=%s, strAddDataUrl=%s",
+							LOGINFO("OnApplicationLaunchRequestWithParam: appName=%s, strPayLoad=%s, strQuery=%s, strAddDataUrl=%s",
 								appName.c_str(), strPayLoad.c_str(), strQuery.c_str(), strAddDataUrl.c_str());
-							Exchange::JXCast::Event::OnApplicationLaunchRequestWithLaunchParam(_parent, appName, strPayLoad, strQuery, strAddDataUrl);
+							Exchange::JXCast::Event::OnApplicationLaunchRequestWithParam(_parent, appName, strPayLoad, strQuery, strAddDataUrl);
 						}
 						virtual void OnApplicationLaunchRequest(const string& appName, const string& parameter) override
 						{
@@ -79,10 +79,10 @@ namespace WPEFramework {
 							LOGINFO("OnApplicationHideRequest: appName=%s, appID=%s", appName.c_str(), appID.c_str());
 							Exchange::JXCast::Event::OnApplicationHideRequest(_parent, appName, appID);
 						}
-						virtual void OnApplicationStateRequest(const string& appName, const string& appID) override
+						virtual void OnApplicationCurrentStateRequest(const string& appName, const string& appID) override
 						{
-							LOGINFO("OnApplicationStateRequest: appName=%s, appID=%s", appName.c_str(), appID.c_str());
-							Exchange::JXCast::Event::OnApplicationStateRequest(_parent, appName, appID);
+							LOGINFO("OnApplicationCurrentStateRequest: appName=%s, appID=%s", appName.c_str(), appID.c_str());
+							Exchange::JXCast::Event::OnApplicationCurrentStateRequest(_parent, appName, appID);
 						}
 						virtual void OnApplicationResumeRequest(const string& appName, const string& appID) override
 						{

@@ -809,7 +809,7 @@ namespace WPEFramework
                         string strPayLoad = params["strPayLoad"].String();
                         string strQuery = params["strQuery"].String();
                         string strAddDataUrl = params["strAddDataUrl"].String();
-                        (*index)->OnApplicationLaunchRequestWithLaunchParam(appName,strPayLoad,strQuery,strAddDataUrl);
+                        (*index)->OnApplicationLaunchRequestWithParam(appName,strPayLoad,strQuery,strAddDataUrl);
                     }
                     break;
                     case LAUNCH_REQUEST:
@@ -837,7 +837,7 @@ namespace WPEFramework
                     {
                         string appName = params["appName"].String();
                         string appId = params["appId"].String();
-                        (*index)->OnApplicationStateRequest(appName,appId);
+                        (*index)->OnApplicationCurrentStateRequest(appName,appId);
                     }
                     break;
                     case RESUME_REQUEST:
@@ -1011,13 +1011,13 @@ namespace WPEFramework
             LOGINFO ("=================================================================");
         }  
 
-        Core::hresult XCastImplementation::ApplicationStateChanged(const string& applicationName, const Exchange::IXCast::State& state, const string& applicationId, const Exchange::IXCast::ErrorCode& error,bool &success){
+        Core::hresult XCastImplementation::UpdateApplicationState(const string& applicationName, const Exchange::IXCast::State& state, const string& applicationId, const Exchange::IXCast::ErrorCode& error,bool &success){
             LOGINFO("ARGS = %s : %s : %d : %d ", applicationName.c_str(), applicationId.c_str() , state , error);
             success = false;
             uint32_t status = Core::ERROR_GENERAL;
             if(!applicationName.empty() && (nullptr != m_xcast_manager))
             {
-                LOGINFO("XCastImplementation::ApplicationStateChanged  ARGS = %s : %s : %d : %d ", applicationName.c_str(), applicationId.c_str() , state , error);
+                LOGINFO("XCastImplementation::UpdateApplicationState  ARGS = %s : %s : %d : %d ", applicationName.c_str(), applicationId.c_str() , state , error);
                 string appstate = "";
                 if (state == Exchange::IXCast::State::RUNNING)
                 {
@@ -1055,7 +1055,7 @@ namespace WPEFramework
                 }
                 else
                 {
-                    LOGERR("XCastImplementation::ApplicationStateChanged - Invalid Error Code");
+                    LOGERR("XCastImplementation::UpdateApplicationState - Invalid Error Code");
                     return Core::ERROR_GENERAL;
                 }
 
@@ -1065,7 +1065,7 @@ namespace WPEFramework
             }
             else
             {
-                LOGERR("XCastImplementation::ApplicationStateChanged - m_xcast_manager is NULL");
+                LOGERR("XCastImplementation::UpdateApplicationState - m_xcast_manager is NULL");
             }
             return status;
         }
@@ -1228,12 +1228,6 @@ namespace WPEFramework
 		Core::hresult XCastImplementation::GetFriendlyName(string &friendlyname , bool &success ) { 
             LOGINFO("XCastImplementation::getFriendlyName :%s ",m_friendlyName.c_str());
             friendlyname = m_friendlyName;
-            success = true;
-            return Core::ERROR_NONE;
-        }
-		Core::hresult XCastImplementation::GetApiVersionNumber(uint32_t &version , bool &success) { 
-            LOGINFO("XCastImplementation::getApiVersionNumber");
-            version = API_VERSION_NUMBER_MAJOR;
             success = true;
             return Core::ERROR_NONE;
         }
