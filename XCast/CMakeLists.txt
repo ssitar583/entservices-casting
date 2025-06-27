@@ -17,28 +17,39 @@
 
 set(PLUGIN_NAME XCast)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+set(PLUGIN_IMPLEMENTATION ${MODULE_NAME}Implementation)
 
 set(PLUGIN_XCAST_AUTOSTART "false" CACHE STRING "Automatically start XCast plugin")
 set(PLUGIN_XCAST_STARTUPORDER "" CACHE STRING "To configure startup order of XCast plugin")
 set(PLUGIN_XCAST_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
-
-add_library(${MODULE_NAME} SHARED
-        XCast.cpp
-        XCastImplementation.cpp
-        Module.cpp
-        XCastManager.cpp)
-
 find_package(RFC)
-find_package(IARMBus)
 find_package(GLIB REQUIRED)
 find_package(WPEFrameworkSecurityUtil)
+find_package(${NAMESPACE}Definitions REQUIRED)
 if(NOT WPEFRAMEWORK_SECURITYUTIL_FOUND)
     add_definitions(-DSECURITY_TOKEN_ENABLED=0)
 endif()
 
+find_library(GLIB_LIBRARY NAMES glib-2.0)
+
 find_library(XDIAL_LIBRARIES NAMES gdial-server)
+
+if (USE_THUNDER_R4)
+    find_package(${NAMESPACE}COM REQUIRED)
+else ()
+    find_package(${NAMESPACE}Protocols REQUIRED)
+endif (USE_THUNDER_R4)
+
+add_library(${MODULE_NAME} SHARED
+        XCast.cpp
+        Module.cpp)
+
+#add_executable(${MODULE_NAME} 
+#        XCast.cpp
+#        Module.cpp)
+
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
@@ -46,18 +57,76 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 
 target_compile_definitions(${MODULE_NAME} PRIVATE MODULE_NAME=Plugin_${PLUGIN_NAME})
 
-add_definitions (-DRT_PLATFORM_LINUX)
-target_include_directories(${MODULE_NAME} PRIVATE ${IARMBUS_INCLUDE_DIRS} ../helpers)
-target_include_directories(${MODULE_NAME} PRIVATE ${RFC_INCLUDE_DIRS} ../helpers)
-target_include_directories(${MODULE_NAME} PRIVATE ${GLIB_INCLUDE_DIRS})
 
-if(NOT RDK_SERVICES_L1_TEST)
-	target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins ${RFC_LIBRARIES} ${IARMBUS_LIBRARIES} ${XDIAL_LIBRARIES})
-else(RDK_SERVICES_L1_TEST)
-      target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins ${RFC_LIBRARIES} ${IARMBUS_LIBRARIES})
-endif()
+include_directories(
+        ../helpers)
+
+target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 install(TARGETS ${MODULE_NAME}
+        DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+
+add_library(${PLUGIN_IMPLEMENTATION} SHARED
+        XCastImplementation.cpp
+        Module.cpp
+        XCastManager.cpp)
+
+#add_executable(${PLUGIN_IMPLEMENTATION}
+#        XCastImplementation.cpp
+#        Module.cpp
+#        XCastManager.cpp)
+        
+target_link_libraries(${PLUGIN_IMPLEMENTATION}
+        PRIVATE
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES)	
+		
+
+if (USE_THUNDER_R4)
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}COM::${NAMESPACE}COM)
+else ()
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}Protocols::${NAMESPACE}Protocols)
+endif (USE_THUNDER_R4)
+
+
+find_package(DS)
+find_package(IARMBus)
+find_package(CEC)
+
+if (RDK_SERVICE_L2_TEST)
+    message ("L2 test Enabled")
+    find_library(TESTMOCKLIB_LIBRARIES NAMES TestMocklib)
+    if (TESTMOCKLIB_LIBRARIES)
+        message ("linking mock libraries ${TESTMOCKLIB_LIBRARIES} library")
+        target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${TESTMOCKLIB_LIBRARIES})
+    else (TESTMOCKLIB_LIBRARIES)
+        message ("Require ${TESTMOCKLIB_LIBRARIES} library")
+    endif (TESTMOCKLIB_LIBRARIES)
+endif()
+
+
+
+
+target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ${IARMBUS_INCLUDE_DIRS})
+target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ${DS_INCLUDE_DIRS})
+target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ../helpers)
+target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ${GLIB_INCLUDE_DIRS})
+target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ${RFC_INCLUDE_DIRS} ../helpers)
+
+if(NOT RDK_SERVICES_L1_TEST)
+      target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins ${RFC_LIBRARIES} ${IARMBUS_LIBRARIES} ${XDIAL_LIBRARIES} ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
+else(RDK_SERVICES_L1_TEST)
+      target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins ${RFC_LIBRARIES} ${IARMBUS_LIBRARIES} ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
+endif()
+
+
+set_source_files_properties(XCast.cpp PROPERTIES COMPILE_FLAGS "-fexceptions")
+
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PUBLIC ${NAMESPACE}Plugins::${NAMESPACE}Plugins ${IARMBUS_LIBRARIES} ${DS_LIBRARIES} ${GLIB_LIBRARIES} ${RFC_LIBRARIES})
+
+install(TARGETS ${PLUGIN_IMPLEMENTATION}
         DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
 write_config(${PLUGIN_NAME})

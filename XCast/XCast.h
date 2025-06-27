@@ -1,264 +1,146 @@
-/*
- * If not stated otherwise in this file or this component's LICENSE file the
- * following copyright and licenses apply:
- *
- * Copyright 2020 RDK Management
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 /**
- * @file XCast.h
- * @brief Thunder Plugin based Implementation for TTS service API's (RDK-27957).
- */
-
-/**
-  @mainpage XCast
-
-  <b>XCast</b> XCast Thunder Service provides APIs for the arbitrators
-  * (ex: Native application such as Cobalt) to use TTS resource.
-  */
+* If not stated otherwise in this file or this component's LICENSE
+* file the following copyright and licenses apply:
+*
+* Copyright 2019 RDK Management
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+**/
 
 #pragma once
 
 #include "Module.h"
 #include <interfaces/IXCast.h>
+#include <interfaces/json/JsonData_XCast.h>
+#include <interfaces/json/JXCast.h>
 #include <interfaces/IConfiguration.h>
-#include "tracing/Logging.h"
-#include "tptimer.h"
-#include "libIBus.h"
-#include "libIBusDaemon.h"
-#include "XCastCommon.h"
-#include <mutex>
-#include <map>
-#include <glib.h>
 #include "UtilsLogging.h"
-#include <interfaces/IPowerManager.h>
-#include "PowerManagerInterface.h"
+#include "tracing/Logging.h"
 
-using namespace WPEFramework::Exchange;
-using PowerState = WPEFramework::Exchange::IPowerManager::PowerState;
-using ThermalTemperature = WPEFramework::Exchange::IPowerManager::ThermalTemperature;
 
 namespace WPEFramework {
-namespace Plugin {
-    class XCast: public PluginHost::IPlugin, public PluginHost::JSONRPC {
-    public:        
-        BEGIN_INTERFACE_MAP(XCast)
-            INTERFACE_ENTRY(PluginHost::IPlugin)
-            INTERFACE_ENTRY(PluginHost::IDispatcher)
-            INTERFACE_AGGREGATE(Exchange::IXCast, _xcast)
-        END_INTERFACE_MAP
 
-        XCast();
-        virtual ~XCast();
-        void registerEventHandlers();
-        void onPowerModeChanged(const PowerState currentState, const PowerState newState);
-        void onNetworkStandbyModeChanged(const bool enabled);
-        virtual const string Initialize(PluginHost::IShell* service) override;
-        virtual void Deinitialize(PluginHost::IShell* service) override;
-        virtual string Information() const override { return {}; }
+    namespace Plugin {
+			
+		class XCast : public PluginHost::IPlugin, public PluginHost::JSONRPC
+		{
+			private:
+            	class Notification : public RPC::IRemoteConnection::INotification, public Exchange::IXCast::INotification
+                {
+					private:
+			        	Notification() = delete;
+			            Notification(const Notification&) = delete;
+			            Notification& operator=(const Notification&) = delete;
+						
+					public:
+						explicit Notification(XCast *parent)
+							: _parent(*parent)
+						{
+							ASSERT(parent != nullptr);
+						}
+		
+						virtual ~Notification()
+						{
+						}
+					
+						BEGIN_INTERFACE_MAP(Notification)
+						INTERFACE_ENTRY(Exchange::IXCast::INotification)
+						INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
+						END_INTERFACE_MAP
 
-        void event_onApplicationLaunchRequestWithLaunchParam(string appName,string strPayLoad, string strQuery, string strAddDataUrl);
-        void event_onApplicationLaunchRequest(string appName, string parameter);
-        void event_onApplicationStopRequest(string appName, string appID);
-        void event_onApplicationHideRequest(string appName, string appID);
-        void event_onApplicationStateRequest(string appName, string appID);
-        void event_onApplicationResumeRequest(string appName, string appID);
-        void event_onUpdatePowerStateRequest(string powerState);
-    public:
-        class Notification : public RPC::IRemoteConnection::INotification,
-                             public Exchange::IXCast::INotification {
-            private:
-                Notification() = delete;
-                Notification(const Notification&) = delete;
-                Notification& operator=(const Notification&) = delete;
+						 virtual void OnApplicationLaunchRequestWithLaunchParam(const string& appName, const string& strPayLoad, const string& strQuery, const string& strAddDataUrl) override
+						{
+							LOGINFO("OnApplicationLaunchRequestWithLaunchParam: appName=%s, strPayLoad=%s, strQuery=%s, strAddDataUrl=%s",
+								appName.c_str(), strPayLoad.c_str(), strQuery.c_str(), strAddDataUrl.c_str());
+							Exchange::JXCast::Event::OnApplicationLaunchRequestWithLaunchParam(_parent, appName, strPayLoad, strQuery, strAddDataUrl);
+						}
+						virtual void OnApplicationLaunchRequest(const string& appName, const string& parameter) override
+						{
+							LOGINFO("OnApplicationLaunchRequest: appName=%s, parameter=%s", appName.c_str(), parameter.c_str());
+							Exchange::JXCast::Event::OnApplicationLaunchRequest(_parent, appName, parameter);
+						}
+						virtual void OnApplicationStopRequest(const string& appName, const string& appID) override
+						{
+							LOGINFO("OnApplicationStopRequest: appName=%s, appID=%s", appName.c_str(), appID.c_str());
+							Exchange::JXCast::Event::OnApplicationStopRequest(_parent, appName, appID);
+						}
+						virtual void OnApplicationHideRequest(const string& appName, const string& appID) override
+						{
+							LOGINFO("OnApplicationHideRequest: appName=%s, appID=%s", appName.c_str(), appID.c_str());
+							Exchange::JXCast::Event::OnApplicationHideRequest(_parent, appName, appID);
+						}
+						virtual void OnApplicationStateRequest(const string& appName, const string& appID) override
+						{
+							LOGINFO("OnApplicationStateRequest: appName=%s, appID=%s", appName.c_str(), appID.c_str());
+							Exchange::JXCast::Event::OnApplicationStateRequest(_parent, appName, appID);
+						}
+						virtual void OnApplicationResumeRequest(const string& appName, const string& appID) override
+						{
+							LOGINFO("OnApplicationResumeRequest: appName=%s, appID=%s", appName.c_str(), appID.c_str());
+							Exchange::JXCast::Event::OnApplicationResumeRequest(_parent, appName, appID);
+						}
+							
+						virtual void Activated(RPC::IRemoteConnection *connection) final
+						{
+							if(_parent._connectionId == connection->Id())
+							{
+								LOGINFO("XCast Notification Activated");
+							}
+						}
+		
+						virtual void Deactivated(RPC::IRemoteConnection *connection) final
+						{
+							if(_parent._connectionId == connection->Id())
+							{
+								LOGINFO("XCast Notification Deactivated");
+								_parent.Deactivated(connection);
+							}
+						}
+		
+						private:
+							XCast &_parent;
+				};
+			
+			public:
+				XCast(const XCast &) = delete;
+				XCast &operator=(const XCast &) = delete;
+				
+				XCast();
+				virtual ~XCast();
+			
+				BEGIN_INTERFACE_MAP(XCast)
+				INTERFACE_ENTRY(PluginHost::IPlugin)
+				INTERFACE_ENTRY(PluginHost::IDispatcher)
+				INTERFACE_AGGREGATE(Exchange::IXCast, _xcast)
+				END_INTERFACE_MAP
+				
+				//  IPlugin methods
+				// -------------------------------------------------------------------------------------------------------
+				const string Initialize(PluginHost::IShell* service) override;
+				void Deinitialize(PluginHost::IShell* service) override;
+				string Information() const override;
+				
+				private:
+                	void Deactivated(RPC::IRemoteConnection* connection);
+			
+				private:
+					PluginHost::IShell *_service{};
+					uint32_t _connectionId{};
+					Exchange::IXCast *_xcast{};
+					Core::Sink<Notification> _xcastNotification;
 
-            public:
-                explicit Notification(XCast* parent)
-                    : _parent(*parent) {
-                    ASSERT(parent != nullptr);
-                }
-
-                virtual ~Notification() {
-                }
-
-            public:
-                virtual void onApplicationLaunchRequestWithLaunchParam(const string& appName, const string& strPayLoad, const string& strQuery, const string& strAddDataUrl) override
-                {
-                    _parent.event_onApplicationLaunchRequestWithLaunchParam(appName, strPayLoad, strQuery, strAddDataUrl);
-                }
-                virtual void onApplicationLaunchRequest(const string& appName, const string& parameter) override
-                {
-                    _parent.event_onApplicationLaunchRequest(appName, parameter);
-                }
-				virtual void onApplicationStopRequest(const string& appName, const string& appID) override
-                {
-                    _parent.event_onApplicationStopRequest(appName, appID);
-                }
-				virtual void onApplicationHideRequest(const string& appName, const string& appID) override
-                {
-                    _parent.event_onApplicationHideRequest(appName, appID);
-                }
-				virtual void onApplicationStateRequest(const string& appName, const string& appID) override
-                {
-                    _parent.event_onApplicationStateRequest(appName, appID);
-                }
-				virtual void onApplicationResumeRequest(const string& appName, const string& appID) override
-                {
-                    _parent.event_onApplicationResumeRequest(appName, appID);
-                }
-                virtual void onUpdatePowerStateRequest(const string& powerState) override
-                {
-                    _parent.event_onUpdatePowerStateRequest(powerState);
-                }
-
-                virtual void Activated(RPC::IRemoteConnection* /* connection */) final
-                {
-                    LOGINFO("XCast::Notification::Activated - %p", this);
-                }
-
-                virtual void Deactivated(RPC::IRemoteConnection* connection) final
-                {
-                    LOGINFO("XCast::Notification::Deactivated - %p", this);
-                    _parent.Deactivated(connection);
-                }
-
-                BEGIN_INTERFACE_MAP(Notification)
-                INTERFACE_ENTRY(Exchange::IXCast::INotification)
-                INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
-                END_INTERFACE_MAP
-
-            private:
-                XCast& _parent;
+					friend class Notification;
         };
 
-    private:
-        class PowerManagerNotification : public Exchange::IPowerManager::INetworkStandbyModeChangedNotification,
-                                                     public Exchange::IPowerManager::IModeChangedNotification {
-        private:
-            PowerManagerNotification(const PowerManagerNotification&) = delete;
-            PowerManagerNotification& operator=(const PowerManagerNotification&) = delete;
-
-        public:
-            explicit PowerManagerNotification(XCast& parent)
-                : _parent(parent)
-            {
-            }
-            ~PowerManagerNotification() override = default;
-
-        public:
-            void OnPowerModeChanged(const PowerState currentState, const PowerState newState) override
-            {
-                _parent.onPowerModeChanged(currentState, newState);
-            }
-
-            void OnNetworkStandbyModeChanged(const bool enabled)
-            {
-                _parent.onNetworkStandbyModeChanged(enabled);
-            }
-
-            template <typename T>
-            T* baseInterface()
-            {
-                static_assert(std::is_base_of<T, PowerManagerNotification>(), "base type mismatch");
-                return static_cast<T*>(this);
-            }
-
-            BEGIN_INTERFACE_MAP(PowerManagerNotification)
-            INTERFACE_ENTRY(Exchange::IPowerManager::INetworkStandbyModeChangedNotification)
-            INTERFACE_ENTRY(Exchange::IPowerManager::IModeChangedNotification)
-            END_INTERFACE_MAP
-
-        private:
-            XCast& _parent;
-        };
-        // We do not allow this plugin to be copied !!
-        XCast(const XCast&) = delete;
-        XCast& operator=(const XCast&) = delete;
-
-        void RegisterAll();
-
-        void Deactivated(RPC::IRemoteConnection* connection);
-        //Begin methods
-        uint32_t getApiVersionNumber(const JsonObject& parameters, JsonObject& response);
-        uint32_t applicationStateChanged(const JsonObject& parameters, JsonObject& response);
-        uint32_t setEnabled(const JsonObject& parameters, JsonObject& response);
-        uint32_t getEnabled(const JsonObject& parameters, JsonObject& response);
-        uint32_t setStandbyBehavior(const JsonObject& parameters, JsonObject& response);
-        uint32_t getStandbyBehavior(const JsonObject& parameters, JsonObject& response);
-        uint32_t setFriendlyName(const JsonObject& parameters, JsonObject& response);
-        uint32_t getFriendlyName(const JsonObject& parameters, JsonObject& response);
-        uint32_t registerApplications(const JsonObject& parameters, JsonObject& response);
-        uint32_t unregisterApplications(const JsonObject& parameters, JsonObject& response);
-        uint32_t getProtocolVersion(const JsonObject& parameters, JsonObject& response);
-
-        uint32_t setManufacturerName(const JsonObject& parameters, JsonObject& response);
-        uint32_t getManufacturerName(const JsonObject& parameters, JsonObject& response);
-        uint32_t setModelName(const JsonObject& parameters, JsonObject& response);
-        uint32_t getModelName(const JsonObject& parameters, JsonObject& response);
-
-        uint32_t registerApplicationsInternal(std::vector<DynamicAppConfig*> appConfigEntries);
-        //End methods
-        /**
-         * Whether Cast service is enabled by RFC
-         */
-        static bool m_xcastEnable;
-        static WPEFramework::Exchange::IPowerManager::PowerState m_powerState;
-        static bool m_networkStandbyMode;
-        bool m_isDynamicRegistrationsRequired;
-        std::mutex m_appConfigMutex;
-        WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement> * m_SystemPluginObj = NULL;
-        std::vector<DynamicAppConfig*> m_appConfigCache;
-        static string m_friendlyName;
-        static bool m_standbyBehavior;
-        guint m_FriendlyNameUpdateTimerID{0};
-        //Timer related variables and functions
-        TpTimer m_locateCastTimer;
-        PowerManagerInterfaceRef _powerManagerPlugin;
-        Core::Sink<PowerManagerNotification> _pwrMgrNotification;
-        bool _registeredEventHandlers;
-        void InitializePowerManager(PluginHost::IShell *service);
-        void InitializeIARM();
-        void DeinitializeIARM();
-        //Internal methods
-        void onLocateCastTimer();
-        void getUrlFromAppLaunchParams (const char *app_name, const char *payload, const char *query_string, const char *additional_data_url, char *url);
-        bool getEntryFromAppLaunchParamList (const char* appName, DynamicAppConfig& retAppConfig);
-        void dumpDynamicAppConfigCache(string strListName, std::vector<DynamicAppConfig*> appConfigList);
-        bool deleteFromDynamicAppCache(JsonArray applications);
-        bool deleteFromDynamicAppCache(std::vector<string>& appsToDelete);
-        void updateDynamicAppCache(JsonArray applications);
-        void getSystemPlugin();
-        int updateSystemFriendlyName();
-        static gboolean update_friendly_name_timercallback(gpointer userdata);
-        void onFriendlyNameUpdateHandler(const JsonObject& parameters);
-        bool setPowerState(std::string powerState);
-
-        /**
-         * Check whether the xdial service is allowed in this device.
-         */
-        static void threadPowerModeChangeEvent(void);
-        static void networkStandbyModeChangeEvent(void);
-    private:
-        static XCast *m_instance;
-        uint8_t _skipURL{};
-        uint32_t _connectionId{};
-        PluginHost::IShell* _service{};
-        Exchange::IXCast* _xcast{};
-        Core::Sink<Notification> _notification;
-        uint32_t m_apiVersionNumber;
-        friend class Notification;
-    };
-} // namespace Plugin
+    } // namespace Plugin
 } // namespace WPEFramework
