@@ -2126,12 +2126,12 @@ void MiracastRTSPMsg::RTSPMessageHandler_Thread(void *args)
             }
             else if ( RTSP_MSG_TEARDOWN_REQUEST == status_code )
             {
-                if ( Exchange::IMiracastPlayer::STOP_REASON_APP_REQ_FOR_EXIT == rtsp_message_data.stop_reason_code )
+                if ( STOP_REASON_APP_REQ_FOR_EXIT == rtsp_message_data.stop_reason_code )
                 {
                     reason = WPEFramework::Exchange::IMiracastPlayer::REASON_CODE_APP_REQ_TO_STOP;
                     MIRACASTLOG_INFO("#### MCAST-TRIAGE-OK-APP-EXIT APP REQUESTED TO STOP ON EXIT ####");
                 }
-                else if ( Exchange::IMiracastPlayer::STOP_REASON_APP_REQ_FOR_NEW_CONNECTION == rtsp_message_data.stop_reason_code )
+                else if ( STOP_REASON_APP_REQ_FOR_NEW_CONNECTION == rtsp_message_data.stop_reason_code )
                 {
                     reason = WPEFramework::Exchange::IMiracastPlayer::REASON_CODE_NEW_SRC_DEV_CONNECT_REQ;
                     MIRACASTLOG_INFO("#### MCAST-TRIAGE-OK-APP-STOP-ON-NEW-CONNECT APP REQUESTED TO STOP ON NEW CONNECTION ####");
@@ -2266,12 +2266,12 @@ void MiracastRTSPMsg::RTSPMessageHandler_Thread(void *args)
 
                             if (RTSP_TEARDOWN_FROM_SINK2SRC == rtsp_message_data.state)
                             {
-                                if ( WPEFramework::Exchange::IMiracastPlayer::STOP_REASON_APP_REQ_FOR_EXIT == rtsp_message_data.stop_reason_code )
+                                if ( STOP_REASON_APP_REQ_FOR_EXIT == rtsp_message_data.stop_reason_code )
                                 {
                                     reason = WPEFramework::Exchange::IMiracastPlayer::REASON_CODE_APP_REQ_TO_STOP;
                                     MIRACASTLOG_INFO("#### MCAST-TRIAGE-OK-APP-EXIT APP REQUESTED TO STOP ON EXIT ####");
                                 }
-                                else if ( WPEFramework::Exchange::IMiracastPlayer::STOP_REASON_APP_REQ_FOR_NEW_CONNECTION == rtsp_message_data.stop_reason_code )
+                                else if ( STOP_REASON_APP_REQ_FOR_NEW_CONNECTION == rtsp_message_data.stop_reason_code )
                                 {
                                     reason = WPEFramework::Exchange::IMiracastPlayer::REASON_CODE_NEW_SRC_DEV_CONNECT_REQ;
                                     MIRACASTLOG_INFO("#### MCAST-TRIAGE-OK-APP-STOP-ON-NEW-CONNECT APP REQUESTED TO STOP ON NEW CONNECTION ####");

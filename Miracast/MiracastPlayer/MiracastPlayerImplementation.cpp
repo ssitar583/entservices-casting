@@ -49,7 +49,15 @@ namespace WPEFramework
         MiracastPlayerImplementation::~MiracastPlayerImplementation()
         {
             LOGINFO("Call MiracastPlayerImplementation destructor");
-            if(mService != nullptr)
+            if (m_isPluginInitialized)
+            {
+                MiracastRTSPMsg::destroyInstance();
+                m_miracast_rtsp_obj = nullptr;
+                m_GstPlayer = nullptr;
+                m_isPluginInitialized = false;
+                MIRACASTLOG_INFO("Done..!!!");
+            }
+            if (nullptr != mService)
             {
                 mService->Release();
                 mService = nullptr;
@@ -186,12 +194,16 @@ namespace WPEFramework
                         playerState = std::get<2>(*tupleValue);
                         reason = std::get<3>(*tupleValue);
                         reasonCodeStr = std::to_string(reason);
+                        MIRACASTLOG_INFO("Notifying PLAYER_STATE_CHANGE Event ClientMac[%s] ClientName[%s] PlayerState[%d] ReasonCode[%u]",clientMac.c_str(), clientName.c_str(), (int)playerState, (int)reason);
+                        while (index != _miracastPlayerNotification.end())
+                        {
+                            (*index)->OnStateChange(clientName , clientMac , playerState , reasonCodeStr, reason );
+                            ++index;
+                        }
                     }
-                    MIRACASTLOG_INFO("Notifying PLAYER_STATE_CHANGE Event ClientMac[%s] ClientName[%s] PlayerState[%d] ReasonCode[%u]",clientMac.c_str(), clientName.c_str(), (int)playerState, (int)reason);
-                    while (index != _miracastPlayerNotification.end())
+                    else
                     {
-                        (*index)->OnStateChange(clientName , clientMac , playerState , reasonCodeStr, reason );
-                        ++index;
+                        MIRACASTLOG_ERROR("MIRACASTPLAYER_EVENT_ON_STATE_CHANGE: Invalid parameters");
                     }
                 }
                 break;
@@ -204,10 +216,10 @@ namespace WPEFramework
 
         /*  COMRPC Methods Start */
         /* ------------------------------------------------------------------------------------------------------- */
-        Core::hresult MiracastPlayerImplementation::Initialize(PluginHost::IShell *service)
+        uint32_t MiracastPlayerImplementation::Configure(PluginHost::IShell *service)
         {
             MIRACASTLOG_TRACE("Entering ...");
-            Core::hresult result = Core::ERROR_GENERAL;
+            uint32_t result = Core::ERROR_GENERAL;
 
             ASSERT(nullptr != service);
 
@@ -248,34 +260,7 @@ namespace WPEFramework
             return result;
         }
 
-        Core::hresult MiracastPlayerImplementation::Deinitialize(PluginHost::IShell* service)
-        {
-            MIRACASTLOG_TRACE("Entering ...");
-
-            ASSERT(nullptr != service);
-
-            if (m_isPluginInitialized)
-            {
-                MiracastRTSPMsg::destroyInstance();
-                m_miracast_rtsp_obj = nullptr;
-                m_GstPlayer = nullptr;
-                m_isPluginInitialized = false;
-                MIRACASTLOG_INFO("Done..!!!");
-            }
-            MIRACASTLOG_TRACE("Exiting ...");
-
-            if (nullptr != mService)
-            {
-                mService->Release();
-                mService = nullptr;
-            }
-            MiracastPlayerImplementation::_instance = nullptr;
-
-            MIRACASTLOG_TRACE("Exiting ...");
-            return Core::ERROR_NONE;
-        }
-
-        Core::hresult MiracastPlayerImplementation::PlayRequest(const DeviceParameters &deviceParam , const VideoRectangle &videoRect , Result &result )
+        Core::hresult MiracastPlayerImplementation::PlayRequest(const DeviceParameters &deviceParam , const VideoRectangle videoRect , Result &result )
         {
             RTSP_HLDR_MSGQ_STRUCT rtsp_hldr_msgq_data = {0};
             bool isSuccessOrFailure = false;
@@ -310,7 +295,7 @@ namespace WPEFramework
             return Core::ERROR_NONE;
         }
 
-        Core::hresult MiracastPlayerImplementation::StopRequest(const string &clientMac , const string &clientName , const int &reasonCode , Result &result )
+        Core::hresult MiracastPlayerImplementation::StopRequest(const string &clientMac , const string &clientName , const int reasonCode , Result &result )
         {
             RTSP_HLDR_MSGQ_STRUCT rtsp_hldr_msgq_data = {0};
             bool isSuccessOrFailure = true;
@@ -320,8 +305,8 @@ namespace WPEFramework
             MIRACASTLOG_INFO("clientMac[%s] clientName[%s] reasonCode[%d]",clientMac.c_str(), clientName.c_str(), reasonCode);
             switch (stopReasonCode)
             {
-                case WPEFramework::Exchange::IMiracastPlayer::STOP_REASON_APP_REQ_FOR_EXIT:
-                case WPEFramework::Exchange::IMiracastPlayer::STOP_REASON_APP_REQ_FOR_NEW_CONNECTION:
+                case STOP_REASON_APP_REQ_FOR_EXIT:
+                case STOP_REASON_APP_REQ_FOR_NEW_CONNECTION:
                 {
                     rtsp_hldr_msgq_data.stop_reason_code = stopReasonCode;
 
@@ -343,7 +328,7 @@ namespace WPEFramework
             return Core::ERROR_NONE;
         }
 
-        Core::hresult MiracastPlayerImplementation::SetVideoRectangle(const int &startX , const int &startY , const int &width , const int &height , Result &result )
+        Core::hresult MiracastPlayerImplementation::SetVideoRectangle(const int startX , const int startY , const int width , const int height , Result &result )
         {
             RTSP_HLDR_MSGQ_STRUCT rtsp_hldr_msgq_data = {0};
             bool isSuccessOrFailure = false;

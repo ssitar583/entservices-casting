@@ -23,108 +23,110 @@
 #include <interfaces/json/JsonData_MiracastService.h>
 #include <interfaces/json/JMiracastService.h>
 #include <interfaces/IMiracastService.h>
+#include <interfaces/IConfiguration.h>
 #include "UtilsLogging.h"
 #include "tracing/Logging.h"
 #include <mutex>
 
 namespace WPEFramework
 {
-	namespace Plugin
-	{
-		class MiracastService : public PluginHost::IPlugin, public PluginHost::JSONRPC
-		{
-			private:
-				class Notification : public RPC::IRemoteConnection::INotification,
-									public Exchange::IMiracastService::INotification
-				{
-					private:
-						Notification() = delete;
-						Notification(const Notification&) = delete;
-						Notification& operator=(const Notification&) = delete;
+    namespace Plugin
+    {
+        class MiracastService : public PluginHost::IPlugin, public PluginHost::JSONRPC
+        {
+            private:
+                class Notification : public RPC::IRemoteConnection::INotification,
+                                    public Exchange::IMiracastService::INotification
+                {
+                    private:
+                        Notification() = delete;
+                        Notification(const Notification&) = delete;
+                        Notification& operator=(const Notification&) = delete;
 
-					public:
-					explicit Notification(MiracastService* parent)
-						: _parent(*parent)
-						{
-							ASSERT(parent != nullptr);
-						}
+                    public:
+                    explicit Notification(MiracastService* parent)
+                        : _parent(*parent)
+                        {
+                            ASSERT(parent != nullptr);
+                        }
 
-						virtual ~Notification()
-						{
-						}
+                        virtual ~Notification()
+                        {
+                        }
 
-						BEGIN_INTERFACE_MAP(Notification)
-						INTERFACE_ENTRY(Exchange::IMiracastService::INotification)
-						INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
-						END_INTERFACE_MAP
+                        BEGIN_INTERFACE_MAP(Notification)
+                        INTERFACE_ENTRY(Exchange::IMiracastService::INotification)
+                        INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
+                        END_INTERFACE_MAP
 
-						void Activated(RPC::IRemoteConnection*) override
-						{
-						}
+                        void Activated(RPC::IRemoteConnection*) override
+                        {
+                        }
 
-						void Deactivated(RPC::IRemoteConnection *connection) override
-						{
-						_parent.Deactivated(connection);
-						}
+                        void Deactivated(RPC::IRemoteConnection *connection) override
+                        {
+                        _parent.Deactivated(connection);
+                        }
 
-						void OnClientConnectionRequest(const string &clientMac , const string &clientName ) override
-						{
-							LOGINFO("=> clientMac:[%s], clientName:[%s]", clientMac.c_str(), clientName.c_str());
-							Exchange::JMiracastService::Event::OnClientConnectionRequest(_parent, clientMac, clientName);
-						}
+                        void OnClientConnectionRequest(const string &clientMac , const string &clientName ) override
+                        {
+                            LOGINFO("=> clientMac:[%s], clientName:[%s]", clientMac.c_str(), clientName.c_str());
+                            Exchange::JMiracastService::Event::OnClientConnectionRequest(_parent, clientMac, clientName);
+                        }
 
-						void OnClientConnectionError(const string &clientMac , const string &clientName , const string &reasonCode , const Exchange::IMiracastService::ReasonCode &reasonDescription ) override
-						{
-							LOGINFO("=> clientMac:[%s], clientName:[%s], errorCode:[%s]", clientMac.c_str(), clientName.c_str(), reasonCode.c_str());
-							Exchange::JMiracastService::Event::OnClientConnectionError(_parent, clientMac, clientName, reasonCode, reasonDescription);
-						}
+                        void OnClientConnectionError(const string &clientMac , const string &clientName , const string &reasonCode , const Exchange::IMiracastService::ReasonCode reasonDescription ) override
+                        {
+                            LOGINFO("=> clientMac:[%s], clientName:[%s], errorCode:[%s]", clientMac.c_str(), clientName.c_str(), reasonCode.c_str());
+                            Exchange::JMiracastService::Event::OnClientConnectionError(_parent, clientMac, clientName, reasonCode, reasonDescription);
+                        }
 
-						void OnLaunchRequest(const Exchange::IMiracastService::DeviceParameters deviceParameters) override
-						{
-							LOGINFO("=> SrcDevIP[%s] SrcDevMac[%s] SrcDevName[%s] SinkDevIP[%s]",
-									deviceParameters.sourceDeviceIP.c_str(),
-									deviceParameters.sourceDeviceMac.c_str(),
-									deviceParameters.sourceDeviceName.c_str(),
-									deviceParameters.sinkDeviceIP.c_str());
-							Exchange::JMiracastService::Event::OnLaunchRequest(_parent, deviceParameters);
-						}
+                        void OnLaunchRequest(const Exchange::IMiracastService::DeviceParameters &deviceParameters) override
+                        {
+                            LOGINFO("=> SrcDevIP[%s] SrcDevMac[%s] SrcDevName[%s] SinkDevIP[%s]",
+                                    deviceParameters.sourceDeviceIP.c_str(),
+                                    deviceParameters.sourceDeviceMac.c_str(),
+                                    deviceParameters.sourceDeviceName.c_str(),
+                                    deviceParameters.sinkDeviceIP.c_str());
+                            Exchange::JMiracastService::Event::OnLaunchRequest(_parent, deviceParameters);
+                        }
 
-					private:
-						MiracastService& _parent;
-				}; // class Notification
+                    private:
+                        MiracastService& _parent;
+                }; // class Notification
 
-			public:
-				MiracastService(const MiracastService&) = delete;
-				MiracastService& operator=(const MiracastService&) = delete;
+            public:
+                MiracastService(const MiracastService&) = delete;
+                MiracastService& operator=(const MiracastService&) = delete;
 
-				MiracastService();
-				virtual ~MiracastService();
+                MiracastService();
+                virtual ~MiracastService();
 
-				BEGIN_INTERFACE_MAP(MiracastService)
-				INTERFACE_ENTRY(PluginHost::IPlugin)
-				INTERFACE_ENTRY(PluginHost::IDispatcher)
-				INTERFACE_AGGREGATE(Exchange::IMiracastService, mMiracastServiceImpl)
-				END_INTERFACE_MAP
+                BEGIN_INTERFACE_MAP(MiracastService)
+                INTERFACE_ENTRY(PluginHost::IPlugin)
+                INTERFACE_ENTRY(PluginHost::IDispatcher)
+                INTERFACE_AGGREGATE(Exchange::IMiracastService, mMiracastServiceImpl)
+                END_INTERFACE_MAP
 
-				/* IPlugin methods  */
-				const string Initialize(PluginHost::IShell* service) override;
-				void Deinitialize(PluginHost::IShell* service) override;
-				string Information() const override;
+                /* IPlugin methods  */
+                const string Initialize(PluginHost::IShell* service) override;
+                void Deinitialize(PluginHost::IShell* service) override;
+                string Information() const override;
 
-			private:
-				void Deactivated(RPC::IRemoteConnection* connection);
+            private:
+                void Deactivated(RPC::IRemoteConnection* connection);
 
-			private: /* members */
-				PluginHost::IShell* mCurrentService{};
-				uint32_t mConnectionId{};
-				Exchange::IMiracastService* mMiracastServiceImpl{};
-				Core::Sink<Notification> mMiracastServiceNotification;
+            private: /* members */
+                PluginHost::IShell* mCurrentService{};
+                uint32_t mConnectionId{};
+                Exchange::IMiracastService* mMiracastServiceImpl{};
+                Exchange::IConfiguration* mConfigure;
+                Core::Sink<Notification> mMiracastServiceNotification;
 
-			public /* constants */:
-				static const string SERVICE_NAME;
+            public /* constants */:
+                static const string SERVICE_NAME;
 
-			public /* members */:
-				static MiracastService* _instance;
-		}; // class MiracastService
-	} // namespace Plugin
+            public /* members */:
+                static MiracastService* _instance;
+        }; // class MiracastService
+    } // namespace Plugin
 } // namespace WPEFramework

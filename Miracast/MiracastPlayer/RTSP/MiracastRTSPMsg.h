@@ -30,7 +30,6 @@
 using namespace WPEFramework;
 using MiracastPlayerState = WPEFramework::Exchange::IMiracastPlayer::State;
 using MiracastPlayerReasonCode = WPEFramework::Exchange::IMiracastPlayer::ReasonCode;
-using MiracastPlayerStopReasonCode = WPEFramework::Exchange::IMiracastPlayer::StopReasonCode;
 
 #define MAX_EPOLL_EVENTS 64
 #define RTSP_REQUEST_RECV_TIMEOUT   ( 6 * ONE_SECOND_IN_MILLISEC )
@@ -53,6 +52,13 @@ typedef enum rtsp_status_e
     RTSP_METHOD_NOT_SUPPORTED
 }
 RTSP_STATUS;
+
+typedef enum miracast_player_stop_reason_code_e
+{
+    STOP_REASON_APP_REQ_FOR_EXIT = 300,
+    STOP_REASON_APP_REQ_FOR_NEW_CONNECTION = 301
+}
+MiracastPlayerStopReasonCode;
 
 typedef struct rtsp_hldr_msgq_st
 {

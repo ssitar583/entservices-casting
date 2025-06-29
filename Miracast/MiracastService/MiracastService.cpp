@@ -24,7 +24,7 @@ const string WPEFramework::Plugin::MiracastService::SERVICE_NAME = "org.rdk.Mira
 namespace WPEFramework
 {
     namespace
-	{
+    {
         static Plugin::Metadata<Plugin::MiracastService> metadata(
             /* Version (Major, Minor, Patch) */
             MIRACAST_SERVICE_API_VERSION_NUMBER_MAJOR, MIRACAST_SERVICE_API_VERSION_NUMBER_MINOR, MIRACAST_SERVICE_API_VERSION_NUMBER_PATCH,
@@ -38,7 +38,7 @@ namespace WPEFramework
     }
 
     namespace Plugin
-	{
+    {
         SERVICE_REGISTRATION(MiracastService, MIRACAST_SERVICE_API_VERSION_NUMBER_MAJOR, MIRACAST_SERVICE_API_VERSION_NUMBER_MINOR, MIRACAST_SERVICE_API_VERSION_NUMBER_PATCH);
 
         MiracastService* MiracastService::_instance = nullptr;
@@ -62,7 +62,6 @@ namespace WPEFramework
 
         const string MiracastService::Initialize(PluginHost::IShell* service )
         {
-            uint32_t result = Core::ERROR_GENERAL;
             string retStatus = "";
 
             ASSERT(nullptr != service);
@@ -83,17 +82,28 @@ namespace WPEFramework
 
                 if (nullptr != mMiracastServiceImpl)
                 {
-                    if (Core::ERROR_NONE != (result = mMiracastServiceImpl->Initialize(mCurrentService)))
+                    mConfigure = mMiracastServiceImpl->QueryInterface<Exchange::IConfiguration>();
+                    if (mConfigure)
                     {
-                        SYSLOG(Logging::Startup, (_T("MiracastService::Initialize: Failed to initialise %s"), PLUGIN_MIRACAST_SERVICE_IMPLEMENTATION_NAME));
-                        retStatus = _T("MiracastService plugin could not be initialised");
+                        uint32_t result = mConfigure->Configure(mCurrentService);
+                        if(result != Core::ERROR_NONE)
+                        {
+                            SYSLOG(Logging::Startup, (_T("MiracastService::Initialize: Failed to Configure %s"), PLUGIN_MIRACAST_SERVICE_IMPLEMENTATION_NAME));
+                            retStatus = _T("MiracastService plugin could not be initialised");
+                        }
+                        else
+                        {
+                            /* Register for notifications */
+                            mMiracastServiceImpl->Register(&mMiracastServiceNotification);
+                            /* Invoking Plugin API register to wpeframework */
+                            Exchange::JMiracastService::Register(*this, mMiracastServiceImpl);
+                        }
+                        mConfigure->Release();
                     }
                     else
                     {
-                        /* Register for notifications */
-                        mMiracastServiceImpl->Register(&mMiracastServiceNotification);
-                        /* Invoking Plugin API register to wpeframework */
-                        Exchange::JMiracastService::Register(*this, mMiracastServiceImpl);
+                        retStatus = _T("MiracastService implementation did not provide a configuration interface");
+                        SYSLOG(Logging::Startup, (_T("MiracastService::Initialize: MiracastServiceImpl[%s] does not provide a configuration interface"), PLUGIN_MIRACAST_SERVICE_IMPLEMENTATION_NAME));
                     }
                 }
                 else
@@ -110,7 +120,7 @@ namespace WPEFramework
 
             if (0 != retStatus.length())
             {
-               Deinitialize(service);
+                Deinitialize(service);
             }
 
             return retStatus;
@@ -128,11 +138,6 @@ namespace WPEFramework
                 mMiracastServiceImpl->Unregister(&mMiracastServiceNotification);
                 Exchange::JMiracastService::Unregister(*this);
 
-                if (nullptr != mCurrentService)
-                {
-                    mMiracastServiceImpl->Deinitialize(mCurrentService);
-                }
-
                 /* Stop processing: */
                 RPC::IRemoteConnection* connection = service->RemoteConnection(mConnectionId);
                 VARIABLE_IS_NOT_USED uint32_t result = mMiracastServiceImpl->Release();
@@ -140,19 +145,19 @@ namespace WPEFramework
                 mMiracastServiceImpl = nullptr;
     
                 /* It should have been the last reference we are releasing,
-                 * so it should endup in a DESTRUCTION_SUCCEEDED, if not we
-                 * are leaking... */
+                * so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+                * are leaking... */
                 ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
     
                 /* If this was running in a (container) process... */
                 if (nullptr != connection)
                 {
-                   /* Lets trigger the cleanup sequence for
+                /* Lets trigger the cleanup sequence for
                     * out-of-process code. Which will guard
                     * that unwilling processes, get shot if
                     * not stopped friendly :-) */
-                   connection->Terminate();
-                   connection->Release();
+                connection->Terminate();
+                connection->Release();
                 }
             }
     

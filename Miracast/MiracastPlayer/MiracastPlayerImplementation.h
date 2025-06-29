@@ -23,6 +23,7 @@
 #include <boost/variant.hpp>
 #include <interfaces/Ids.h>
 #include <interfaces/IMiracastPlayer.h>
+#include<interfaces/IConfiguration.h>
 
 #include <com/com.h>
 #include <core/core.h>
@@ -38,14 +39,13 @@ using namespace WPEFramework;
 
 using MiracastPlayerState = WPEFramework::Exchange::IMiracastPlayer::State;
 using MiracastPlayerReasonCode = WPEFramework::Exchange::IMiracastPlayer::ReasonCode;
-using MiracastPlayerStopReasonCode = WPEFramework::Exchange::IMiracastPlayer::StopReasonCode;
 using ParamsType = boost::variant<std::tuple<std::string, std::string, MiracastPlayerState, MiracastPlayerReasonCode>>;
 
 namespace WPEFramework
 {
     namespace Plugin
     {
-        class MiracastPlayerImplementation : public Exchange::IMiracastPlayer, public MiracastPlayerNotifier
+        class MiracastPlayerImplementation : public Exchange::IMiracastPlayer, public Exchange::IConfiguration, public MiracastPlayerNotifier
         {
         public:
             // We do not allow this plugin to be copied !!
@@ -62,6 +62,7 @@ namespace WPEFramework
 
             BEGIN_INTERFACE_MAP(MiracastPlayerImplementation)
             INTERFACE_ENTRY(Exchange::IMiracastPlayer)
+            INTERFACE_ENTRY(Exchange::IConfiguration)
             END_INTERFACE_MAP
 
         public:
@@ -115,14 +116,14 @@ namespace WPEFramework
 
 
         public:
-            Core::hresult Initialize(PluginHost::IShell* service) override;
-            Core::hresult Deinitialize(PluginHost::IShell* service) override;
+            uint32_t Configure(PluginHost::IShell* service) override;
+
             Core::hresult Register(Exchange::IMiracastPlayer::INotification *notification) override;
             Core::hresult Unregister(Exchange::IMiracastPlayer::INotification *notification) override;
 
-            Core::hresult PlayRequest(const DeviceParameters &deviceParam , const VideoRectangle &videoRect , Result &result ) override;
-            Core::hresult StopRequest(const string &clientMac , const string &clientName , const int &reasonCode , Result &result ) override;
-            Core::hresult SetVideoRectangle(const int &startX , const int &startY , const int &width , const int &height , Result &result ) override;
+            Core::hresult PlayRequest(const DeviceParameters &deviceParam , const VideoRectangle videoRect , Result &result ) override;
+            Core::hresult StopRequest(const string &clientMac , const string &clientName , const int reasonCode , Result &result ) override;
+            Core::hresult SetVideoRectangle(const int startX , const int startY , const int width , const int height , Result &result ) override;
             Core::hresult SetWesterosEnvironment( IEnvArgumentsIterator * const westerosArgs , Result &result ) override;
             Core::hresult UnsetWesterosEnvironment(Result &result ) override;
             Core::hresult SetEnvArguments( IEnvArgumentsIterator * const envArgs , Result &result ) override;

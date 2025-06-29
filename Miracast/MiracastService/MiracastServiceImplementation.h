@@ -26,6 +26,7 @@
 #include <interfaces/Ids.h>
 #include <interfaces/IMiracastService.h>
 #include <interfaces/IPowerManager.h>
+#include<interfaces/IConfiguration.h>
 
 #include <MiracastController.h>
 #include "libIARM.h"
@@ -63,7 +64,7 @@ namespace WPEFramework
 {
     namespace Plugin
     {		
-        class MiracastServiceImplementation : public Exchange::IMiracastService, public MiracastServiceNotifier
+        class MiracastServiceImplementation : public Exchange::IMiracastService, public Exchange::IConfiguration, public MiracastServiceNotifier
         {
             public:
                 // We do not allow this plugin to be copied !!
@@ -84,6 +85,7 @@ namespace WPEFramework
                 
                 BEGIN_INTERFACE_MAP(MiracastServiceImplementation)
                 INTERFACE_ENTRY(Exchange::IMiracastService)
+                INTERFACE_ENTRY(Exchange::IConfiguration)
                 END_INTERFACE_MAP
 
             public:
@@ -140,17 +142,17 @@ namespace WPEFramework
                 }; // class Job
 
             public:
-                Core::hresult Initialize(PluginHost::IShell* service) override;
-                Core::hresult Deinitialize(PluginHost::IShell* service) override;
+                uint32_t Configure(PluginHost::IShell* service) override;
+
                 Core::hresult Register(Exchange::IMiracastService::INotification *notification) override;
                 Core::hresult Unregister(Exchange::IMiracastService::INotification *notification) override;
 
-                Core::hresult SetEnabled(const bool &enabled , Result &returnPayload ) override;
+                Core::hresult SetEnabled(const bool enabled , Result &returnPayload ) override;
                 Core::hresult GetEnabled(bool &enabled , bool &success ) override;
                 Core::hresult AcceptClientConnection(const string &requestStatus , Result &returnPayload ) override;
                 Core::hresult StopClientConnection(const string &clientMac , const string &clientName, Result &returnPayload ) override;
-                Core::hresult UpdatePlayerState(const string &clientMac , const MiracastPlayerState &playerState , const int &reasonCode , Result &returnPayload ) override;
-                Core::hresult SetP2PBackendDiscovery(const bool &enabled , Result &returnPayload ) override;
+                Core::hresult UpdatePlayerState(const string &clientMac , const MiracastPlayerState playerState , const int reasonCode , Result &returnPayload ) override;
+                Core::hresult SetP2PBackendDiscovery(const bool enabled , Result &returnPayload ) override;
 
             private:
                 class PowerManagerNotification : public Exchange::IPowerManager::IModeChangedNotification
