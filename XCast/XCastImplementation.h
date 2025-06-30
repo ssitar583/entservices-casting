@@ -175,20 +175,20 @@ namespace WPEFramework
             Core::hresult Register(Exchange::IXCast::INotification *notification) override;
             Core::hresult Unregister(Exchange::IXCast::INotification *notification) override; 
 
-            Core::hresult UpdateApplicationState(const string& applicationName, const Exchange::IXCast::State& state, const string& applicationId, const Exchange::IXCast::ErrorCode& error,  bool &success) override;
+            Core::hresult UpdateApplicationState(const string& applicationName, const Exchange::IXCast::State& state, const string& applicationId, const Exchange::IXCast::ErrorCode& error,  Exchange::IXCast::XCastSuccess &success) override;
             Core::hresult GetProtocolVersion(string &protocolVersion, bool &success) override;
-            Core::hresult SetManufacturerName(const string &manufacturername,  bool &success) override;
+            Core::hresult SetManufacturerName(const string &manufacturername,  Exchange::IXCast::XCastSuccess &success) override;
             Core::hresult GetManufacturerName(string &manufacturername, bool &success) override;
-            Core::hresult SetModelName(const string &modelname,  bool &success) override;
+            Core::hresult SetModelName(const string &modelname,  Exchange::IXCast::XCastSuccess &success) override;
             Core::hresult GetModelName(string &modelname, bool &success) override;
-            Core::hresult SetEnabled(const bool& enabled,  bool &success) override;
+            Core::hresult SetEnabled(const bool& enabled,  Exchange::IXCast::XCastSuccess &success) override;
             Core::hresult GetEnabled(bool &enabled , bool &success ) override;
-            Core::hresult SetStandbyBehavior(const Exchange::IXCast::StandbyBehavior &standbybehavior,  bool &success) override;
+            Core::hresult SetStandbyBehavior(const Exchange::IXCast::StandbyBehavior &standbybehavior,  Exchange::IXCast::XCastSuccess &success) override;
             Core::hresult GetStandbyBehavior(Exchange::IXCast::StandbyBehavior &standbybehavior, bool &success) override;
-            Core::hresult SetFriendlyName(const string &friendlyname,  bool &success) override;
+            Core::hresult SetFriendlyName(const string &friendlyname,  Exchange::IXCast::XCastSuccess &success) override;
             Core::hresult GetFriendlyName(string &friendlyname , bool &success ) override;
-            Core::hresult RegisterApplications(Exchange::IXCast::IApplicationInfoIterator* const appInfoList,  bool &success) override;
-            Core::hresult UnregisterApplications(Exchange::IXCast::IStringIterator* const apps,  bool &success) override;
+            Core::hresult RegisterApplications(Exchange::IXCast::IApplicationInfoIterator* const appInfoList,  Exchange::IXCast::XCastSuccess &success) override;
+            Core::hresult UnregisterApplications(Exchange::IXCast::IStringIterator* const apps,  Exchange::IXCast::XCastSuccess &success) override;
 
             virtual void onXcastApplicationLaunchRequestWithParam (string appName, string strPayLoad, string strQuery, string strAddDataUrl) override ;
             virtual void onXcastApplicationLaunchRequest(string appName, string parameter) override ;
