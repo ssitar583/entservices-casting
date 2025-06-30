@@ -1013,7 +1013,7 @@ namespace WPEFramework
 
         Core::hresult XCastImplementation::UpdateApplicationState(const string& applicationName, const Exchange::IXCast::State& state, const string& applicationId, const Exchange::IXCast::ErrorCode& error,Exchange::IXCast::XCastSuccess &success){
             LOGINFO("ARGS = %s : %s : %d : %d ", applicationName.c_str(), applicationId.c_str() , state , error);
-            success = false;
+            success.success = false;
             uint32_t status = Core::ERROR_GENERAL;
             if(!applicationName.empty() && (nullptr != m_xcast_manager))
             {
@@ -1060,7 +1060,7 @@ namespace WPEFramework
                 }
 
                 m_xcast_manager->applicationStateChanged(applicationName.c_str(), appstate.c_str(), applicationId.c_str(), errorStr.c_str());
-                success = true;
+                success.success = true;
                 status = Core::ERROR_NONE;
             }
             else
@@ -1092,11 +1092,11 @@ namespace WPEFramework
         Core::hresult XCastImplementation::SetManufacturerName(const string &manufacturername, Exchange::IXCast::XCastSuccess &success) {
             uint32_t status = Core::ERROR_GENERAL;
             LOGINFO("ManufacturerName : %s", manufacturername.c_str());
-            success = false;
+            success.success = false;
             if (nullptr != m_xcast_manager)
             {
                 m_xcast_manager->setManufacturerName(manufacturername);
-                success = true;
+                 success.success = true;
                 status = Core::ERROR_NONE;
             }
             return status;
@@ -1119,13 +1119,13 @@ namespace WPEFramework
         }
 		Core::hresult XCastImplementation::SetModelName(const string &modelname, Exchange::IXCast::XCastSuccess &success) { 
             uint32_t status = Core::ERROR_GENERAL;
-            success = false;
+            success.success = false;
             LOGINFO("ModelName : %s", modelname.c_str());
 
             if (nullptr != m_xcast_manager)
             {
                 m_xcast_manager->setModelName(modelname);
-                success = true;
+                 success.success = true;
                 status = Core::ERROR_NONE;
             }
             return status;
@@ -1150,7 +1150,7 @@ namespace WPEFramework
             LOGINFO("XCastImplementation::setEnabled - %d",enabled);
             bool isEnabled = false;
             m_xcastEnable= enabled;
-
+            success.success = false;
             if (m_xcastEnable && ( (m_standbyBehavior == true) || ((m_standbyBehavior == false)&&(m_powerState == WPEFramework::Exchange::IPowerManager::POWER_STATE_ON))))
             {
                 isEnabled = true;
@@ -1160,8 +1160,8 @@ namespace WPEFramework
                 isEnabled = false;
             }
             LOGINFO("XCastImplementation::setEnabled : %d, enabled : %d" , m_xcastEnable, isEnabled);
-            success = enableCastService(m_friendlyName,isEnabled);
-            return (success) ? Core::ERROR_NONE : Core::ERROR_GENERAL;
+            success.success = enableCastService(m_friendlyName,isEnabled);
+            return (success.success) ? Core::ERROR_NONE : Core::ERROR_GENERAL;
 
          }
 		Core::hresult XCastImplementation::GetEnabled(bool &enabled , bool &success ) { 
@@ -1173,7 +1173,7 @@ namespace WPEFramework
        
 		Core::hresult XCastImplementation::SetStandbyBehavior(const Exchange::IXCast::StandbyBehavior &standbybehavior, Exchange::IXCast::XCastSuccess &success) { 
             LOGINFO("XCastImplementation::setStandbyBehavior\n");
-            success = false;
+             success.success = false;
             bool enabled = false;
             if (standbybehavior == Exchange::IXCast::StandbyBehavior::ACTIVE)
             {
@@ -1189,7 +1189,7 @@ namespace WPEFramework
                 return Core::ERROR_GENERAL;
             }
             m_standbyBehavior = enabled;
-            success = true;
+             success.success = true;
             LOGINFO("XCastImplementation::setStandbyBehavior m_standbyBehavior : %d", m_standbyBehavior);
             return Core::ERROR_NONE;
         }
@@ -1205,7 +1205,7 @@ namespace WPEFramework
 		Core::hresult XCastImplementation::SetFriendlyName(const string& friendlyname, Exchange::IXCast::XCastSuccess &success) { 
             LOGINFO("XCastImplementation::setFriendlyName - %s", friendlyname.c_str());
             uint32_t result = Core::ERROR_GENERAL;
-            success = false;
+             success.success = false;
             bool enabledStatus = false;
             if (!friendlyname.empty())
             {
@@ -1220,7 +1220,7 @@ namespace WPEFramework
                         enabledStatus = false;
                     }
                     enableCastService(m_friendlyName,enabledStatus);
-                    success = true;
+                     success.success = true;
                     result = Core::ERROR_NONE;
             }
             return result;
@@ -1369,7 +1369,7 @@ namespace WPEFramework
             else {
                 LOGINFO("CastService not enabled m_xcastEnable: %d m_standbyBehavior: %d m_powerState:%d", m_xcastEnable, m_standbyBehavior, m_powerState);
             }
-            success = true;
+            success.success = true;
             return Core::ERROR_NONE;
         }
 		Core::hresult XCastImplementation::UnregisterApplications(Exchange::IXCast::IStringIterator* const apps, Exchange::IXCast::XCastSuccess &success) 
@@ -1406,7 +1406,7 @@ namespace WPEFramework
             else {
                 LOGINFO("CastService not enabled m_xcastEnable: %d m_standbyBehavior: %d m_powerState:%d", m_xcastEnable, m_standbyBehavior, m_powerState);
             }
-            success = (returnStatus)? true : false;
+            success.success = (returnStatus)? true : false;
             return (returnStatus)? Core::ERROR_NONE : Core::ERROR_GENERAL;
         }
 
