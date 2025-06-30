@@ -174,7 +174,7 @@ namespace WPEFramework
         public:
             Core::hresult Register(Exchange::IXCast::INotification *notification) override;
             Core::hresult Unregister(Exchange::IXCast::INotification *notification) override; 
-
+            
             Core::hresult UpdateApplicationState(const string& applicationName, const Exchange::IXCast::State& state, const string& applicationId, const Exchange::IXCast::ErrorCode& error,  Exchange::IXCast::XCastSuccess &success) override;
             Core::hresult GetProtocolVersion(string &protocolVersion, bool &success) override;
             Core::hresult SetManufacturerName(const string &manufacturername,  Exchange::IXCast::XCastSuccess &success) override;
