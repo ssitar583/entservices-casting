@@ -1011,7 +1011,7 @@ namespace WPEFramework
             LOGINFO ("=================================================================");
         }  
 
-        Core::hresult XCastImplementation::UpdateApplicationState(const string& applicationName, const Exchange::IXCast::State& state, const string& applicationId, const Exchange::IXCast::ErrorCode& error,bool &success){
+        Core::hresult XCastImplementation::UpdateApplicationState(const string& applicationName, const Exchange::IXCast::State& state, const string& applicationId, const Exchange::IXCast::ErrorCode& error,Exchange::IXCast::XCastSuccess &success){
             LOGINFO("ARGS = %s : %s : %d : %d ", applicationName.c_str(), applicationId.c_str() , state , error);
             success = false;
             uint32_t status = Core::ERROR_GENERAL;
@@ -1089,7 +1089,7 @@ namespace WPEFramework
             }
             return 0;
         }
-        Core::hresult XCastImplementation::SetManufacturerName(const string &manufacturername, bool &success) {
+        Core::hresult XCastImplementation::SetManufacturerName(const string &manufacturername, Exchange::IXCast::XCastSuccess &success) {
             uint32_t status = Core::ERROR_GENERAL;
             LOGINFO("ManufacturerName : %s", manufacturername.c_str());
             success = false;
@@ -1117,7 +1117,7 @@ namespace WPEFramework
             }
             return Core::ERROR_NONE;
         }
-		Core::hresult XCastImplementation::SetModelName(const string &modelname, bool &success) { 
+		Core::hresult XCastImplementation::SetModelName(const string &modelname, Exchange::IXCast::XCastSuccess &success) { 
             uint32_t status = Core::ERROR_GENERAL;
             success = false;
             LOGINFO("ModelName : %s", modelname.c_str());
@@ -1146,7 +1146,7 @@ namespace WPEFramework
             return Core::ERROR_NONE;
         }
 
-		Core::hresult XCastImplementation::SetEnabled(const bool& enabled, bool &success){
+		Core::hresult XCastImplementation::SetEnabled(const bool& enabled, Exchange::IXCast::XCastSuccess &success){
             LOGINFO("XCastImplementation::setEnabled - %d",enabled);
             bool isEnabled = false;
             m_xcastEnable= enabled;
@@ -1171,7 +1171,7 @@ namespace WPEFramework
             return Core::ERROR_NONE;
          }
        
-		Core::hresult XCastImplementation::SetStandbyBehavior(const Exchange::IXCast::StandbyBehavior &standbybehavior, bool &success) { 
+		Core::hresult XCastImplementation::SetStandbyBehavior(const Exchange::IXCast::StandbyBehavior &standbybehavior, Exchange::IXCast::XCastSuccess &success) { 
             LOGINFO("XCastImplementation::setStandbyBehavior\n");
             success = false;
             bool enabled = false;
@@ -1202,7 +1202,7 @@ namespace WPEFramework
             success = true;
             return Core::ERROR_NONE;
         }
-		Core::hresult XCastImplementation::SetFriendlyName(const string& friendlyname, bool &success) { 
+		Core::hresult XCastImplementation::SetFriendlyName(const string& friendlyname, Exchange::IXCast::XCastSuccess &success) { 
             LOGINFO("XCastImplementation::setFriendlyName - %s", friendlyname.c_str());
             uint32_t result = Core::ERROR_GENERAL;
             success = false;
@@ -1347,7 +1347,7 @@ namespace WPEFramework
             return;
         }
 
-        Core::hresult XCastImplementation::RegisterApplications(Exchange::IXCast::IApplicationInfoIterator* const appInfoList, bool &success) { 
+        Core::hresult XCastImplementation::RegisterApplications(Exchange::IXCast::IApplicationInfoIterator* const appInfoList, Exchange::IXCast::XCastSuccess &success) { 
             LOGINFO("XCastImplementation::registerApplications \n");
             enableCastService(m_friendlyName,false);
             m_isDynamicRegistrationsRequired = true;
@@ -1372,7 +1372,7 @@ namespace WPEFramework
             success = true;
             return Core::ERROR_NONE;
         }
-		Core::hresult XCastImplementation::UnregisterApplications(Exchange::IXCast::IStringIterator* const apps, bool &success) 
+		Core::hresult XCastImplementation::UnregisterApplications(Exchange::IXCast::IStringIterator* const apps, Exchange::IXCast::XCastSuccess &success) 
         {
             LOGINFO("XcastService::unregisterApplications \n ");
             auto returnStatus = false;
