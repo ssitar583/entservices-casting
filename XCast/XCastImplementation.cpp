@@ -1146,7 +1146,7 @@ namespace WPEFramework
             return Core::ERROR_NONE;
         }
 
-		Core::hresult XCastImplementation::SetEnabled(const bool& enabled, Exchange::IXCast::XCastSuccess &success){
+	Core::hresult XCastImplementation::SetEnabled(const bool& enabled, Exchange::IXCast::XCastSuccess &success){
             LOGINFO("XCastImplementation::setEnabled - %d",enabled);
             bool isEnabled = false;
             m_xcastEnable= enabled;
@@ -1160,18 +1160,19 @@ namespace WPEFramework
                 isEnabled = false;
             }
             LOGINFO("XCastImplementation::setEnabled : %d, enabled : %d" , m_xcastEnable, isEnabled);
-            success.success = enableCastService(m_friendlyName,isEnabled);
-            return (success.success) ? Core::ERROR_NONE : Core::ERROR_GENERAL;
+            enableCastService(m_friendlyName,isEnabled);
+	    success.success = true;
+            return Core::ERROR_NONE;
 
-         }
-		Core::hresult XCastImplementation::GetEnabled(bool &enabled , bool &success ) { 
+        }
+	Core::hresult XCastImplementation::GetEnabled(bool &enabled , bool &success ) { 
             LOGINFO("XCastImplementation::getEnabled - %d",m_xcastEnable);
             enabled = m_xcastEnable;
             success = true;
             return Core::ERROR_NONE;
          }
        
-		Core::hresult XCastImplementation::SetStandbyBehavior(const Exchange::IXCast::StandbyBehavior &standbybehavior, Exchange::IXCast::XCastSuccess &success) { 
+	Core::hresult XCastImplementation::SetStandbyBehavior(const Exchange::IXCast::StandbyBehavior &standbybehavior, Exchange::IXCast::XCastSuccess &success) { 
             LOGINFO("XCastImplementation::setStandbyBehavior\n");
              success.success = false;
             bool enabled = false;
@@ -1193,7 +1194,7 @@ namespace WPEFramework
             LOGINFO("XCastImplementation::setStandbyBehavior m_standbyBehavior : %d", m_standbyBehavior);
             return Core::ERROR_NONE;
         }
-		Core::hresult XCastImplementation::GetStandbyBehavior(Exchange::IXCast::StandbyBehavior &standbybehavior, bool &success) { 
+	Core::hresult XCastImplementation::GetStandbyBehavior(Exchange::IXCast::StandbyBehavior &standbybehavior, bool &success) { 
             LOGINFO("XCastImplementation::getStandbyBehavior m_standbyBehavior :%d",m_standbyBehavior);
             if(m_standbyBehavior)
                 standbybehavior = Exchange::IXCast::StandbyBehavior::ACTIVE;
@@ -1202,7 +1203,7 @@ namespace WPEFramework
             success = true;
             return Core::ERROR_NONE;
         }
-		Core::hresult XCastImplementation::SetFriendlyName(const string& friendlyname, Exchange::IXCast::XCastSuccess &success) { 
+	Core::hresult XCastImplementation::SetFriendlyName(const string& friendlyname, Exchange::IXCast::XCastSuccess &success) { 
             LOGINFO("XCastImplementation::setFriendlyName - %s", friendlyname.c_str());
             uint32_t result = Core::ERROR_GENERAL;
              success.success = false;
@@ -1225,7 +1226,7 @@ namespace WPEFramework
             }
             return result;
         }
-		Core::hresult XCastImplementation::GetFriendlyName(string &friendlyname , bool &success ) { 
+	Core::hresult XCastImplementation::GetFriendlyName(string &friendlyname , bool &success ) { 
             LOGINFO("XCastImplementation::getFriendlyName :%s ",m_friendlyName.c_str());
             friendlyname = m_friendlyName;
             success = true;
@@ -1372,7 +1373,7 @@ namespace WPEFramework
             success.success = true;
             return Core::ERROR_NONE;
         }
-		Core::hresult XCastImplementation::UnregisterApplications(Exchange::IXCast::IStringIterator* const apps, Exchange::IXCast::XCastSuccess &success) 
+	Core::hresult XCastImplementation::UnregisterApplications(Exchange::IXCast::IStringIterator* const apps, Exchange::IXCast::XCastSuccess &success) 
         {
             LOGINFO("XcastService::unregisterApplications \n ");
             auto returnStatus = false;
